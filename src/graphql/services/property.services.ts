@@ -617,18 +617,10 @@ export class PropertyService {
             }
         }
 
-        const generateSeo = await SeoGenerator.generateSEOFields(
-            propertyId,
-            propertyData.propertyDetailsSchema.propertyType,
-            propertyData.location.city,
-            propertyData.location.district,
-        );
 
         await db.transaction(async (tx) => {
-            await tx.insert(properties).values({
+           const createdProperty =  await tx.insert(properties).values({
                 id: propertyId,
-                title: generateSeo?.title,
-                description: generateSeo?.seoDescription,
                 propertyType:
                     propertyData.propertyDetailsSchema.propertyType.toUpperCase(),
                 status: "PUBLISHED",
@@ -652,7 +644,22 @@ export class PropertyService {
                 createdByType: "ADMIN",
                 createdByAdminId: userID,
                 approvalStatus: "PENDING",
-            });
+            }).returning({listing_id:properties.listingId});
+            console.log('>>>>>>insertedProperty>>>>>>',createdProperty)
+
+            const generateSeo = await SeoGenerator.generateSEOFields(
+                createdProperty[0].listing_id,
+                propertyData.propertyDetailsSchema.propertyType,
+                propertyData.location.city,
+                propertyData.location.district,
+            );
+
+            await tx.update(properties)
+                .set({
+                    title: generateSeo.title,
+                    description: generateSeo.seoDescription,
+                })
+                .where(eq(properties.listingId, createdProperty[0].listing_id));
 
             await tx.insert(propertySeo).values({
                 propertyId,
@@ -731,20 +738,13 @@ export class PropertyService {
             }
         }
 
-        const generateSeo = await SeoGenerator.generateSEOFields(
-            propertyId,
-            propertyData.propertyDetailsSchema.propertyType,
-            propertyData.location.city,
-            propertyData.location.district
-        );
+       
 
         console.log(processedImages);
 
         await db.transaction(async (tx) => {
-            await tx.insert(properties).values({
+            const createdProperty = await tx.insert(properties).values({
                 id: propertyId,
-                title: generateSeo?.title,
-                description: generateSeo?.seoDescription,
                 propertyType:
                     propertyData.propertyDetailsSchema.propertyType.toUpperCase(),
                 status: "PUBLISHED",
@@ -767,7 +767,23 @@ export class PropertyService {
                 publishedAt: new Date(),
                 createdByType: "USER",
                 createdByUserId: userID,
-            });
+            }).returning({listing_id:properties.listingId});
+
+            const generateSeo = await SeoGenerator.generateSEOFields(
+                createdProperty[0].listing_id,
+                propertyData.propertyDetailsSchema.propertyType,
+                propertyData.location.city,
+                propertyData.location.district
+            );
+
+            await tx.update(properties)
+            .set({
+                title: generateSeo.title,
+                description: generateSeo.seoDescription,
+            })
+            .where(eq(properties.listingId, createdProperty[0].listing_id));
+
+            console.log('>>>>>>>createdProperty>>>>>>',createdProperty)
 
             await tx.insert(propertySeo).values({
                 propertyId,

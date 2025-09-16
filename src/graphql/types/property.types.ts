@@ -144,6 +144,7 @@ type Property {
   adminNotes: String
   lastReviewedBy: ID
   lastReviewedAt: String
+  listingId : Int
  
 }
 type propertyUser {
