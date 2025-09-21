@@ -11,13 +11,14 @@ import { azureEmailService } from "../../src/graphql/services/email.service"
 import { createSession, getSession, deleteSession } from "../config/auth"
 import { twilioSMSService } from "../graphql/services/twilio-sms.service"
 import { googleAuthService } from "../graphql/services/google-auth.service"
+import { azureStorage } from "../utils/azure-storage"
 
 
 const { platformUsers, platformUserProfiles, otpTokens } = schema
 
 export class PlatformUserService {
     // Create new platform user
-    static async createUser(userData: any) {
+    static async createUser(userData: any,adminId='') {
         try {
             // Validate input
             const validatedData = validateInput(createUserSchema, userData)
@@ -37,39 +38,61 @@ export class PlatformUserService {
             // Hash password
             const hashedPassword = await bcrypt.hash(validatedData.password, 12)
 
-            // Create user
-            const [newUser] = await db
-                .insert(platformUsers)
-                .values({
-                    email: validatedData.email,
-                    firstName: validatedData.firstName,
-                    lastName: validatedData.lastName,
-                    password: hashedPassword,
-                    role: (validatedData.role || "USER").toUpperCase(),
-                    isActive: true,
-                    isVerified: false,
-                })
-                .returning()
+            console.log(userData);
 
-            // Create user profile
-            await db.insert(platformUserProfiles).values({
-                userId: newUser.id,
-                phone: userData.phone,
-            })
+			// Handle optional avatar upload to Azure (users folder)
+			let avatarUrl: string | undefined
+			const normalizedRole = ((validatedData.role || "USER").toUpperCase() as "OWNER" | "AGENT" | "USER")
+			const resolveUpload = async (maybeUpload: any) => {
+				if (!maybeUpload) return null
+				return typeof maybeUpload?.promise === 'function' ? await maybeUpload.promise : maybeUpload
+			}
+			const profileUpload = await resolveUpload(userData.profileImage.file)
+			if (profileUpload) {
+				const variants = await azureStorage.uploadFile(profileUpload, "users")
+				const baseFilename = variants?.[0]?.filename
+				if (baseFilename) {
+					const urls = azureStorage.getAllVariantUrls(baseFilename, "users")
+					avatarUrl = urls.large || urls.original || Object.values(urls)[0]
+				}
+			}
 
-            // Send welcome email
-            if (validatedData.firstName) {
-                await azureEmailService.sendWelcomeEmail(validatedData.email, validatedData.firstName)
-            }
+			// Create user
+			const [newUser] = await db
+				.insert(platformUsers)
+				.values({
+					email: validatedData.email,
+					firstName: validatedData.firstName,
+					lastName: validatedData.lastName,
+					password: hashedPassword,
+					role: normalizedRole,
+					isActive: true,
+					isVerified: false,
+					createdByAdminId: adminId || null,
+				})
+				.returning()
 
-            logInfo("Platform user created successfully", { userId: newUser.id, email: validatedData.email })
+			// Create user profile
+			await db.insert(platformUserProfiles).values({
+				userId: newUser.id,
+				phone: userData.phone,
+				avatar: avatarUrl,
+				address:userData.address
+			})
 
-            return newUser
-        } catch (error) {
-            logError("Failed to create platform user", error as Error, { email: userData.email, phone: userData.phone })
-            throw error
-        }
-    }
+			// Send welcome email
+			if (validatedData.firstName) {
+				await azureEmailService.sendWelcomeEmail(validatedData.email, validatedData.firstName)
+			}
+
+			logInfo("Platform user created successfully", { userId: newUser.id, email: validatedData.email })
+
+			return newUser
+		} catch (error) {
+			logError("Failed to create platform user", error as Error, { email: userData.email, phone: userData.phone })
+			throw error
+		}
+	}
 
     // Find user by email
     static async findUserByEmail(email: string) {
@@ -135,6 +158,71 @@ export class PlatformUserService {
         } catch (error) {
             logError("Password verification failed", error as Error)
             return false
+        }
+    }
+
+    // Search users by name, email, phone, or id
+    // page is 1-based (default 1)
+    static async searchUsers(searchTerm:string,limit:number=10,page:number=1) {
+        try {
+            const trimmed = (searchTerm || "").trim()
+            if (!trimmed) {
+                throw new Error("Search term is required")
+            }
+
+            const wildcard = `%${trimmed}%`
+
+            // sanitize pagination
+            const safeLimit = Math.max(1, Math.min(100, Number(limit) || 10))
+            const safePage = Math.max(1, Number(page) || 1)
+            const offset = (safePage - 1) * safeLimit
+
+            // Build where clause once and reuse for count
+            const whereClause = or(
+                like(platformUsers.firstName, wildcard),
+                like(platformUsers.lastName, wildcard),
+                like(platformUsers.email, wildcard),
+                like(platformUserProfiles.phone as any, wildcard),
+            )
+
+            const results = await db
+                .select({
+                    user: platformUsers,
+                    profile: platformUserProfiles,
+                })
+                .from(platformUsers)
+                .leftJoin(platformUserProfiles, eq(platformUsers.id, platformUserProfiles.userId))
+                .where(whereClause)
+                .limit(safeLimit)
+                .offset(offset)
+
+            const users = (results || []).map((row: any) => ({
+                ...row.user,
+                profile: row.profile,
+            }))
+
+            const [{ count }] = await db
+                .select({ count: sql<number>`COUNT(*)` })
+                .from(platformUsers)
+                .leftJoin(platformUserProfiles, eq(platformUsers.id, platformUserProfiles.userId))
+                .where(whereClause)
+
+            const total = Number(count || 0)
+            const totalPages = Math.max(1, Math.ceil(total / safeLimit))
+
+            logInfo("Search users executed", { searchTerm: trimmed, returned: users.length, total })
+
+            return {
+                data: users,
+                meta: {
+                    page: safePage,
+                    limit: safeLimit,
+                    totalPages,
+                },
+            }
+        } catch (error) {
+            logError("Failed to search users", error as Error, { searchTerm })
+            throw error
         }
     }
 
@@ -306,7 +394,7 @@ export class PlatformUserService {
                         email: googleUser.email,
                         firstName: googleUser.given_name,
                         lastName: googleUser.family_name,
-                        role: "user",
+                        role: "USER",
                         isActive: true,
                         isVerified: true, // Google accounts are pre-verified
                         emailVerifiedAt: new Date(),
@@ -569,14 +657,14 @@ export class PlatformUserService {
             const validatedData = validateInput(updateProfessionalInfoSchema, professionalInfoData)
 
             const profileUpdateData: {
-                experience?: number
-                specializations?: string[]
-                languages?: string[]
-                serviceAreas?: string[]
+                experience?: string
+                specializations?: any
+                languages?: any
+                serviceAreas?: any
                 updatedAt: Date
             } = { updatedAt: new Date() }
 
-            if (validatedData.experience !== undefined) profileUpdateData.experience = validatedData.experience
+            if (validatedData.experience !== undefined) profileUpdateData.experience = String(validatedData.experience)
             if (validatedData.specializations !== undefined) profileUpdateData.specializations = validatedData.specializations
             if (validatedData.languages !== undefined) profileUpdateData.languages = validatedData.languages
             if (validatedData.serviceAreas !== undefined) profileUpdateData.serviceAreas = validatedData.serviceAreas
