@@ -134,7 +134,6 @@ export const adminDashboardResolvers = {
       }
       try {
         const result = await PlatformUserService.searchUsers(searchTerm, limit, page);
-        console.log(result);
         return result;
       } catch (error) {
         //   logError("SearchAgentByNamePhone failed", error as Error, { searchTerm, limit, page });
