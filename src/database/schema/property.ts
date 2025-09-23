@@ -86,7 +86,7 @@ const geometry = customType<{ data: string }>({
 // Properties table - Enhanced with all UI fields
 export const properties = pgTable("properties", {
   id: uuid("id").defaultRandom().primaryKey(),
-  listingId : serial("property_id"),
+  listingId : serial("listing_id"),
   title: text("title"),
   description: text("description"),
   propertyType: propertyTypeEnum("property_type").notNull(),

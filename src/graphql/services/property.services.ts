@@ -530,6 +530,7 @@ export class PropertyService {
             const [property] = await db.execute(sql`
                 SELECT
                   p.id,
+                  p.listing_id as "listingId",
                   p.title,
                   p.description,
                   p.property_type as "propertyType",
