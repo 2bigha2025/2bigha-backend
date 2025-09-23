@@ -191,6 +191,8 @@ type owner {
   firstName: String
   lastName: String
   phone: String
+  avatar : String
+  role : String
 }
 
 type properties {

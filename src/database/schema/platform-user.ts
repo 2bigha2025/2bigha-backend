@@ -1,5 +1,5 @@
 import { pgEnum, pgTable, serial, text, timestamp, boolean, jsonb, uuid, integer } from "drizzle-orm/pg-core"
-
+import { adminUsers } from "./admin-user"
 // Platform user role enum - for regular platform users
 export const platformUserRoleEnum = pgEnum("platform_user_roles", ["OWNER", "AGENT", "USER"])
 
@@ -19,6 +19,7 @@ export const platformUsers = pgTable("platform_users", {
 
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdByAdminId:uuid("created_by_admin_id").references(() => adminUsers.id, { onDelete: "set null" })
 })
 
 // Platform user profiles table
