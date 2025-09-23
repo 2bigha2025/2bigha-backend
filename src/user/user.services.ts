@@ -38,8 +38,6 @@ export class PlatformUserService {
             // Hash password
             const hashedPassword = await bcrypt.hash(validatedData.password, 12)
 
-            console.log(userData);
-
 			// Handle optional avatar upload to Azure (users folder)
 			let avatarUrl: string | undefined
 			const normalizedRole = ((validatedData.role || "USER").toUpperCase() as "OWNER" | "AGENT" | "USER")
