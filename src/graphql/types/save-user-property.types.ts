@@ -19,7 +19,6 @@ type location {
 }
 
 input SaveUserPropertyInput {
-  userId: String
   propertyId: String
   category: String
   notes: String
