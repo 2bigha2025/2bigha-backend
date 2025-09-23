@@ -619,9 +619,7 @@ export class PropertyService {
         status: "draft" | "published"
     ) {
         const propertyId = uuidv4();
-
         const images = propertyData.images;
-
         const parse = await parsePropertyPolygon(propertyData?.map);
 
         let processedImages: PropertyImageData[] = [];
