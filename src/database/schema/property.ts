@@ -143,6 +143,7 @@ export const properties = pgTable("properties", {
   // References to platform users
   createdByAdminId: uuid("created_by_admin_id").references(() => adminUsers.id, { onDelete: "set null" }),
   createdByUserId: uuid("created_by_user_id").references(() => platformUsers.id, { onDelete: "set null" }),
+  ownerId:uuid("owner_id").references(() => platformUsers.id, { onDelete: "cascade" }),
   approvalStatus: approvalStatusEnum("approval_status").notNull().default("PENDING"), // Pending, Approved, Flagged
   approvalMessage: text("approval_message"), // Message from admin during approval/rejection
   approvedBy: uuid("approved_by").references(() => adminUsers.id),
