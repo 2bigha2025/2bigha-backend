@@ -665,6 +665,7 @@ export class PropertyService {
                 createdByType: "ADMIN",
                 createdByAdminId: userID,
                 approvalStatus: "PENDING",
+                ownerId : propertyData.propertyDetailsSchema.ownerId,
             }).returning({listing_id:properties.listingId});
 
             const generateSeo = await SeoGenerator.generateSEOFields(
@@ -802,8 +803,6 @@ export class PropertyService {
                 description: generateSeo.seoDescription,
             })
             .where(eq(properties.listingId, createdProperty[0].listing_id));
-
-            console.log('>>>>>>>createdProperty>>>>>>',createdProperty)
 
             await tx.insert(propertySeo).values({
                 propertyId,
