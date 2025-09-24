@@ -1,7 +1,7 @@
 import { GraphQLError } from "graphql";
 import { AdminAuthService } from "../services/auth.service";
 import { createSession } from "../../config/auth";
-
+import { PlatformUserService } from "../../user/user.services";
 export interface AdminContext {
     admin?: {
         adminId: string;
@@ -213,8 +213,64 @@ export const adminAuthResolvers = {
                     extensions: { code: "INTERNAL_ERROR" },
                 });
             }
-        },
-
+        },        adminCreateUser: async (
+            _: any,
+            { input }: { input: any },
+            context: AdminContext
+          ) => {
+            try {
+              if (!context.admin?.adminId) {
+                throw new GraphQLError("Not Authenticated", {
+                  extensions: { code: "UNAUTHENTICATED" },
+                });
+              }
+      
+              // Extract user data and profile data from input
+              const { profile, ...userData } = input;
+              const createUserData = {
+                ...userData,
+                phone: profile?.phone,
+                profileImage: profile?.avatar,
+              };
+      
+              const user = await PlatformUserService.createUser(createUserData, context.admin?.adminId);
+              
+              // Get the full user with profile
+              const fullUser = await PlatformUserService.findUserById(user.id);
+              
+              return {
+                success: true,
+                message: "Account created successfully",
+                user: {
+                  id: fullUser?.id.toString(),
+                  uuid: fullUser?.id, // Using id as uuid since uuid field doesn't exist
+                  email: fullUser?.email,
+                  firstName: fullUser?.firstName,
+                  lastName: fullUser?.lastName,
+                  role: fullUser?.role,
+                  isActive: fullUser?.isActive,
+                  isVerified: fullUser?.isVerified,
+                  emailVerifiedAt: fullUser?.emailVerifiedAt?.toISOString(),
+                  lastLoginAt: fullUser?.lastLoginAt?.toISOString(),
+                  twoFactorEnabled: fullUser?.twoFactorEnabled,
+                  licenseNumber: null, // These fields don't exist in the schema
+                  companyName: null,
+                  businessType: null,
+                  taxId: null,
+                  createdAt: fullUser?.createdAt.toISOString(),
+                  updatedAt: fullUser?.updatedAt.toISOString(),
+                  profile: fullUser?.profile,
+                },
+                requiresEmailVerification: !fullUser?.isVerified,
+                requiresPhoneVerification: false,
+              };
+            } catch (error) {
+              throw new GraphQLError((error as Error).message, {
+                extensions: { code: "SIGNUP_FAILED" },
+              });
+            }
+          },
+            
         verifyAdminOTP: async (_: any, { input }: { input: any }) => {
             const { email, otp, type } = input;
 
