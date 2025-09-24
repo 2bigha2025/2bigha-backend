@@ -101,7 +101,7 @@ export class BlogService {
     let imageUrl = input.image
     if(input.featuredImage){
       const azureStorage = new AzureStorageService()
-      const uploadedImage = await azureStorage.uploadFile(input.featuredImage.file, "blogs")
+      const uploadedImage = await azureStorage.uploadFile(input.featuredImage.file, "blogs",true)
       imageUrl = uploadedImage[3].url
     }
 
