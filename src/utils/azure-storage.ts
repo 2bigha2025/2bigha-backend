@@ -118,7 +118,7 @@ export class AzureStorageService {
 
   // Upload single file with multiple variants
   // Upload single file with multiple WebP variants
-  async uploadFile(file: File, folder = "properties", bypassCompression = false): Promise<UploadResult[]> {
+  async uploadFile(file: File, folder = "properties"): Promise<UploadResult[]> {
     const { filename, mimetype, encoding, createReadStream } = file;
 
     const validation = this.validateImageFile(file);
@@ -156,42 +156,29 @@ export class AzureStorageService {
         let processedBuffer: Buffer;
         let width: number;
         let height: number;
-        let extension = "webp";
-    
-        if (bypassCompression) {
-          // 🚀 Directly use the original buffer (no sharp)
-          processedBuffer = buffer;
-          extension = filename.split(".").pop() || "bin"; // keep original extension
-          const image = sharp(buffer);
-          const metadata = await image.metadata();
-          width = metadata.width || 0;
-          height = metadata.height || 0;
-        } else {
-          // 🔧 Use sharp compression as before
-          const processed = await sharp(buffer)
-            .resize(variant.width, variant.height, {
-              fit: "inside",
-              withoutEnlargement: true,
-            })
-            .webp({ quality: variant.quality })
-            .toBuffer({ resolveWithObject: true });
-    
-          processedBuffer = processed.data;
-          width = processed.info.width;
-          height = processed.info.height;
-        }
-    
+
+        // Resize/convert without watermark for all variants
+        const processed = await sharp(buffer)
+          .resize(variant.width, variant.height, {
+            fit: "inside",
+            withoutEnlargement: true,
+          })
+          .webp({ quality: variant.quality })
+          .toBuffer({ resolveWithObject: true });
+
+        processedBuffer = processed.data;
+        width = processed.info.width;
+        height = processed.info.height;
+
+
         const variantFilename = `${baseFilename}-${variant.name}.${extension}`;
         const blobPath = `${folder}/${variantFilename}`;
-    
-        const blockBlobClient: BlockBlobClient =
-          this.containerClient.getBlockBlobClient(blobPath);
-    
+
+        const blockBlobClient: BlockBlobClient = this.containerClient.getBlockBlobClient(blobPath);
+
         await blockBlobClient.uploadData(processedBuffer, {
           blobHTTPHeaders: {
-            blobContentType: bypassCompression
-              ? mimetype // keep original mimetype
-              : "image/webp",
+            blobContentType: "image/webp",
             blobCacheControl: "public, max-age=31536000",
           },
           metadata: {
@@ -202,13 +189,13 @@ export class AzureStorageService {
             height: height.toString(),
           },
         });
-    
+
         const url = `${this.baseUrl}/${this.containerName}/${blobPath}`;
-    
+
         results.push({
           filename: baseFilename,
           originalName: filename,
-          mimetype: bypassCompression ? mimetype : "image/webp",
+          mimetype: "image/webp",
           encoding,
           url,
           size: processedBuffer.length,
@@ -216,7 +203,6 @@ export class AzureStorageService {
           height,
           variant: variant.name,
         });
-    
 
         console.log(`✅ Uploaded ${variant.name} variant: ${variantFilename}`);
       } catch (error) {

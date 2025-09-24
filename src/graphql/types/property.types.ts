@@ -144,7 +144,6 @@ type Property {
   adminNotes: String
   lastReviewedBy: ID
   lastReviewedAt: String
-  listingId : Int
  
 }
 type propertyUser {
@@ -226,7 +225,6 @@ input PropertyDetailsSchemaInput {
   areaUnit: String
   totalPrice: String
   pricePerUnit: String
-  ownerId: String
 }
 
 input ContactDetailsInput {

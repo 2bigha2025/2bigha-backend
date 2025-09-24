@@ -1,8 +1,8 @@
-import { and, eq, getTableColumns, ne, sql } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { db } from "../../database/connection";
 import { blogPosts, blogStatusEnum, blogPostCategories } from "../../database/schema/blog";
 import { AzureStorageService } from "../../utils/azure-storage";
-import { adminUsers } from "../../database/schema/admin-user";
+
 export class BlogService {
   static async generateSlug(title: string): Promise<string> {
     const base = title
@@ -164,18 +164,11 @@ export class BlogService {
   static async getAllBlogs(status?: string) {
     if (status) {
       return await db
-        .select({
-          ...getTableColumns(blogPosts),
-          authorName: sql`${adminUsers.firstName} || ' ' || ${adminUsers.lastName}`.as("authorName"),
-        }).from(blogPosts)
-        .leftJoin(adminUsers, eq(blogPosts.authorId, adminUsers.id))
+        .select()
+        .from(blogPosts)
         .where(eq(blogPosts.status, status));
     } else {
-      return await db.select({
-        ...getTableColumns(blogPosts),
-        authorName: sql`${adminUsers.firstName} || ' ' || ${adminUsers.lastName}`.as("authorName"),
-      }).from(blogPosts)
-      .leftJoin(adminUsers, eq(blogPosts.authorId, adminUsers.id))
+      return await db.select().from(blogPosts);
     }
   }
 }
