@@ -56,7 +56,7 @@ export class BlogService {
     const azureStorage = new AzureStorageService()
     let featuredImageUrl: string | null = null
     if (input.featuredImage?.file) {
-      const uploadedFile = await azureStorage.uploadFile(input.featuredImage.file, "blogs")
+      const uploadedFile = await azureStorage.uploadFile(input.featuredImage.file, "blogs",true)
       featuredImageUrl = uploadedFile?.[3]?.url ?? null
     }
 
@@ -101,7 +101,7 @@ export class BlogService {
     let imageUrl = input.image
     if(input.featuredImage){
       const azureStorage = new AzureStorageService()
-      const uploadedImage = await azureStorage.uploadFile(input.featuredImage.file, "blogs")
+      const uploadedImage = await azureStorage.uploadFile(input.featuredImage.file, "blogs",true)
       imageUrl = uploadedImage[3].url
     }
 
