@@ -1,9 +1,6 @@
 
 
 export const authTypeDefs = `#graphql
-scalar Date
-scalar Upload
-
 type Role {
   id: ID!
   name: String!
@@ -41,87 +38,7 @@ type Permission {
     rememberMe: Boolean
     ipAddress: String
   }
-  
-   
-  enum PlatformUserRole {
-    OWNER
-    AGENT
-    USER
-  }
 
-  type PlatformUser {
-    id: ID!
-    uuid: String!
-    email: String!
-    firstName: String
-    lastName: String
-    role: PlatformUserRole!
-    isActive: Boolean!
-    isVerified: Boolean!
-    emailVerifiedAt: String
-    lastLoginAt: String
-    twoFactorEnabled: Boolean!
-    createdAt: String!
-    updatedAt: String!
-    profile: PlatformUserProfile
-  }
-
-  type PlatformUserProfile {
-    id: ID!
-    bio: String
-    avatar: String
-    phone: String
-    address: String
-    city: String
-    state: String
-    country: String
-    pincode: String
-    website: String
-    socialLinks: JSON
-    preferences: JSON
-    specializations: JSON
-    serviceAreas: JSON
-    languages: JSON
-    experience: Int
-    rating: Int
-    totalReviews: Int
-    createdAt: String!
-    updatedAt: String!
-  }  
-
-  input PlatformUserProfileInput {
-    bio: String
-    avatar: Upload
-    phone: String
-    address: String
-    city: String
-    state: String
-    country: String
-    pincode: String
-    languages: JSON
-    experience: Int
-    rating: Int
-    totalReviews: Int
-  }
-
-  input PlatformUserInput {
-    email: String!
-    password: String!
-    firstName: String!
-    lastName: String!
-    role: PlatformUserRole
-    profile: PlatformUserProfileInput
-  }
-
-  type PlatformAuthResponse {
-    success: Boolean!
-    message: String!
-    token: String
-    refreshToken: String
-    user: PlatformUser
-    requiresEmailVerification: Boolean
-    requiresPhoneVerification: Boolean
-  }
 
 
 type User {
@@ -185,7 +102,6 @@ type ResendOTPResponse {
   # Auth Mutations
    type Mutation {
     adminLogin(input: AdminLoginInput!): AuthResponse!
-    adminCreateUser(input: PlatformUserInput!): PlatformAuthResponse!
     verifyAdminOTP(input: VerifyOTPInput!): AuthResponse!
     adminLogout(token: String!): AuthResponse!
     verifyOTP(input: VerifyOTPInput!): VerifyOTPResponse!
