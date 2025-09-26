@@ -1,30 +1,45 @@
+import { relations, sql, } from "drizzle-orm";
+import { customType, jsonb, pgTable, text, timestamp, uuid, boolean } from "drizzle-orm/pg-core";
 
+// Custom geometry type for PostGIS
+const geometry = customType<{ data: unknown }>({
+    dataType() {
+        return "geometry";
+    },
+});
 
-
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
-
-
-// GeoJSON collections table
-export const geojsonCollections = pgTable("geojson_collections", {
+// Collections table
+export const geojsonCollections = pgTable("geo_json_collectionss", {
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name").notNull(),
     description: text("description"),
-    data: text("data").notNull(), // JSON string of GeoJSON
+    data: jsonb("data").notNull(), // Store full FeatureCollection if needed
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
-})
+});
 
-// Individual features table for better querying
-export const geojsonFeatures = pgTable("geojson_features", {
+// Features table
+export const geojsonFeatures = pgTable("json_featuress", {
     id: uuid("id").defaultRandom().primaryKey(),
     collectionId: uuid("collection_id").references(() => geojsonCollections.id, { onDelete: "cascade" }),
     type: text("type").notNull(), // Point, LineString, Polygon, etc.
-    properties: text("properties").notNull(), // JSON string of properties
-    geometry: text("geometry").notNull(), // JSON string of geometry
-    bounds: text("bounds"), // JSON string of bounding box [minLng, minLat, maxLng, maxLat]
+    properties: jsonb("properties").notNull(), // Properties object
+    geometry: jsonb("geometry").notNull(),
+    geom: geometry("geom"),
+    bounds: jsonb("bounds"), // Store bbox as JSON array
+    isApproved: boolean("is_approved").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
-})
+});
 
-// Zod schemas for validation
+// Relations
+export const geojsonCollectionsRelations = relations(geojsonCollections, ({ many }) => ({
+    features: many(geojsonFeatures),
+}));
 
+export const geojsonFeaturesRelations = relations(geojsonFeatures, ({ one }) => ({
+    collection: one(geojsonCollections, {
+        fields: [geojsonFeatures.collectionId],
+        references: [geojsonCollections.id],
+    }),
+}));

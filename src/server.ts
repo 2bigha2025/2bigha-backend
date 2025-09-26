@@ -72,7 +72,7 @@ const startServer = async () => {
         })
     )
 
-    const PORT = process.env.ADMIN_PORT || 5000
+    const PORT = process.env.ADMIN_PORT || 5002
     httpServer.listen(PORT, () => {
         console.log(`🚀 Server ready at http://localhost:${PORT}/graphql`)
     })
