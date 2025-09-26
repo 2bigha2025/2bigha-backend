@@ -61,7 +61,6 @@ export class MapPropertiesService {
             // or appropriate import if using Drizzle
             const baseSelect:any = {
                 id: properties.id,
-                listing_id : properties.listingId,
                 title: properties.title,
                 description: properties.description,
                 propertyType: properties.propertyType,

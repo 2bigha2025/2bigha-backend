@@ -8,6 +8,7 @@ import { blogResolvers } from './blog.resolvers';
 import { mapPropertiesResolvers } from './map-properties.resolvers';
 import { seoResolvers } from './seo.resolvers';
 import { savedPropertiesResolvers } from './saved-properties.resolvers';
+import { geoJsonResolvers } from './geo-json.resolvers';
 
-export const resolvers: any = mergeResolvers([adminAuthResolvers, propertyResolvers, rbacResolvers, propertyApprovalResolvers, adminDashboardResolvers, mapPropertiesResolvers, blogResolvers,seoResolvers,savedPropertiesResolvers]);
+export const resolvers: any = mergeResolvers([adminAuthResolvers, propertyResolvers, rbacResolvers, propertyApprovalResolvers, adminDashboardResolvers, mapPropertiesResolvers, blogResolvers, seoResolvers, savedPropertiesResolvers, geoJsonResolvers]);
 

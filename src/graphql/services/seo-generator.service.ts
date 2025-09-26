@@ -13,7 +13,7 @@ export class SeoGenerator {
             .trim();
     }
 
-    static async generateUniqueSlug(baseText: string,propertyId : number): Promise<string> {
+    static async generateUniqueSlug(baseText: string,propertyId : string): Promise<string> {
         const baseSlug = this.generateSlug(baseText);
         return `${baseSlug}-${propertyId}`;
     }
@@ -28,13 +28,13 @@ export class SeoGenerator {
     }
 
     static async generateSEOFields(
-        listingId : number,
+        propertyId : string,
         propertyType: string,
         city?: string,
         district?: string,
     ) {
         const title = `${propertyType} land ${city ? `in ${city}` : ""}${district ? `, ${district}` : ""}`.trim();
-        const slug = await this.generateUniqueSlug(title,listingId);
+        const slug = await this.generateUniqueSlug(title,propertyId);
 
         return {
             title,

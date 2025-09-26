@@ -1,4 +1,5 @@
 
+
 export const adminDashboardTypeDefs = `#graphql
   # Admin Dashboard Types
   type AdminDashboardStats {
@@ -12,53 +13,6 @@ export const adminDashboardTypeDefs = `#graphql
     topCities: [CityStats!]!
     agentPerformance: [AgentPerformance!]!
   }
-
-   enum PlatformUserRole {
-    OWNER
-    AGENT
-    USER
-  }
-
-  type PlatformUser {
-    id: ID!
-    uuid: String!
-    email: String!
-    firstName: String
-    lastName: String
-    role: PlatformUserRole!
-    isActive: Boolean!
-    isVerified: Boolean!
-    emailVerifiedAt: String
-    lastLoginAt: String
-    twoFactorEnabled: Boolean!
-    createdAt: String!
-    updatedAt: String!
-    profile: PlatformUserProfile
-  }
-
-  type PlatformUserProfile {
-    id: ID!
-    bio: String
-    avatar: String
-    phone: String
-    address: String
-    city: String
-    state: String
-    country: String
-    pincode: String
-    website: String
-    socialLinks: JSON
-    preferences: JSON
-    specializations: JSON
-    serviceAreas: JSON
-    languages: JSON
-    experience: Int
-    rating: Int
-    totalReviews: Int
-    createdAt: String!
-    updatedAt: String!
-  }  
-
 
   type DashboardMetric {
     value: Int!
@@ -164,12 +118,7 @@ export const adminDashboardTypeDefs = `#graphql
     adminDashboardStats(
       filters: AdminDashboardFilters
     ): AdminDashboardStats!
-    # Search agents by name, phone, or email with pagination
-    SearchAgentByNamePhone(
-      limit: Int = 10
-      page: Int = 1
-      searchTerm: String!
-    ): SearchUsersResult!
+
     # Get real-time dashboard metrics
     realTimeDashboardMetrics: AdminDashboardStats!
 
@@ -218,17 +167,5 @@ export const adminDashboardTypeDefs = `#graphql
     inquiries: Int!
     averagePrice: Float!
     growth: Float!
-  }
-
-  # Search results wrapper for platform users
-  type SearchUsersResult {
-    data: [PlatformUser!]!
-    meta: SearchMeta!
-  }
-
-  type SearchMeta {
-    page: Int!
-    limit: Int!
-    totalPages: Int!
   }
 `

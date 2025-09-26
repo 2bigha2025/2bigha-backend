@@ -10,3 +10,4 @@ export * from './property-approval'
 export * from './static-page-seo'
 export * from './saved-properties'
 export * from "./seo"
+export * from "./geo-json"

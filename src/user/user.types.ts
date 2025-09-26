@@ -132,7 +132,6 @@ type Property {
   lastReviewedBy: ID
   lastReviewedAt: String
   saved: Boolean
-  listingId : Int
  
 }
 type properties {
@@ -191,8 +190,6 @@ type owner {
   firstName: String
   lastName: String
   phone: String
-  avatar : String
-  role : String
 }
 
 type properties {
