@@ -1,138 +1,241 @@
 
-import { eq, desc, like } from "drizzle-orm"
-import type { FeatureCollection, BBox } from "geojson"
+import { eq, sql } from "drizzle-orm";
 import { db } from "../../database/connection"
 import { geojsonCollections, geojsonFeatures } from '../../database/schema/geo-json'
-// Collection operations
-export async function createCollection(data: Omit<NewGeojsonCollection, "id" | "createdAt" | "updatedAt">) {
-    const [collection] = await db
-        .insert(geojsonCollections)
-        .values({
-            ...data,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-        })
-        .returning()
-    return collection
-}
+import { v4 as uuidv4 } from "uuid";
+import { geometry } from "drizzle-orm/pg-core";
 
-export async function getCollections() {
-    return await db.select().from(geojsonCollections).orderBy(desc(geojsonCollections.createdAt))
-}
-
-export async function getCollectionById(id: number) {
-    const [collection] = await db.select().from(geojsonCollections).where(eq(geojsonCollections.id, id))
-    return collection
-}
-
-export async function updateCollection(id: number, data: Partial<Omit<NewGeojsonCollection, "id" | "createdAt">>) {
-    const [collection] = await db
-        .update(geojsonCollections)
-        .set({ ...data, updatedAt: new Date() })
-        .where(eq(geojsonCollections.id, id))
-        .returning()
-    return collection
-}
-
-export async function deleteCollection(id: number) {
-    await db.delete(geojsonCollections).where(eq(geojsonCollections.id, id))
-}
-
-export async function searchCollections(query: string) {
-    return await db
-        .select()
-        .from(geojsonCollections)
-        .where(like(geojsonCollections.name, `%${query}%`))
-        .orderBy(desc(geojsonCollections.createdAt))
-}
-
-// Feature operations
-export async function createFeature(data: Omit<NewGeojsonFeature, "id" | "createdAt">) {
-    const [feature] = await db
-        .insert(geojsonFeatures)
-        .values({
-            ...data,
-            createdAt: new Date(),
-        })
-        .returning()
-    return feature
-}
-
-export async function getFeaturesByCollection(collectionId: number) {
-    return await db
-        .select()
-        .from(geojsonFeatures)
-        .where(eq(geojsonFeatures.collectionId, collectionId))
-        .orderBy(desc(geojsonFeatures.createdAt))
-}
-
-export async function updateFeature(id: number, data: Partial<Omit<NewGeojsonFeature, "id" | "createdAt">>) {
-    const [feature] = await db.update(geojsonFeatures).set(data).where(eq(geojsonFeatures.id, id)).returning()
-    return feature
-}
-
-export async function deleteFeature(id: number) {
-    await db.delete(geojsonFeatures).where(eq(geojsonFeatures.id, id))
-}
-
-// Utility functions for GeoJSON processing
-export function calculateBounds(geometry: any): BBox | null {
-    if (!geometry || !geometry.coordinates) return null
-
-    let minLng = Number.POSITIVE_INFINITY,
-        minLat = Number.POSITIVE_INFINITY,
-        maxLng = Number.NEGATIVE_INFINITY,
-        maxLat = Number.NEGATIVE_INFINITY
-
-    const processCoordinates = (coords: any) => {
-        if (Array.isArray(coords[0])) {
-            coords.forEach(processCoordinates)
-        } else {
-            const [lng, lat] = coords
-            minLng = Math.min(minLng, lng)
-            maxLng = Math.max(maxLng, lng)
-            minLat = Math.min(minLat, lat)
-            maxLat = Math.max(maxLat, lat)
+export const GeoJsonService = {
+    // Collections
+    async getCollection(id: string) {
+        try {
+            return db.query.geojsonCollections.findFirst({
+                where: eq(geojsonCollections.id, id),
+                with: { features: true },
+            });
+        } catch (error) {
+            throw new Error(`Failed to get collection: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
-    }
+    },
 
-    processCoordinates(geometry.coordinates)
+    async listCollections() {
+        try {
+            return db.query.geojsonCollections.findMany({
+                with: { features: true },
+            });
+        } catch (error) {
+            throw new Error(`Failed to list collections: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    },
 
-    return [minLng, minLat, maxLng, maxLat]
-}
+    async createCollection(input: { name: string; description?: string; data: string }) {
+        try {
+            const [collection] = await db
+                .insert(geojsonCollections)
+                .values({
+                    name: input.name,
+                    description: input.description, data: []
+                })
+                .returning();
+            return collection;
+        } catch (error) {
+            console.log(error)
+            throw new Error(`Failed to create collection: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    },
 
-export async function saveGeoJSONCollection(name: string, description: string, geojson: FeatureCollection) {
-    // Create the collection
-    const collection = await createCollection({
-        name,
-        description,
-        data: JSON.stringify(geojson),
-    })
+    async updateCollection(id: string, input: { name: string; description?: string; data: string }) {
+        try {
+            const [updated] = await db
+                .update(geojsonCollections)
+                .set({ ...input, updatedAt: new Date() })
+                .where(eq(geojsonCollections.id, id))
+                .returning();
+            return updated;
+        } catch (error) {
+            throw new Error(`Failed to update collection: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    },
 
-    // Save individual features for better querying
-    if (geojson.features && collection) {
-        for (const feature of geojson.features) {
-            const bounds = calculateBounds(feature.geometry)
-            await createFeature({
-                collectionId: collection.id,
+    async deleteCollection(id: string) {
+        try {
+            await db.delete(geojsonCollections).where(eq(geojsonCollections.id, id));
+            return true;
+        } catch (error) {
+            throw new Error(`Failed to delete collection: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    },
+
+    // Features
+    async getFeature(id: string) {
+        try {
+            return db.query.geojsonFeatures.findFirst({
+                where: eq(geojsonFeatures.id, id),
+                with: { collection: true },
+            });
+        } catch (error) {
+            throw new Error(`Failed to get feature: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    },
+
+    async listFeatures(collectionId: string) {
+        try {
+            return db.query.geojsonFeatures.findMany({
+                where: eq(geojsonFeatures.collectionId, collectionId),
+            });
+        } catch (error) {
+            throw new Error(`Failed to list features: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    },
+
+    async createFeature(input: {
+        collectionId: string;
+        type: string;
+        properties: string;
+        geometry: string;
+        bounds?: string;
+    }) {
+        try {
+            const featureData = {
+                id: uuidv4(),
+                collectionId: input.collectionId,
+                type: input.type,
+                properties: JSON.parse(input.properties),
+                geometry: JSON.parse(input.geometry),
+                bounds: input.bounds ? JSON.parse(input.bounds) : null,
+            };
+
+            const [feature] = await db
+                .insert(geojsonFeatures)
+                .values(featureData)
+                .returning();
+            return feature;
+        } catch (error) {
+            console.log(error)
+            throw new Error(`Failed to create feature: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    },
+
+    async updateFeature(
+        id: string,
+        input: { type: string; properties: string; geometry: string; bounds?: string }
+    ) {
+        try {
+            const updateData = {
+                type: input.type,
+                properties: JSON.parse(input.properties),
+                geojson: JSON.parse(input.geometry),
+                bounds: input.bounds ? JSON.parse(input.bounds) : null,
+                updatedAt: new Date()
+            };
+
+            const [updated] = await db
+                .update(geojsonFeatures)
+                .set(updateData)
+                .where(eq(geojsonFeatures.id, id))
+                .returning();
+            return updated;
+        } catch (error) {
+            throw new Error(`Failed to update feature: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    },
+
+    async deleteFeature(id: string) {
+        try {
+            await db.delete(geojsonFeatures).where(eq(geojsonFeatures.id, id));
+            return true;
+        } catch (error) {
+            throw new Error(`Failed to delete feature: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    },
+
+    // Bulk operations
+    async bulkCreateFeatures(features: Array<{
+        collectionId: string;
+        type: string;
+        properties: string;
+        geometry: string;
+        bounds?: string;
+    }>) {
+        try {
+            const featuresWithIds = features.map(feature => {
+                // Parse geometry if it's a string, otherwise use as-is
+                const geometryObj = typeof feature.geometry === 'string' ?
+                    JSON.parse(feature.geometry) : feature.geometry;
+
+                return {
+                    id: uuidv4(),
+                    collectionId: feature.collectionId,
+                    type: feature.type,
+                    properties: typeof feature.properties === 'string' ?
+                        JSON.parse(feature.properties) : feature.properties,
+                    geometry: geometryObj,
+                    geom: sql`ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(geometryObj)}), 4326)`,
+                    bounds: feature.bounds ? JSON.parse(feature.bounds) : null,
+                };
+            });
+
+            const createdFeatures = await db
+                .insert(geojsonFeatures)
+                .values(featuresWithIds)
+                .returning();
+
+            return createdFeatures;
+        } catch (error) {
+            console.log(error)
+            throw new Error(`Failed to bulk create features: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    },
+
+    // Spatial operations
+    async findFeaturesWithinRadius(lat: number, lng: number, radiusKm: number = 100) {
+        try {
+            const radiusMeters = radiusKm * 1000;    // Convert km to meters
+            // Raw SQL query using PostGIS ST_DWithin function
+            // Ensure that the geom column is indexed with a spatial index for performance
+            // Example: CREATE INDEX idx_geojson_features_geom ON geo_json_features USING GIST(geom);
+            const results = await db.select()
+                .from(geojsonFeatures)
+                .where(sql`
+                    ST_DWithin(
+                        ${geojsonFeatures.geom}::geography,
+                        ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography,
+                        ${radiusMeters}
+                    )
+                `);
+            console.log(results)
+            console.log(results.length);
+            return results;
+        } catch (error) {
+            console.log(error);
+            throw new Error(`Failed to find features within radius: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    },
+
+    // Import GeoJSON data
+    async importGeoJsonData(collectionId: string, geoJsonData: any) {
+        try {
+            // Parse GeoJSON if it's a string
+            const parsedData = typeof geoJsonData === 'string' ? JSON.parse(geoJsonData) : geoJsonData;
+
+            // Validate that it's valid GeoJSON
+            if (!parsedData.type || !parsedData.features) {
+                throw new Error('Invalid GeoJSON format');
+            }
+
+            // Convert GeoJSON features to our feature format
+            const features = parsedData.features.map((feature: any) => ({
+                collectionId,
                 type: feature.geometry.type,
                 properties: JSON.stringify(feature.properties || {}),
                 geometry: JSON.stringify(feature.geometry),
-                bounds: bounds ? JSON.stringify(bounds) : null,
-            })
+                bounds: feature.bbox ? JSON.stringify(feature.bbox) : undefined
+            }));
+
+            // Bulk create features
+            return await this.bulkCreateFeatures(features);
+        } catch (error) {
+            throw new Error(`Failed to import GeoJSON data: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
-    }
-
-    return collection
-}
-
-export async function getGeoJSONCollection(id: number): Promise<FeatureCollection | null> {
-    const collection = await getCollectionById(id)
-    if (!collection) return null
-
-    try {
-        return JSON.parse(collection.data) as FeatureCollection
-    } catch {
-        return null
-    }
-}
+    },
+};

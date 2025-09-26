@@ -17,6 +17,8 @@ import { blogResolvers } from './graphql/resolvers/blog.resolvers'
 import { blogTypeDefs } from './graphql/types/blog.types'
 import { userPropertyTypeDefs } from './graphql/types/save-user-property.types'
 import { savedPropertiesResolvers } from './graphql/resolvers/saved-properties.resolvers'
+import { geoJsonTypeDefs } from './graphql/types/geoJson.types'
+import { geoJsonResolvers } from './graphql/resolvers/geo-json.resolvers'
 
 dotenv.config()
 
@@ -35,12 +37,12 @@ const startServer = async () => {
 
     // Apply constraint directive and build schema
     const schema = makeExecutableSchema({
-        typeDefs: [platformUserTypeDefs, mapPropertiesTypeDefs,blogTypeDefs,userPropertyTypeDefs],
-        resolvers: [platformUserResolvers, mapPropertiesResolvers,blogResolvers,savedPropertiesResolvers],
+        typeDefs: [platformUserTypeDefs, mapPropertiesTypeDefs, blogTypeDefs, userPropertyTypeDefs, geoJsonTypeDefs],
+        resolvers: [platformUserResolvers, mapPropertiesResolvers, blogResolvers, savedPropertiesResolvers, geoJsonResolvers],
     })
 
     await constraintDirective()(schema)
-    
+
     const server = new ApolloServer<MyContext>({
         schema,
         plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
