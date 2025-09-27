@@ -1,10 +1,8 @@
-import { eq, and, or, like, sql, gt } from "drizzle-orm"
+import { eq, and, or, like, sql, gt, ilike } from "drizzle-orm"
 import { db } from "../database/connection"
 import * as schema from "../database/schema/index"
 import bcrypt from 'bcryptjs';
 import crypto from "crypto"
-
-
 import { logInfo, logError } from "../utils/logger"
 import { validateInput, createUserSchema, updateUserSchema, updateAddressInfoSchema, updateOnlinePresenceSchema, updateProfessionalInfoSchema, updateBasicInfoSchema } from "../utils/validation"
 import { azureEmailService } from "../../src/graphql/services/email.service"
@@ -37,23 +35,25 @@ export class PlatformUserService {
 
             // Hash password
             const hashedPassword = await bcrypt.hash(validatedData.password, 12)
-
 			// Handle optional avatar upload to Azure (users folder)
 			let avatarUrl: string | undefined
-			const normalizedRole = ((validatedData.role || "USER").toUpperCase() as "OWNER" | "AGENT" | "USER")
+            const normalizedRole = ((validatedData.role || "USER").toUpperCase() as "OWNER" | "AGENT" | "USER")
 			const resolveUpload = async (maybeUpload: any) => {
 				if (!maybeUpload) return null
 				return typeof maybeUpload?.promise === 'function' ? await maybeUpload.promise : maybeUpload
 			}
-			const profileUpload = await resolveUpload(userData.profileImage.file)
-			if (profileUpload) {
-				const variants = await azureStorage.uploadFile(profileUpload, "users")
-				const baseFilename = variants?.[0]?.filename
-				if (baseFilename) {
-					const urls = azureStorage.getAllVariantUrls(baseFilename, "users")
-					avatarUrl = urls.large || urls.original || Object.values(urls)[0]
-				}
-			}
+            // Safely resolve an optional uploaded file (may be undefined)
+            const profileImageFile = userData?.profileImage?.file ?? null
+            // console.log('profileImage.file ->', profileImageFile)
+            const profileUpload = await resolveUpload(profileImageFile)
+            if (profileUpload) {
+                const variants = await azureStorage.uploadFile(profileUpload, "users")
+                const baseFilename = variants?.[0]?.filename
+                if (baseFilename) {
+                    const urls = azureStorage.getAllVariantUrls(baseFilename, "users")
+                    avatarUrl = urls.large || urls.original || Object.values(urls)[0]
+                }
+            }
 
 			// Create user
 			const [newUser] = await db
@@ -177,10 +177,10 @@ export class PlatformUserService {
 
             // Build where clause once and reuse for count
             const whereClause = or(
-                like(platformUsers.firstName, wildcard),
-                like(platformUsers.lastName, wildcard),
-                like(platformUsers.email, wildcard),
-                like(platformUserProfiles.phone as any, wildcard),
+                ilike(platformUsers.firstName, wildcard),
+                ilike(platformUsers.lastName, wildcard),
+                ilike(platformUsers.email, wildcard),
+                ilike(platformUserProfiles.phone as any, wildcard),
             )
 
             const results = await db

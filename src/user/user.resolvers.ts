@@ -320,8 +320,15 @@ export const platformUserResolvers = {
                         extensions: { code: "VALIDATION_ERROR" },
                     });
                 }
-
-                const user = await PlatformUserService.createUser(input);
+                const {profile, ...userdata} = input;
+                const createUserData = {
+                    ...userdata, 
+                    phone: profile?.phone,
+                    profileImage: profile?.avatar,
+                    address : profile?.address,
+                }
+                 console.log(input,createUserData);
+                const user = await PlatformUserService.createUser(createUserData);
                 const sessionToken = PlatformUserService.createUserSession(
                     user.id,
                     user.email,
@@ -340,7 +347,6 @@ export const platformUserResolvers = {
                     token: sessionToken,
                     user: {
                         id: user.id.toString(),
-
                         email: user.email,
                         firstName: user.firstName,
                         lastName: user.lastName,
@@ -356,7 +362,7 @@ export const platformUserResolvers = {
                     email: input.email,
                     ip: context.ip,
                 });
-
+            
                 throw new GraphQLError((error as Error).message, {
                     extensions: { code: "SIGNUP_FAILED" },
                 });
