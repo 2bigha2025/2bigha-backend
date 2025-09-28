@@ -28,6 +28,7 @@ interface MapPropertyFilters {
 interface MapProperty {
     id: string
     address: string
+    listingId: number
     price: number
     beds?: number
     baths?: number
