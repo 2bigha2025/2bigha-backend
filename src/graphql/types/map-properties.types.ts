@@ -20,7 +20,7 @@ type PropertyImageVariants {
   # Map-specific property type optimized for rendering
   type MapProperty {
     id: ID!
-    listingId: Int!
+    listingId: Int
     price: Float!
     areaUnit: AreaUnit!
     images: [PropertyImage!]!
