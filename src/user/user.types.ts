@@ -83,7 +83,6 @@ type location {
 }
 type Property {
   id: ID!
-  listingId: Int
   uuid: String
   title: String!
   description: String!
