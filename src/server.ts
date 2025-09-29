@@ -16,68 +16,73 @@ import { getSession } from './config/auth'
 dotenv.config()
 
 interface MyContext {
-    token?: string
-    admin?: {
-        adminId: string
-        email: string
-        roles: string[]
-    }
+  token?: string
+  admin?: {
+    adminId: string
+    email: string
+    roles: string[]
+  }
 }
 
 const startServer = async () => {
-    const app = express()
-    const httpServer = http.createServer(app)
+  const app = express()
+  const httpServer = http.createServer(app)
 
-    // Apply constraint directive and build schema
-    const schema = makeExecutableSchema({
-        typeDefs,
-        resolvers,
+  // ✅ Build schema with constraint directive
+  const schema = makeExecutableSchema({
+    typeDefs,
+    resolvers,
+  })
+  await constraintDirective()(schema)
+
+  const server = new ApolloServer<MyContext>({
+    schema,
+    plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
+  })
+
+  await server.start()
+
+  // ✅ Middleware order matters
+  app.use(cors())
+
+  // Increase payload size limit (JSON + URL-encoded)
+  app.use(express.json({ limit: '100mb' }))
+  app.use(express.urlencoded({ limit: '100mb', extended: true }))
+
+  // Handle GraphQL file uploads
+  app.use(graphqlUploadExpress({ maxFileSize: 100 * 1024 * 1024, maxFiles: 10 }))
+
+  // Apollo middleware
+  app.use(
+    '/graphql',
+    expressMiddleware(server, {
+      context: async ({ req }) => {
+        const token =
+          req.headers.authorization?.replace('Bearer ', '') || req.headers.token
+
+        let admin = null
+        if (token) {
+          const session = getSession(token as string)
+          if (session) {
+            admin = {
+              adminId: session.userId,
+              email: session.email,
+              roles: session.role.split(','),
+            }
+          }
+        }
+
+        return { token, admin, req }
+      },
     })
+  )
 
-    await constraintDirective()(schema)
-
-    const server = new ApolloServer<MyContext>({
-        schema,
-        plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
-    })
-
-    await server.start()
-
-    // ✅ Middleware order matters
-    app.use(cors())
-    app.use(express.json())
-    app.use(graphqlUploadExpress({ maxFileSize: 10 * 1024 * 1024, maxFiles: 5 }))
-
-    app.use(
-        '/graphql',
-        expressMiddleware(server, {
-            context: async ({ req }) => {
-                const token =
-                    req.headers.authorization?.replace('Bearer ', '') || req.headers.token
-
-                let admin = null
-                if (token) {
-                    const session = getSession(token as string)
-                    if (session) {
-                        admin = {
-                            adminId: session.userId,
-                            email: session.email,
-                            roles: session.role.split(','),
-                        }
-                    }
-                }
-
-                return { token, admin, req }
-            },
-        })
-    )
-
-    const PORT = process.env.ADMIN_PORT || 5002
-    httpServer.listen(PORT, () => {
-        console.log(`🚀 Server ready at http://localhost:${PORT}/graphql`)
-    })
+  const PORT = process.env.ADMIN_PORT || 5002
+  httpServer.listen(PORT, () => {
+    console.log(`🚀 Server ready at http://localhost:${PORT}/graphql`)
+  })
 }
 
 startServer().catch((err) => {
-    console.error('Failed to start server:', err)
+  console.error('Failed to start server:', err)
 })
