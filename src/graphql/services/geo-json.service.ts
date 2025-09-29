@@ -1,5 +1,4 @@
-
-import { eq, sql } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "../../database/connection"
 import { geojsonCollections, geojsonFeatures } from '../../database/schema/geo-json'
 import { v4 as uuidv4 } from "uuid";
@@ -236,6 +235,144 @@ export const GeoJsonService = {
             return await this.bulkCreateFeatures(features);
         } catch (error) {
             throw new Error(`Failed to import GeoJSON data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    },
+
+    async listCollectionsWithFeatureCount({
+        page = 1,
+        limit = 10,
+        search,
+        sortBy = 'name',
+        sortOrder = 'asc'
+    }: {
+        page?: number;
+        limit?: number;
+        search?: string;
+        sortBy?: 'name' | 'createdAt';
+        sortOrder?: 'asc' | 'desc';
+    }) {
+        try {
+            // Calculate offset
+            const offset = (page - 1) * limit;
+
+            // Build base query for total count
+            let countQuery = db.select({
+                count: sql<number>`count(*)::int`
+            }).from(geojsonCollections);
+
+            // Build base query for collections with feature count
+            let query = db
+                .select({
+                    id: geojsonCollections.id,
+                    name: geojsonCollections.name,
+                    description: geojsonCollections.description,
+                    data: geojsonCollections.data,
+                    createdAt: geojsonCollections.createdAt,
+                    updatedAt: geojsonCollections.updatedAt,
+                    featureCount: sql<number>`count(${geojsonFeatures.id})::int`
+                })
+                .from(geojsonCollections)
+                .leftJoin(geojsonFeatures, eq(geojsonCollections.id, geojsonFeatures.collectionId))
+                .groupBy(geojsonCollections.id);
+
+            // Apply search filter if provided
+            if (search) {
+                const searchCondition = sql`${geojsonCollections.name} ILIKE ${`%${search}%`} OR 
+                    COALESCE(${geojsonCollections.description}, '') ILIKE ${`%${search}%`}`;
+                query = query.where(searchCondition);
+                countQuery = countQuery.where(searchCondition);
+            }
+
+            // Apply sorting
+            const sortColumn = sortBy === 'name' ? geojsonCollections.name : geojsonCollections.createdAt;
+            query = query.orderBy(
+                sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn)
+            );
+
+            // Apply pagination
+            query = query.limit(limit).offset(offset);
+
+            // Execute queries in parallel
+            const [collections, [{ count }]] = await Promise.all([
+                query,
+                countQuery
+            ]);
+
+            return {
+                collections,
+                pagination: {
+                    total: count,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(count / limit)
+                }
+            };
+        } catch (error) {
+            throw new Error(`Failed to list collections with feature count: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    },
+
+    async listFeaturesWithPagination({
+        page = 1,
+        limit = 10,
+        search,
+        sortBy = 'createdAt',
+        sortOrder = 'desc'
+    }: {
+        page?: number;
+        limit?: number;
+        search?: string;
+        sortBy?: 'type' | 'createdAt' | 'updatedAt';
+        sortOrder?: 'asc' | 'desc';
+    }) {
+        try {
+            const offset = (page - 1) * limit;
+
+            // Build base query for total count and features
+            const baseConditions = [];
+
+            // Apply search filter if provided
+            if (search) {
+                baseConditions.push(
+                    sql`${geojsonFeatures.type} ILIKE ${`%${search}%`} OR 
+                    ${geojsonFeatures.properties}::text ILIKE ${`%${search}%`}`
+                );
+            }
+
+            // Build count query
+            const countResult = await db
+                .select({ count: sql<number>`count(*)::int` })
+                .from(geojsonFeatures)
+                .where(baseConditions.length > 0 ? sql`${baseConditions.map((c, i) => i === 0 ? c : sql` AND ${c}`)}` : undefined);
+
+            // Build main query with sorting
+            const sortColumn =
+                sortBy === 'type' ? geojsonFeatures.type :
+                    sortBy === 'updatedAt' ? geojsonFeatures.updatedAt :
+                        geojsonFeatures.createdAt;
+
+            const features = await db
+                .select()
+                .from(geojsonFeatures)
+                .where(baseConditions.length > 0 ? sql`${baseConditions.map((c, i) => i === 0 ? c : sql` AND ${c}`)}` : undefined)
+                .orderBy(sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn))
+                .limit(limit)
+                .offset(offset);
+
+            const count = countResult[0]?.count || 0;
+            console.log(features)
+
+            return {
+                features,
+                pagination: {
+                    total: count,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(count / limit)
+                }
+            };
+        } catch (error) {
+            throw new Error(`Failed to list features with pagination: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     },
 };
