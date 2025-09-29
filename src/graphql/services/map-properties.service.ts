@@ -28,6 +28,7 @@ interface MapPropertyFilters {
 interface MapProperty {
     id: string
     address: string
+    listingId: number
     price: number
     beds?: number
     baths?: number
@@ -61,6 +62,7 @@ export class MapPropertiesService {
             // or appropriate import if using Drizzle
             const baseSelect:any = {
                 id: properties.id,
+                listing_id : properties.listingId,
                 title: properties.title,
                 description: properties.description,
                 propertyType: properties.propertyType,

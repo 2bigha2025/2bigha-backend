@@ -1,4 +1,4 @@
-import { eq, and, gte, lte, like, desc, asc, sql, or, ilike } from "drizzle-orm";
+import { eq, and, gte, lte, like, desc, asc, sql, or, ilike} from "drizzle-orm";
 import { db } from "../../database/connection";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -12,7 +12,7 @@ import {
 } from "../../database/schema/index";
 import { azureStorage, FileUpload } from "../../../src/utils/azure-storage";
 import { SeoGenerator } from "./seo-generator.service";
-import { error } from "console";
+
 
 interface PropertyImageData {
     imageUrl: string;
@@ -518,22 +518,6 @@ export class PropertyService {
 
             const property = await this.getPropertyById(seo.propertyId);
 
-            if (property?.property?.createdByType === "ADMIN") {
-                let adminProperty = property;
-
-                const owner = {
-                    id: property?.property?.id,
-                    email: "info@2bigha.ai",
-                    firstName: property?.property?.ownerName,
-                    lastName: null,
-                    phone: property?.property?.ownerPhone,
-                };
-
-                adminProperty.owner = owner;
-
-                return adminProperty;
-            }
-
             return property;
         } catch (error) {
             console.error("❌ Failed to fetch property by slug:", error);
@@ -543,27 +527,65 @@ export class PropertyService {
 
     static async getPropertyById(id: string) {
         try {
-            const [property] = await db
-                .select({
-                    property: properties,
-                    owner: {
-                        id: platformUsers?.id,
-                        email: platformUsers?.email,
-                        firstName: platformUsers?.firstName,
-                        lastName: platformUsers?.lastName,
-                        phone: platformUserProfiles?.phone,
-                    },
-                })
-                .from(properties)
-                .leftJoin(
-                    platformUsers,
-                    eq(properties.createdByUserId, platformUsers.id)
-                )
-                .leftJoin(
-                    platformUserProfiles,
-                    eq(platformUsers.id, platformUserProfiles.userId)
-                )
-                .where(eq(properties.id, id));
+            const [property] = await db.execute(sql`
+                SELECT
+                  p.id,
+                  p.listing_id as "listingId",
+                  p.title,
+                  p.description,
+                  p.property_type as "propertyType",
+                  p.price,
+                  p.price_per_unit as "PricePerUnit",
+                  p.area,
+                  p.state as "status",
+                  p.area_unit as "areaUnit",
+                  p.khasra_number as "khasraNumber",
+                  p.murabba_number as "murabbaNumber",
+                  p.khewat_number as "khewatNumber",
+                  p.address as "address",
+                  p.city,
+                  p.created_by_type as "createdByType",
+                  p.district,
+                  p.state,
+                  p.is_verified as "isVerified",
+                  p.listing_as as "listingAs",
+                  p.is_active as "isActive",
+                  p.country,
+                  p.pin_code as "pinCode",
+                  p.location,
+                  p.owner_name,
+                  p.geo_json as "geoJson",
+                  p.calculated_area as "calculatedArea",
+                  p.admin_notes as "adminNotes",
+                  p.last_reviewed_by as "lastReviewedBy",
+                  p.last_reviewed_at as "lastReviewedAt",
+                  COALESCE(u.id, o.id) AS owner_id,
+                  COALESCE(u.email, o.email) AS email,
+                  COALESCE(u.first_name, o.first_name,p.owner_name) AS first_name,
+                  COALESCE(u.last_name, o.last_name) AS last_name,
+                  COALESCE(up.phone, op.phone,p.owner_phone) AS phone,
+                  COALESCE(u.role, o.role) AS role,
+                  COALESCE(up.avatar, op.avatar) AS avatar
+                FROM properties p
+                LEFT JOIN platform_users u
+                  ON p.created_by_user_id = u.id
+                LEFT JOIN platform_user_profiles up
+                  ON u.id = up.user_id
+                -- Join platform_users by ownerId as fallback
+                LEFT JOIN platform_users o
+                  ON p.owner_id = o.id
+                LEFT JOIN platform_user_profiles op
+                  ON o.id = op.user_id
+                WHERE p.id = ${id}
+              `);
+
+              const owner = {
+                firstName : property.first_name,
+                lastName : property.last_name,
+                phone : property.phone,
+                avatar : property.avatar,
+                role : property.role === 'USER' ? "OWNER" : property.role || "OWNER"
+              }
 
             if (!property) {
                 throw new Error(`Property with ID ${id} not found`);
@@ -579,12 +601,13 @@ export class PropertyService {
                 .from(propertyImages)
                 .where(eq(propertyImages.propertyId, id));
 
-            return {
-                property: property?.property,
-                owner: property.owner,
+            const result = {
+                property: property,
                 seo,
                 images,
+                owner
             };
+            return result
         } catch (error) {
             console.error("❌ Error fetching property by ID:", error);
             throw new Error(`Failed to fetch property with ID ${id}`);
@@ -597,9 +620,7 @@ export class PropertyService {
         status: "draft" | "published"
     ) {
         const propertyId = uuidv4();
-
         const images = propertyData.images;
-
         const parse = await parsePropertyPolygon(propertyData?.map);
 
         let processedImages: PropertyImageData[] = [];
@@ -617,18 +638,10 @@ export class PropertyService {
             }
         }
 
-        const generateSeo = await SeoGenerator.generateSEOFields(
-            propertyId,
-            propertyData.propertyDetailsSchema.propertyType,
-            propertyData.location.city,
-            propertyData.location.district,
-        );
 
         await db.transaction(async (tx) => {
-            await tx.insert(properties).values({
+           const createdProperty =  await tx.insert(properties).values({
                 id: propertyId,
-                title: generateSeo?.title,
-                description: generateSeo?.seoDescription,
                 propertyType:
                     propertyData.propertyDetailsSchema.propertyType.toUpperCase(),
                 status: "PUBLISHED",
@@ -652,7 +665,22 @@ export class PropertyService {
                 createdByType: "ADMIN",
                 createdByAdminId: userID,
                 approvalStatus: "PENDING",
-            });
+                ownerId : propertyData.propertyDetailsSchema.ownerId,
+            }).returning({listing_id:properties.listingId});
+
+            const generateSeo = await SeoGenerator.generateSEOFields(
+                createdProperty[0].listing_id,
+                propertyData.propertyDetailsSchema.propertyType,
+                propertyData.location.city,
+                propertyData.location.district,
+            );
+
+            await tx.update(properties)
+                .set({
+                    title: generateSeo.title,
+                    description: generateSeo.seoDescription,
+                })
+                .where(eq(properties.listingId, createdProperty[0].listing_id));
 
             await tx.insert(propertySeo).values({
                 propertyId,
@@ -731,20 +759,13 @@ export class PropertyService {
             }
         }
 
-        const generateSeo = await SeoGenerator.generateSEOFields(
-            propertyId,
-            propertyData.propertyDetailsSchema.propertyType,
-            propertyData.location.city,
-            propertyData.location.district
-        );
+       
 
         console.log(processedImages);
 
         await db.transaction(async (tx) => {
-            await tx.insert(properties).values({
+            const createdProperty = await tx.insert(properties).values({
                 id: propertyId,
-                title: generateSeo?.title,
-                description: generateSeo?.seoDescription,
                 propertyType:
                     propertyData.propertyDetailsSchema.propertyType.toUpperCase(),
                 status: "PUBLISHED",
@@ -767,7 +788,21 @@ export class PropertyService {
                 publishedAt: new Date(),
                 createdByType: "USER",
                 createdByUserId: userID,
-            });
+            }).returning({listing_id:properties.listingId});
+
+            const generateSeo = await SeoGenerator.generateSEOFields(
+                createdProperty[0].listing_id,
+                propertyData.propertyDetailsSchema.propertyType,
+                propertyData.location.city,
+                propertyData.location.district
+            );
+
+            await tx.update(properties)
+            .set({
+                title: generateSeo.title,
+                description: generateSeo.seoDescription,
+            })
+            .where(eq(properties.listingId, createdProperty[0].listing_id));
 
             await tx.insert(propertySeo).values({
                 propertyId,
