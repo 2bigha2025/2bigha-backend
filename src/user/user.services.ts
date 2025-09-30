@@ -20,21 +20,17 @@ export class PlatformUserService {
         try {
             // Validate input
             const validatedData = validateInput(createUserSchema, userData)
-
             // Check if user already exists by email
-            const existingUser = await this.findUserByEmail(validatedData.email)
+            const existingUser = validatedData?.email ? await this.findUserByEmail(validatedData.email) : await this.findUserByPhone(userData.phone);
             if (existingUser) {
-                throw new Error("User with this email already exists")
+                throw new Error("User already exists")
             }
 
             // Check if user already exists by phone
-            const existingUserByPhone = await this.findUserByPhone(userData.phone)
-            if (existingUserByPhone) {
-                throw new Error("User with this phone number already exists")
-            }
 
             // Hash password
-            const hashedPassword = await bcrypt.hash(validatedData.password, 12)
+            const hashedPassword = validatedData?.password ? await bcrypt.hash(validatedData.password, 12): undefined
+
 			// Handle optional avatar upload to Azure (users folder)
 			let avatarUrl: string | undefined
             const normalizedRole = ((validatedData.role || "USER").toUpperCase() as "OWNER" | "AGENT" | "USER")
@@ -79,7 +75,7 @@ export class PlatformUserService {
 			})
 
 			// Send welcome email
-			if (validatedData.firstName) {
+			if (validatedData.email) {
 				await azureEmailService.sendWelcomeEmail(validatedData.email, validatedData.firstName)
 			}
 
@@ -179,13 +175,19 @@ export class PlatformUserService {
             const whereClause = or(
                 ilike(platformUsers.firstName, wildcard),
                 ilike(platformUsers.lastName, wildcard),
-                ilike(platformUsers.email, wildcard),
                 ilike(platformUserProfiles.phone as any, wildcard),
             )
 
             const results = await db
                 .select({
-                    user: platformUsers,
+                    user: {
+                        id:platformUsers.id,
+                        firstname:platformUsers.firstName,
+                        lastname:platformUsers.lastName,
+                        email:platformUsers?.email || "",
+                        role:platformUsers.role,
+                        adminId:platformUsers.createdByAdminId,
+                    },
                     profile: platformUserProfiles,
                 })
                 .from(platformUsers)
@@ -495,8 +497,7 @@ export class PlatformUserService {
 
             // Send verification email
             const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`
-            await azureEmailService.sendEmailVerification(user.email, verificationUrl)
-
+             if(user.email){await azureEmailService.sendEmailVerification(user.email, verificationUrl)}
             logInfo("Email verification sent", { userId, email: user.email })
 
             return true

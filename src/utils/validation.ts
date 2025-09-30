@@ -1,8 +1,23 @@
 import { z } from "zod"
 
 // Common validation schemas
-export const emailSchema = z.string().email("Invalid email address")
-export const passwordSchema = z.string().min(8, "Password must be at least 8 characters")
+export const emailSchema = z
+  .string()
+  .trim()
+  .transform((val) => (val === "" ? undefined : val))
+  .optional()
+  .refine((val) => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), {
+    message: "Invalid email address",
+  });
+
+export const passwordSchema = z
+  .string()
+  .trim()
+  .transform((val) => (val === "" ? undefined : val))
+  .optional()
+  .refine((val) => !val || val.length >= 8, {
+    message: "Password must be at least 8 characters",
+  });
 export const phoneSchema = z.string().regex(/^\+?[\d\s-()]+$/, "Invalid phone number")
 export const urlSchema = z.string().url("Invalid URL")
 

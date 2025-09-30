@@ -6,7 +6,7 @@ export const platformUserRoleEnum = pgEnum("platform_user_roles", ["OWNER", "AGE
 // Platform users table - Regular users of the platform
 export const platformUsers = pgTable("platform_users", {
   id: uuid("id").defaultRandom().primaryKey(),
-  email: text("email").notNull().unique(),
+  email: text("email").unique(),
   firstName: text("first_name"),
   lastName: text("last_name"),
   password: text("password"),
