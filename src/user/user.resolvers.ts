@@ -4,6 +4,7 @@ import { logInfo, logError } from "../utils/logger";
 import { PlatformUserService } from "./user.services";
 import { PropertyService } from "../graphql/services/property.services";
 import { seoService } from "../graphql/services/seo.service";
+import { GeoJsonService } from "../graphql/services/geo-json.service";
 
 interface PlatformUserContext {
     user?: {
@@ -306,7 +307,14 @@ export const platformUserResolvers = {
         getHomePageSeo: async (_: any, { url }: { url: string }) => {
             return await seoService.getGlobalSeoSettings()
         },
+
+        findGeoJsonFeaturesWithinRadius: (
+            _: any,
+            { lat, lng, radiusKm }: { lat: number; lng: number; radiusKm: number }
+        ) => GeoJsonService.findFeaturesWithinRadius(lat, lng, radiusKm),
     },
+
+
 
     Mutation: {
         signupUser: async (

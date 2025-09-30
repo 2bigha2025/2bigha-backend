@@ -474,6 +474,19 @@ enum PropertyStatus {
     ogImage: String
    
   }
+
+  type GeoJsonFeature {
+  id: ID!
+  collectionId: ID!
+  type: String! # Point, LineString, Polygon, etc.
+  properties: JSON # JSON string
+  geometry: JSON # JSON string
+  bounds: String # Optional bounding box
+  isEnabled: Boolean # Feature status
+  createdAt: Date!
+  updatedAt: Date!
+
+}
   type Query {
     getHomePageSeo:homePageSeo
      getPropertyBySlug(input: inputGetPropertyBySlug!):properties 
@@ -500,6 +513,7 @@ enum PropertyStatus {
     getUserProfile(uuid: String!): PlatformUser
 
     getPropertiesByUser(input: GetPropertiesInput!): PaginatedProperties!
+      findGeoJsonFeaturesWithinRadius(lat: Float!, lng: Float!, radiusKm: Float!): [GeoJsonFeature!]!
   }
    input UpdateBasicInfoInput {
     firstName: String

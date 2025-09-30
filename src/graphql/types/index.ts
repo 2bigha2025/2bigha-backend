@@ -8,5 +8,6 @@ import { adminDashboardTypeDefs } from './admin-dashboard.types';
 import { blogTypeDefs } from './blog.types';
 import { seoTypeDefs } from './seo.types';
 import { userPropertyTypeDefs } from './save-user-property.types';
-export const typeDefs = mergeTypeDefs([userPropertyTypeDefs,authTypeDefs, propertyTypeDefs, rbacTypeDefs, propertyApprovalEnhancedTypeDefs, adminDashboardTypeDefs, mapPropertiesTypeDefs, blogTypeDefs, seoTypeDefs]);
+import { geoJsonTypeDefs } from './geoJson.types';
+export const typeDefs = mergeTypeDefs([userPropertyTypeDefs, authTypeDefs, propertyTypeDefs, rbacTypeDefs, propertyApprovalEnhancedTypeDefs, adminDashboardTypeDefs, mapPropertiesTypeDefs, blogTypeDefs, seoTypeDefs, geoJsonTypeDefs]);
 
