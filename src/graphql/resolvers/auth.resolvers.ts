@@ -269,8 +269,7 @@ export const adminAuthResolvers = {
                 extensions: { code: "SIGNUP_FAILED" },
               });
             }
-          },
-            
+        },       
         verifyAdminOTP: async (_: any, { input }: { input: any }) => {
             const { email, otp, type } = input;
 

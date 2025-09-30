@@ -369,6 +369,20 @@ enum PropertyStatus {
     user: PlatformUser
     isNewUser: Boolean!
   }
+    input PlatformUserProfileInput {
+    bio: String
+    avatar: Upload
+    phone: String
+    address: String
+    city: String
+    state: String
+    country: String
+    pincode: String
+    languages: JSON
+    experience: Int
+    rating: Int
+    totalReviews: Int
+  }
 
   # Input Types
   input PlatformUserSignupInput {
@@ -376,11 +390,8 @@ enum PropertyStatus {
     password: String!
     firstName: String
     lastName: String
-    phone: String
     role: PlatformUserRole
-    licenseNumber: String
-    companyName: String
-    businessType: String
+    profile:PlatformUserProfileInput
     agreeToTerms: Boolean!
   }
 
