@@ -294,7 +294,7 @@ enum PropertyStatus {
   type PlatformUser {
     id: ID!
     uuid: String!
-    email: String!
+    email: String
     firstName: String
     lastName: String
     role: PlatformUserRole!
@@ -387,7 +387,7 @@ enum PropertyStatus {
   # Input Types
   input PlatformUserSignupInput {
     email: String!
-    password: String!
+    password: String
     firstName: String
     lastName: String
     role: PlatformUserRole

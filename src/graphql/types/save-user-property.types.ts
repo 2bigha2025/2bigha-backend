@@ -85,7 +85,7 @@ input SavedPropertyCollectionInput {
 type PlatformUser {
   id: ID!
   uuid: String!
-  email: String!
+  email: String
   firstName: String
   lastName: String
   isActive: Boolean!

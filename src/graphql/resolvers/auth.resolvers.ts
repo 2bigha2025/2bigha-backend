@@ -236,32 +236,31 @@ export const adminAuthResolvers = {
               const user = await PlatformUserService.createUser(createUserData, context.admin?.adminId);
               
               // Get the full user with profile
-              const fullUser = await PlatformUserService.findUserById(user.id);
+            //   const fullUser = await PlatformUserService.findUserById(user.id);
               
               return {
                 success: true,
                 message: "Account created successfully",
                 user: {
-                  id: fullUser?.id.toString(),
-                  uuid: fullUser?.id, // Using id as uuid since uuid field doesn't exist
-                  email: fullUser?.email,
-                  firstName: fullUser?.firstName,
-                  lastName: fullUser?.lastName,
-                  role: fullUser?.role,
-                  isActive: fullUser?.isActive,
-                  isVerified: fullUser?.isVerified,
-                  emailVerifiedAt: fullUser?.emailVerifiedAt?.toISOString(),
-                  lastLoginAt: fullUser?.lastLoginAt?.toISOString(),
-                  twoFactorEnabled: fullUser?.twoFactorEnabled,
+                  id: user?.id.toString(),
+                  uuid: user?.id, // Using id as uuid since uuid field doesn't exist
+                  email: user?.email || "",
+                  firstName: user?.firstName,
+                  lastName: user?.lastName,
+                  role: user?.role,
+                  isActive: user?.isActive,
+                  isVerified: user?.isVerified,
+                  emailVerifiedAt: user?.emailVerifiedAt?.toISOString(),
+                  lastLoginAt: user?.lastLoginAt?.toISOString(),
+                  twoFactorEnabled: user?.twoFactorEnabled,
                   licenseNumber: null, // These fields don't exist in the schema
                   companyName: null,
                   businessType: null,
                   taxId: null,
-                  createdAt: fullUser?.createdAt.toISOString(),
-                  updatedAt: fullUser?.updatedAt.toISOString(),
-                  profile: fullUser?.profile,
+                  createdAt: user?.createdAt.toISOString(),
+                  updatedAt: user?.updatedAt.toISOString(),
                 },
-                requiresEmailVerification: !fullUser?.isVerified,
+                requiresEmailVerification: !user?.isVerified,
                 requiresPhoneVerification: false,
               };
             } catch (error) {

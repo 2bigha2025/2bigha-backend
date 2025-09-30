@@ -339,7 +339,7 @@ export const platformUserResolvers = {
                 const user = await PlatformUserService.createUser(createUserData);
                 const sessionToken = PlatformUserService.createUserSession(
                     user.id,
-                    user.email,
+                    user?.email || "",
                     user.role
                 );
 
@@ -409,7 +409,7 @@ export const platformUserResolvers = {
                 await PlatformUserService.updateLastLogin(user.id);
                 const sessionToken = PlatformUserService.createUserSession(
                     user.id,
-                    user.email,
+                    user?.email || "",
                     user.role
                 );
 
@@ -494,7 +494,7 @@ export const platformUserResolvers = {
                 console.log(user);
                 const sessionToken = PlatformUserService.createUserSession(
                     user.id,
-                    user.email,
+                    user?.email || "",
                     user.role
                 );
 
@@ -542,7 +542,7 @@ export const platformUserResolvers = {
                     await PlatformUserService.authenticateWithGoogle(input.googleToken);
                 const sessionToken = PlatformUserService.createUserSession(
                     user.id,
-                    user.email,
+                    user?.email|| "",
                     user.role
                 );
 
