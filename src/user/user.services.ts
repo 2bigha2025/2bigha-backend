@@ -182,8 +182,8 @@ export class PlatformUserService {
                 .select({
                     user: {
                         id:platformUsers.id,
-                        firstname:platformUsers.firstName,
-                        lastname:platformUsers.lastName,
+                        firstName:platformUsers.firstName,
+                        lastName:platformUsers.lastName,
                         email:platformUsers?.email || "",
                         role:platformUsers.role,
                         adminId:platformUsers.createdByAdminId,
@@ -211,7 +211,7 @@ export class PlatformUserService {
             const totalPages = Math.max(1, Math.ceil(total / safeLimit))
 
             logInfo("Search users executed", { searchTerm: trimmed, returned: users.length, total })
-
+            console.log(users);
             return {
                 data: users,
                 meta: {
