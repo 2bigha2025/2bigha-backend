@@ -1,4 +1,4 @@
-import { and, eq, getTableColumns, ne, sql } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, ne, sql } from "drizzle-orm";
 import { db } from "../../database/connection";
 import { blogPosts, blogStatusEnum, blogPostCategories } from "../../database/schema/blog";
 import { AzureStorageService } from "../../utils/azure-storage";
@@ -169,13 +169,13 @@ export class BlogService {
           authorName: sql`${adminUsers.firstName} || ' ' || ${adminUsers.lastName}`.as("authorName"),
         }).from(blogPosts)
         .leftJoin(adminUsers, eq(blogPosts.authorId, adminUsers.id))
-        .where(eq(blogPosts.status, status));
+        .where(eq(blogPosts.status, status as any)).orderBy(desc(blogPosts.createdAt));;
     } else {
       return await db.select({
         ...getTableColumns(blogPosts),
         authorName: sql`${adminUsers.firstName} || ' ' || ${adminUsers.lastName}`.as("authorName"),
       }).from(blogPosts)
-      .leftJoin(adminUsers, eq(blogPosts.authorId, adminUsers.id))
+      .leftJoin(adminUsers, eq(blogPosts.authorId, adminUsers.id)).orderBy(desc(blogPosts.createdAt));
     }
   }
 }
