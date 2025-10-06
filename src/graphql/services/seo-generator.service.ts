@@ -33,14 +33,14 @@ export class SeoGenerator {
         city?: string,
         district?: string,
     ) {
-        const title = `${propertyType} land ${city ? `in ${city}` : ""}${district ? `, ${district}` : ""}`.trim();
+        const title = `${propertyType[0].toUpperCase() + propertyType.slice(1).toLowerCase()} Land ${city ? `in ${city[0].toUpperCase() + city.slice(1).toLowerCase()}` : ""}${district ? `, ${district[0].toUpperCase() + district.slice(1).toLowerCase()}` : ""}`.trim();
         const slug = await this.generateUniqueSlug(title,listingId);
 
         return {
             title,
             slug,
             seoTitle: `Buy ${title} | 2bigha`,
-            seoDescription: `${propertyType} property for sale in ${city}, ${district}. Contact directly on 2bigha.`,
+            seoDescription : `Explore ${title} for sale. Great for cultivation, investment & future growth. Contact 2Bigha today.`,
             seoKeywords: [
                 propertyType?.toLowerCase(),
                 city?.toLowerCase(),
