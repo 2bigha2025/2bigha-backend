@@ -227,11 +227,12 @@ export const adminAuthResolvers = {
       
               // Extract user data and profile data from input
               const { profile, ...userData } = input;
-              const createUserData = {
-                ...userData,
-                phone: profile?.phone,
-                profileImage: profile?.avatar,
-              };
+                            const createUserData = {
+                                ...userData,
+                                phone: profile?.phone,
+                                profileImage: profile?.avatar,
+                                address: profile?.address,
+                            };
       
               const user = await PlatformUserService.createUser(createUserData, context.admin?.adminId);
               

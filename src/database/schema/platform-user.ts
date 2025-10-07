@@ -30,7 +30,7 @@ export const platformUserProfiles = pgTable("platform_user_profiles", {
     .references(() => platformUsers.id, { onDelete: "cascade" }),
   bio: text("bio"),
   avatar: text("avatar"),
-  phone: text("phone"),
+  phone: text("phone").unique(),
   address: text("address"),
   city: text("city"),
   state: text("state"),
