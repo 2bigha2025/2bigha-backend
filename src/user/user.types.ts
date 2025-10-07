@@ -22,6 +22,7 @@ enum CreatedByType {
 }
 
 enum AreaUnit {
+  SQYRD
   KANAL
   MARLA
   ACRE
@@ -159,6 +160,7 @@ type properties {
   }
 
   enum AreaUnit {
+    SQYRD
     SQFT
     SQM
     ACRE

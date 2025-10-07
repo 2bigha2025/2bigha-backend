@@ -136,8 +136,6 @@ export const propertyResolvers = {
           "published"
         );
 
-        console.log(property);
-
         return property;
       } catch (error) {
         console.error("Create property error:", error);

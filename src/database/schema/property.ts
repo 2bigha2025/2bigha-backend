@@ -49,6 +49,7 @@ export const publishedStatusEnum = pgEnum("published_status", [
 
 // Area unit enum
 export const areaUnitEnum = pgEnum("area_unit", [
+  "SQYRD",
   "SQFT",
   "SQM",
   "ACRE",

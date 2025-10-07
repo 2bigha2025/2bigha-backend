@@ -3,7 +3,7 @@ scalar JSON
 scalar Date
 
 enum PropertyType { RESIDENTIAL COMMERCIAL }
-enum AreaUnit { SQFT SQM }
+enum AreaUnit { SQFT SQM SQYRD }
 enum CreatedByType { USER ADMIN }
 enum ApprovalStatus { APPROVED PENDING REJECTED }
 enum ListingAs { OWNER AGENT BUILDER }

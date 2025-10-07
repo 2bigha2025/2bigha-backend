@@ -140,9 +140,6 @@ export class PropertyApprovalService {
             const [property] = await db.select().from(properties).where(eq(properties.id, propertyId));
             if (!property) throw new Error("Property not found");
             const previousStatus = property.approvalStatus;
-
-            // console.log(property);
-
             const [updatedProperty] = await db.update(properties).set({
                 approvalStatus: "REJECTED",
                 approvalMessage: message,
