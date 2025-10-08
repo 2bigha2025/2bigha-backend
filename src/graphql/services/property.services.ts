@@ -12,6 +12,7 @@ import {
 } from "../../database/schema/index";
 import { azureStorage, FileUpload } from "../../../src/utils/azure-storage";
 import { SeoGenerator } from "./seo-generator.service";
+import { alias } from 'drizzle-orm/pg-core';
 
 
 interface PropertyImageData {
@@ -435,6 +436,10 @@ export class PropertyService {
         const baseCondition = eq(properties.approvalStatus, status);
         const searchCondition = this.buildSearchCondition(searchTerm);
         const whereCondition = searchCondition ? and(baseCondition, searchCondition) : baseCondition;
+        const createdByUser = alias(platformUsers, 'createdByUser');
+        const ownerUser = alias(platformUsers, 'ownerUser');
+        const platformUserProfile = alias(platformUserProfiles, 'platformUserProfile');
+        const platformOwnerProfile = alias(platformUserProfiles, 'platformOwnerProfile');
 
         try {
             const results = await db
@@ -447,26 +452,30 @@ export class PropertyService {
           FILTER (WHERE ${propertyImages}.id IS NOT NULL), '[]')
         `.as("images"),
                     user: {
-                        firstName: platformUsers?.firstName,
-                        lastName: platformUsers?.lastName,
-                        email: platformUsers?.email,
-                        role: platformUsers?.role,
-                        phone: platformUserProfiles?.phone,
+                        firstName: createdByUser?.firstName ?? ownerUser?.firstName,
+                        lastName: createdByUser?.lastName ?? ownerUser?.lastName,
+                        email: createdByUser?.email ?? ownerUser?.email,
+                        role: sql`CASE WHEN COALESCE(${createdByUser.role}, ${ownerUser.role}) = 'USER' THEN 'OWNER' ELSE COALESCE(${createdByUser.role}, ${ownerUser.role}) END`,
+                        phone: platformUserProfile?.phone ?? platformOwnerProfile?.phone ?? properties.ownerPhone,
                     },
                 })
                 .from(properties)
                 .innerJoin(propertyVerification, eq(properties.id, propertyVerification.propertyId))
                 .innerJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
                 .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
-                .leftJoin(platformUsers, eq(properties.createdByUserId, platformUsers.id))
-                .leftJoin(platformUserProfiles, eq(platformUserProfiles.userId, platformUsers.id))
+                .leftJoin(createdByUser, eq(properties.createdByUserId, createdByUser.id))
+                .leftJoin(ownerUser, eq(properties.ownerId, ownerUser.id))
+                .leftJoin(platformUserProfile, eq(platformUserProfile.userId, createdByUser.id))
+                .leftJoin(platformOwnerProfile, eq(platformOwnerProfile.userId, createdByUser.id))
                 .where(whereCondition)
                 .groupBy(
                     properties.id,
                     propertySeo.id,
                     propertyVerification.id,
-                    platformUsers.id,
-                    platformUserProfiles.id
+                    createdByUser.id,
+                    ownerUser.id,
+                    platformOwnerProfile.id,
+                    platformUserProfile.id
                 )
                 .orderBy(desc(properties.createdAt))
                 .limit(limit)
