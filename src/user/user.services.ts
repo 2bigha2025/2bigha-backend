@@ -16,7 +16,7 @@ const { platformUsers, platformUserProfiles, otpTokens } = schema
 
 export class PlatformUserService {
     // Create new platform user
-    static async createUser(userData: any,adminId='') {
+    static async createUser(userData: any, adminId = '') {
         try {
             // Validate input
             const validatedData = validateInput(createUserSchema, userData)
@@ -29,15 +29,15 @@ export class PlatformUserService {
             // Check if user already exists by phone
 
             // Hash password
-            const hashedPassword = validatedData?.password ? await bcrypt.hash(validatedData.password, 12): undefined
+            const hashedPassword = validatedData?.password ? await bcrypt.hash(validatedData.password, 12) : undefined
 
-			// Handle optional avatar upload to Azure (users folder)
-			let avatarUrl: string | undefined
+            // Handle optional avatar upload to Azure (users folder)
+            let avatarUrl: string | undefined
             const normalizedRole = ((validatedData.role || "USER").toUpperCase() as "OWNER" | "AGENT" | "USER")
-			const resolveUpload = async (maybeUpload: any) => {
-				if (!maybeUpload) return null
-				return typeof maybeUpload?.promise === 'function' ? await maybeUpload.promise : maybeUpload
-			}
+            const resolveUpload = async (maybeUpload: any) => {
+                if (!maybeUpload) return null
+                return typeof maybeUpload?.promise === 'function' ? await maybeUpload.promise : maybeUpload
+            }
             // Safely resolve an optional uploaded file (may be undefined)
             const profileImageFile = userData?.profileImage?.file ?? null
             // console.log('profileImage.file ->', profileImageFile)
@@ -51,42 +51,42 @@ export class PlatformUserService {
                 }
             }
 
-			// Create user
-			const [newUser] = await db
-				.insert(platformUsers)
-				.values({
-					email: validatedData.email,
-					firstName: validatedData.firstName,
-					lastName: validatedData.lastName,
-					password: hashedPassword,
-					role: normalizedRole,
-					isActive: true,
-					isVerified: false,
-					createdByAdminId: adminId || null,
-				})
-				.returning()
+            // Create user
+            const [newUser] = await db
+                .insert(platformUsers)
+                .values({
+                    email: validatedData.email,
+                    firstName: validatedData.firstName,
+                    lastName: validatedData.lastName,
+                    password: hashedPassword,
+                    role: normalizedRole,
+                    isActive: true,
+                    isVerified: false,
+                    createdByAdminId: adminId || null,
+                })
+                .returning()
 
-			// Create user profile
-			await db.insert(platformUserProfiles).values({
-				userId: newUser.id,
-				phone: userData.phone,
-				avatar: avatarUrl,
-				address:userData.address
-			})
+            // Create user profile
+            await db.insert(platformUserProfiles).values({
+                userId: newUser.id,
+                phone: userData.phone,
+                avatar: avatarUrl,
+                address: userData.address
+            })
 
-			// Send welcome email
-			if (validatedData.email) {
-				await azureEmailService.sendWelcomeEmail(validatedData.email, validatedData.firstName)
-			}
+            // Send welcome email
+            if (validatedData.email) {
+                await azureEmailService.sendWelcomeEmail(validatedData.email, validatedData.firstName)
+            }
 
-			logInfo("Platform user created successfully", { userId: newUser.id, email: validatedData.email })
+            logInfo("Platform user created successfully", { userId: newUser.id, email: validatedData.email })
 
-			return newUser
-		} catch (error) {
-			logError("Failed to create platform user", error as Error, { email: userData.email, phone: userData.phone })
-			throw error
-		}
-	}
+            return newUser
+        } catch (error) {
+            logError("Failed to create platform user", error as Error, { email: userData.email, phone: userData.phone })
+            throw error
+        }
+    }
 
     // Find user by email
     static async findUserByEmail(email: string) {
@@ -157,36 +157,55 @@ export class PlatformUserService {
 
     // Search users by name, email, phone, or id
     // page is 1-based (default 1)
-    static async searchUsers(searchTerm:string,limit:number=10,page:number=1) {
+    static async searchUsers(searchTerm: string, limit: number = 100, page: number = 1) {
         try {
             const trimmed = (searchTerm || "").trim()
             if (!trimmed) {
                 throw new Error("Search term is required")
             }
-
-            const wildcard = `%${trimmed}%`
-
+            const queryParts = trimmed.split(" ").filter(Boolean)
+            // const wildcard = `%${query[0]}%`
+            //   console.log(wildcard);
             // sanitize pagination
             const safeLimit = Math.max(1, Math.min(100, Number(limit) || 10))
             const safePage = Math.max(1, Number(page) || 1)
             const offset = (safePage - 1) * safeLimit
 
+            let filters = [
+                ilike(platformUsers.firstName, `%${queryParts[0]}%`),
+                ilike(platformUsers.lastName, `%${queryParts[0]}%`),
+                ilike(platformUserProfiles.phone as any, `%${queryParts[0]}%`),
+            ];
+
+            // Handle multi-word full name search
+            if (queryParts.length >= 2) {
+                const fullName = queryParts.join(" ");
+                filters.push(
+                    ilike(
+                        sql`${platformUsers.firstName} || ' ' || ${platformUsers.lastName}`,
+                        `%${fullName}%`
+                    )
+                );
+                filters.push(
+                    ilike(
+                        sql`${platformUsers.lastName} || ' ' || ${platformUsers.firstName}`,
+                        `%${fullName}%`
+                    )
+                );
+            }
+
             // Build where clause once and reuse for count
-            const whereClause = or(
-                ilike(platformUsers.firstName, wildcard),
-                ilike(platformUsers.lastName, wildcard),
-                ilike(platformUserProfiles.phone as any, wildcard),
-            )
+            const whereClause = or(...filters)
 
             const results = await db
                 .select({
                     user: {
-                        id:platformUsers.id,
-                        firstName:platformUsers.firstName,
-                        lastName:platformUsers.lastName,
-                        email:platformUsers?.email || "",
-                        role:platformUsers.role,
-                        adminId:platformUsers.createdByAdminId,
+                        id: platformUsers.id,
+                        firstName: platformUsers.firstName,
+                        lastName: platformUsers.lastName,
+                        email: platformUsers?.email || "",
+                        role: platformUsers.role,
+                        adminId: platformUsers.createdByAdminId,
                     },
                     profile: platformUserProfiles,
                 })
@@ -497,7 +516,7 @@ export class PlatformUserService {
 
             // Send verification email
             const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`
-             if(user.email){await azureEmailService.sendEmailVerification(user.email, verificationUrl)}
+            if (user.email) { await azureEmailService.sendEmailVerification(user.email, verificationUrl) }
             logInfo("Email verification sent", { userId, email: user.email })
 
             return true
