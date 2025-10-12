@@ -33,6 +33,7 @@ export const adminDashboardTypeDefs = `#graphql
     twoFactorEnabled: Boolean!
     createdAt: String!
     updatedAt: String!
+    updatedby: String
     profile: PlatformUserProfile
   }
 
@@ -57,7 +58,27 @@ export const adminDashboardTypeDefs = `#graphql
     totalReviews: Int
     createdAt: String!
     updatedAt: String!
-  }  
+  } 
+    
+  input PlatformUserProfileInput {
+    bio: String
+    avatar: Upload 
+    phone: String
+    address: String
+    city: String
+    state: String
+    country: String
+    pincode: String
+    website: String
+    socialLinks: JSON
+    preferences: JSON
+    specializations: JSON
+    serviceAreas: JSON
+    languages: JSON
+    experience: Int
+    rating: Int
+    totalReviews: Int
+  }
 
 
   type DashboardMetric {
@@ -158,6 +179,18 @@ export const adminDashboardTypeDefs = `#graphql
     endDate: Date!
   }
 
+ 
+
+  input ProfileDataInput {
+    firstName: String,
+    lastName: String,
+    role: PlatformUserRole,
+    email: String,
+    phone: String,
+    address: String,
+    avatar: Upload,
+}
+
   # Queries
   extend type Query {
     # Get comprehensive admin dashboard statistics
@@ -170,9 +203,14 @@ export const adminDashboardTypeDefs = `#graphql
       page: Int = 1
       searchTerm: String!
     ): SearchUsersResult!
+    #Get all platform users with pagination
+    GetAllPlatformUsers(
+      limit: Int = 10
+      page: Int = 1
+      searchTerm: String
+    ): SearchUsersResult! 
     # Get real-time dashboard metrics
     realTimeDashboardMetrics: AdminDashboardStats!
-
     # Get detailed activity feed
     adminActivityFeed(
       limit: Int = 50

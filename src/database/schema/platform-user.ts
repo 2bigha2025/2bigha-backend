@@ -19,6 +19,7 @@ export const platformUsers = pgTable("platform_users", {
 
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  updatedby:uuid("updated_by"),
   createdByAdminId:uuid("created_by_admin_id").references(() => adminUsers.id, { onDelete: "set null" })
 })
 

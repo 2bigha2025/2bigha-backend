@@ -4,12 +4,13 @@ import * as schema from "../database/schema/index"
 import bcrypt from 'bcryptjs';
 import crypto from "crypto"
 import { logInfo, logError } from "../utils/logger"
-import { validateInput, createUserSchema, updateUserSchema, updateAddressInfoSchema, updateOnlinePresenceSchema, updateProfessionalInfoSchema, updateBasicInfoSchema } from "../utils/validation"
+import { validateInput, createUserSchema, updateUserSchema, updateAddressInfoSchema, updateOnlinePresenceSchema, updateProfessionalInfoSchema, } from "../utils/validation"
 import { azureEmailService } from "../../src/graphql/services/email.service"
 import { createSession, getSession, deleteSession } from "../config/auth"
 import { twilioSMSService } from "../graphql/services/twilio-sms.service"
 import { googleAuthService } from "../graphql/services/google-auth.service"
 import { azureStorage } from "../utils/azure-storage"
+import { filterDefined } from "../utils/filteredundefined";
 
 
 const { platformUsers, platformUserProfiles, otpTokens } = schema
@@ -88,6 +89,92 @@ export class PlatformUserService {
         }
     }
 
+    static async updateUser(userId: string, updated_by = '', userData: any) {
+        try {
+            // Validate input
+            if (!userId || typeof userId !== "string") {
+                throw new Error("Invalid userId");
+            }
+
+            // Fetch current user once
+            const existingUser = await this.findUserById(userId);
+            if (!existingUser) {
+                throw new Error(`User with ID ${userId} not found`);
+            }
+            console.log("userdata", userData);
+            const validatedData = validateInput(updateUserSchema.partial(), userData);
+            // Handle optional avatar upload to Azure (users folder)
+            let avatarUrl: string | undefined
+            const normalizedRole = ((validatedData.role || "USER").toUpperCase() as "OWNER" | "AGENT" | "USER")
+            const resolveUpload = async (maybeUpload: any) => {
+                if (!maybeUpload) return null
+                return typeof maybeUpload?.promise === 'function' ? await maybeUpload.promise : maybeUpload
+            }
+            // Safely resolve an optional uploaded file (may be undefined)
+            const profileImageFile = userData?.avatar?.file ?? null
+            // console.log('profileImage.file ->', profileImageFile)
+            const profileUpload = await resolveUpload(profileImageFile)
+            if (profileUpload) {
+                const variants = await azureStorage.uploadFile(profileUpload, "users")
+                const baseFilename = variants?.[0]?.filename
+                if (baseFilename) {
+                    const urls = azureStorage.getAllVariantUrls(baseFilename, "users")
+                    avatarUrl = urls.large || urls.original || Object.values(urls)[0]
+                }
+            }
+            // update user
+            console.log("validatedData", validatedData);
+            const userUpdates = filterDefined({
+                email: validatedData.email?.trim().toLowerCase(),
+                firstName: validatedData.firstName?.trim(),
+                lastName: validatedData.lastName?.trim(),
+                ...(normalizedRole ? { role: normalizedRole } : {}),
+                updatedby: updated_by,
+                updatedAt: new Date(),
+            });
+
+            const profileUpdates = filterDefined({
+                phone: validatedData.phone ? String(validatedData.phone).trim() : undefined,
+                avatar: avatarUrl,
+                address: validatedData.address ? String(validatedData.address).trim() : undefined,
+                updatedAt: new Date(),
+            });
+            console.log(userUpdates, profileUpdates);
+            let updatedUserRow = null;
+            let updatedProfileRow = null;
+
+            const [userRow] = await db
+                .update(platformUsers)
+                .set(userUpdates)
+                .where(eq(platformUsers.id, userId))
+                .returning(); // Returns updated row
+            updatedUserRow = userRow;
+
+            const [profileRow] = await db
+                .update(platformUserProfiles)
+                .set(profileUpdates)
+                .where(eq(platformUserProfiles.userId, userId))
+                .returning(); // Returns updated row
+            updatedProfileRow = profileRow;
+
+            // Merge updated rows with existing data
+            const finalUser = {
+                ...existingUser,
+                ...updatedUserRow, // override with updated fields
+                profile: {
+                    ...existingUser.profile,
+                    ...updatedProfileRow, // override profile fields
+                }
+            };
+
+            logInfo("Platform user updated successfully", { userId: finalUser?.id, email: validatedData?.email })
+            return finalUser
+        } catch (error) {
+            logError("Failed to update platform user", error as Error, { email: userData.email, phone: userData.phone })
+            throw error
+        }
+    }
+
     // Find user by email
     static async findUserByEmail(email: string) {
         try {
@@ -100,6 +187,71 @@ export class PlatformUserService {
         }
     }
 
+    static async getAllUsers(limit: number = 10, page: number = 1, searchTerm: string) {
+        try {
+            const offset = (page - 1) * limit;
+            if (searchTerm) {
+                const { data, meta } = await this.searchUsers(searchTerm, limit, page);
+                return { data, meta };
+            } else {
+                const results = await db
+                    .select({
+                        user: {
+                            id: platformUsers.id,
+                            firstName: platformUsers.firstName,
+                            lastName: platformUsers.lastName,
+                            email: platformUsers?.email || "",
+                            role: platformUsers.role,
+                            lastLoginAt: platformUsers.lastLoginAt,
+                            isActive: platformUsers.isActive,
+                            updatedAt: platformUsers.updatedAt,
+                        },
+                        profile: {
+                            id: platformUserProfiles.id,
+                            userId: platformUserProfiles.userId,
+                            phone: platformUserProfiles.phone,
+                            address: platformUserProfiles.address,
+                            createdAt: platformUserProfiles.createdAt,
+                            totalReviews: platformUserProfiles.totalReviews,
+                            avatar: platformUserProfiles.avatar,
+                        },
+                    })
+                    .from(platformUsers)
+                    .innerJoin(
+                        platformUserProfiles,
+                        eq(platformUsers.id, platformUserProfiles.userId)
+                    )
+                    .limit(limit)
+                    .offset(offset);
+
+                const [{ count }] = await db
+                    .select({ count: sql<number>`COUNT(*)` })
+                    .from(platformUsers)
+                    .innerJoin(
+                        platformUserProfiles,
+                        eq(platformUsers.id, platformUserProfiles.userId)
+                    )
+                const data = results.map((row: any) => ({
+                    ...row.user,
+                    profile: row.profile,
+                }))
+                return {
+                    data,
+                    meta: {
+                        total: count,
+                        page,
+                        limit,
+                        totalPages: Math.ceil(count / limit),
+                    },
+                };
+
+            }
+
+        } catch (error) {
+            logError("Failed to getUsers from the table", error as Error);
+            return null;
+        }
+    }
     // Find user by phone
     static async findUserByPhone(phone: string) {
         try {
@@ -157,7 +309,7 @@ export class PlatformUserService {
 
     // Search users by name, email, phone, or id
     // page is 1-based (default 1)
-    static async searchUsers(searchTerm: string, limit: number = 100, page: number = 1) {
+    static async searchUsers(searchTerm: string, limit: number = 30, page: number = 1) {
         try {
             const trimmed = (searchTerm || "").trim()
             if (!trimmed) {
@@ -205,6 +357,10 @@ export class PlatformUserService {
                         lastName: platformUsers.lastName,
                         email: platformUsers?.email || "",
                         role: platformUsers.role,
+                        isActive: platformUsers.isActive,
+                        lastLoginAt: platformUsers.lastLoginAt,
+                        updatedAt: platformUsers.updatedAt,
+                        createdAt: platformUsers.createdAt,
                         adminId: platformUsers.createdByAdminId,
                     },
                     profile: platformUserProfiles,
@@ -234,6 +390,7 @@ export class PlatformUserService {
             return {
                 data: users,
                 meta: {
+                    total,
                     page: safePage,
                     limit: safeLimit,
                     totalPages,
@@ -449,44 +606,45 @@ export class PlatformUserService {
     }
 
     // Update user profile
-    static async updateUserProfile(userId: string, profileData: any) {
-        try {
-            const validatedData = validateInput(updateUserSchema.partial(), profileData)
+    // static async updateUserProfile(userId: string, profileData: any) {
+    //     try {
+    //         const validatedData = validateInput(updateUserSchema, profileData)
 
-            // Update user basic info
-            if (validatedData.firstName || validatedData.lastName) {
-                await db
-                    .update(platformUsers)
-                    .set({
-                        firstName: validatedData.firstName,
-                        lastName: validatedData.lastName,
-                        updatedAt: new Date(),
-                    })
-                    .where(eq(platformUsers.id, userId))
-            }
+    //         // Update user basic info
+    //         if (validatedData.phone && validatedData.firstName || validatedData.lastName) {
+    //             await db
+    //                 .update(platformUsers)
+    //                 .set({
+    //                     firstName: validatedData.firstName,
+    //                     lastName: validatedData.lastName,
+    //                     role:validatedData.role,
+    //                     updatedAt: new Date(),
+    //                 })
+    //                 .where(eq(platformUsers.id, userId))
+    //         }
 
-            // Update profile
-            const profileUpdateData = { ...validatedData }
-            delete profileUpdateData.firstName
-            delete profileUpdateData.lastName
+    //         // Update profile
+    //         const profileUpdateData: { [key: string]: any; firstName?: any; lastName?: any } = { ...validatedData }
+    //         delete profileUpdateData.firstName
+    //         delete profileUpdateData.lastName
 
-            if (Object.keys(profileUpdateData).length > 0) {
-                await db
-                    .update(platformUserProfiles)
-                    .set({
-                        ...profileUpdateData,
-                        updatedAt: new Date(),
-                    })
-                    .where(eq(platformUserProfiles.userId, userId))
-            }
+    //         if (Object.keys(profileUpdateData).length > 0) {
+    //             await db
+    //                 .update(platformUserProfiles)
+    //                 .set({
+    //                     ...profileUpdateData,
+    //                     updatedAt: new Date(),
+    //                 })
+    //                 .where(eq(platformUserProfiles.userId, userId))
+    //         }
 
-            // Return updated user
-            return await this.findUserById(userId)
-        } catch (error) {
-            logError("Failed to update user profile", error as Error, { userId })
-            throw error
-        }
-    }
+    //         // Return updated user
+    //         return await this.findUserById(userId)
+    //     } catch (error) {
+    //         logError("Failed to update user profile", error as Error, { userId })
+    //         throw error
+    //     }
+    // }
 
 
 

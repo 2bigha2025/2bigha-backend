@@ -269,7 +269,24 @@ export const adminAuthResolvers = {
                 extensions: { code: "SIGNUP_FAILED" },
               });
             }
-        },       
+        },
+        UpdatePlatformUser: async (
+              _: any, { userId, profiledata }: { userId: string, profiledata:any }, context: AdminContext
+            ) => {
+              if (!context.admin?.adminId) {
+                throw new GraphQLError("Not authenticated",
+                  {
+                    extensions: { code: "UNAUTHENTICATED" },
+                  });
+              } try {
+                const result = await PlatformUserService.updateUser(userId, context.admin.adminId, profiledata);
+                return result;
+              }
+              catch (error) {
+                throw new GraphQLError("Internal server error",
+                  { extensions: { code: "INTERNAL_SERVER_ERROR" }, });
+              }
+            },       
         verifyAdminOTP: async (_: any, { input }: { input: any }) => {
             const { email, otp, type } = input;
 

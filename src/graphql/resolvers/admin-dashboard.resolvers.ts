@@ -142,6 +142,25 @@ export const adminDashboardResolvers = {
         });
       }
     },
+    GetAllPlatformUsers: async (
+      _: any, { limit = 10, page = 1, searchTerm = '' }: { limit: number, page: number, searchTerm: string }, context: AdminContext
+    ) => {
+      if (!context.admin?.adminId) {
+        throw new GraphQLError("Not authenticated", {
+          extensions: { code: "UNAUTHENTICATED" },
+        });
+      }
+      try {
+        const result = await PlatformUserService.getAllUsers(limit, page, searchTerm);
+        console.log("result", result);
+        return result;
+      } catch (error) {
+        //   logError("SearchAgentByNamePhone failed", error as Error, { searchTerm, limit, page });
+        throw new GraphQLError("Internal server error", {
+          extensions: { code: "INTERNAL_SERVER_ERROR" },
+        });
+      }
+    },
     propertyAnalytics: async (
       _: any,
       { filters }: { filters?: any },
@@ -169,7 +188,7 @@ export const adminDashboardResolvers = {
       }
     },
   },
-  
+
   // Type resolvers
   DashboardMetric: {
     // All fields resolved directly from service

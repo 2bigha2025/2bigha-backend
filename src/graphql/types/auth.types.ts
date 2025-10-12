@@ -186,6 +186,8 @@ type ResendOTPResponse {
    type Mutation {
     adminLogin(input: AdminLoginInput!): AuthResponse!
     adminCreateUser(input: PlatformUserInput!): PlatformAuthResponse!
+     #update platform user with id
+    UpdatePlatformUser(userId: ID! profiledata: ProfileDataInput): PlatformUser!
     verifyAdminOTP(input: VerifyOTPInput!): AuthResponse!
     adminLogout(token: String!): AuthResponse!
     verifyOTP(input: VerifyOTPInput!): VerifyOTPResponse!

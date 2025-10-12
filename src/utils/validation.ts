@@ -1,3 +1,4 @@
+import { add } from "winston";
 import { z } from "zod"
 
 // Common validation schemas
@@ -52,7 +53,7 @@ export const createUserSchema = z.object({
   role: z.enum(["OWNER", "AGENT", "USER"]).optional(),
 })
 
-export const updateUserSchema = createUserSchema.partial()
+// export const updateUserSchema = createUserSchema.partial()
 
 // Property validation schemas
 export const createPropertySchema = z.object({
@@ -110,13 +111,14 @@ export function validatePartialInput<T>(schema: z.ZodSchema<T>, data: unknown): 
 
 
 // Basic Information validation schema
-export const updateBasicInfoSchema = z.object({
+export const updateUserSchema = z.object({
   firstName: z.string().min(1, "First name is required").optional(),
-  lastName: z.string().min(1, "Last name is required").optional(),
+  lastName: z.string().optional(),
+  role: z.enum(["OWNER", "AGENT", "USER"]).optional(),
   email: emailSchema.optional(),
-  phone: phoneSchema.optional(),
-  bio: z.string().max(500, "Bio cannot exceed 500 characters").optional(),
-  avatar: urlSchema.optional(),
+  phone: phoneSchema,
+  address: z.string().optional(),
+  // avatar: z.instanceof(File).optional(),
 })
 
 // Address Information validation schema
