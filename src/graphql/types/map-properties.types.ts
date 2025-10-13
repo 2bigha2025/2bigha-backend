@@ -1,5 +1,3 @@
-
-
 export const mapPropertiesTypeDefs = `#graphql
  type MapCoordinate {
     lat: Float!
@@ -12,6 +10,13 @@ type PropertyImageVariants {
   medium: String
  
 }
+
+  type Location {
+    name: String
+    address: String
+    placeId: String
+    coordinates: MapCoordinate
+  }
   type PropertyImage {
 
   variants: PropertyImageVariants
@@ -28,12 +33,13 @@ type PropertyImageVariants {
     area: String
     daysOnMarket: Int
     status: String!
-    location: JSON
+    location: Location
     khasraNumber: String
     khewatNumber: String
     saleBy: String!
     isVerified: Boolean!
     boundaries: JSON
+    createdAt: String
     listingType: String
     ownerName: String
     propertyType: String
@@ -49,4 +55,4 @@ type PropertyImageVariants {
     # Get all properties for map (optimized for speed)
     mapProperties: [MapProperty!]!
   }
-`
+`;
