@@ -2,6 +2,7 @@ import { eq, and, gte, lte, like, desc, asc, sql, or, ilike} from "drizzle-orm";
 import { db } from "../../database/connection";
 import { v4 as uuidv4 } from "uuid";
 import {
+    adminUsers,
     platformUserProfiles,   
     platformUsers,
     properties,
@@ -185,12 +186,22 @@ export class PropertyService {
         const baseCondition = eq(properties.approvalStatus, "APPROVED");
         const searchCondition = this.buildSearchCondition(searchTerm);
         const whereCondition = searchCondition ? and(baseCondition, searchCondition) : baseCondition;
+        const createdByUser = alias(platformUsers, 'createdByUser');
+        const createdByAdmin = alias(adminUsers, 'createdByAdmin');
 
         const results = await db
             .select({
                 property: properties,
                 seo: propertySeo,
                 verification: propertyVerification,
+                user: {
+                    firstName: sql`
+                      COALESCE(${createdByUser.firstName}, ${createdByAdmin.firstName})
+                    `.as("firstName"),
+                    lastName: sql`
+                      COALESCE(${createdByUser.lastName}, ${createdByAdmin.lastName})
+                    `.as("lastName"),
+                  },
                 images: sql`
                     COALESCE(json_agg(${propertyImages}.*) 
                     FILTER (WHERE ${propertyImages}.id IS NOT NULL), '[]')
@@ -202,10 +213,11 @@ export class PropertyService {
                 eq(properties.id, propertyVerification.propertyId)
             )
             .innerJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
-            .leftJoin(platformUsers, eq(properties.createdByUserId, platformUsers.id))
+            .leftJoin(createdByUser, eq(properties.createdByUserId, createdByUser.id))
+            .leftJoin(createdByAdmin, eq(properties.createdByAdminId, createdByAdmin.id))
             .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
             .where(whereCondition)
-            .groupBy(properties.id, propertySeo.id, propertyVerification.id, platformUsers.id)
+            .groupBy(properties.id, propertySeo.id, propertyVerification.id, createdByUser.id,createdByAdmin.id)
             .orderBy(desc(properties.createdAt))
             .limit(limit)
             .offset(offset);
