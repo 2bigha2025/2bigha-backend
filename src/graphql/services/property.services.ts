@@ -470,6 +470,14 @@ export class PropertyService {
                         role: sql`CASE WHEN COALESCE(${createdByUser.role}, ${ownerUser.role}) = 'USER' THEN 'OWNER' ELSE COALESCE(${createdByUser.role}, ${ownerUser.role}) END`,
                         phone: platformUserProfile?.phone ?? platformOwnerProfile?.phone ?? properties.ownerPhone,
                     },
+                    createdByUser: {
+                        firstName: sql`
+                          COALESCE(${createdByUser.firstName}, ${adminUsers.firstName})
+                        `.as("firstName"),
+                        lastName: sql`
+                          COALESCE(${createdByUser.lastName}, ${adminUsers.lastName})
+                        `.as("lastName"),
+                      },
                 })
                 .from(properties)
                 .innerJoin(propertyVerification, eq(properties.id, propertyVerification.propertyId))
@@ -477,6 +485,7 @@ export class PropertyService {
                 .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
                 .leftJoin(createdByUser, eq(properties.createdByUserId, createdByUser.id))
                 .leftJoin(ownerUser, eq(properties.ownerId, ownerUser.id))
+                .leftJoin(adminUsers, eq(properties.createdByAdminId, adminUsers.id))
                 .leftJoin(platformUserProfile, eq(platformUserProfile.userId, createdByUser.id))
                 .leftJoin(platformOwnerProfile, eq(platformOwnerProfile.userId, createdByUser.id))
                 .where(whereCondition)
@@ -487,7 +496,8 @@ export class PropertyService {
                     createdByUser.id,
                     ownerUser.id,
                     platformOwnerProfile.id,
-                    platformUserProfile.id
+                    platformUserProfile.id,
+                    adminUsers.id
                 )
                 .orderBy(desc(properties.createdAt))
                 .limit(limit)

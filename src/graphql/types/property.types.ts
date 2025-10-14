@@ -148,6 +148,11 @@ type Property {
   listingId : Int
  
 }
+
+type createdByUser {
+  firstName: String
+  lastName: String
+}
 type propertyUser {
   firstName: String
    lastName: String
@@ -161,6 +166,7 @@ type properties {
   property: Property
   images: [PropertyImage]
   user: propertyUser
+  createdByUser: createdByUser
 }
 
 
