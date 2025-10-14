@@ -130,7 +130,7 @@ type Property {
   isActive: Boolean!
   viewCount: Int!
   inquiryCount: Int!
-  createdAt: Date!
+  createdAt: Date
   updatedAt: Date!
   publishedAt: String
   createdByAdminId: ID

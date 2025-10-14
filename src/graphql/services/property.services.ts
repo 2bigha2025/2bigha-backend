@@ -565,6 +565,7 @@ export class PropertyService {
                   p.khewat_number as "khewatNumber",
                   p.address as "address",
                   p.city,
+                  p.created_at as "createdAt",
                   p.created_by_type as "createdByType",
                   p.district,
                   p.state,
