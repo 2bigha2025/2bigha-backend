@@ -135,7 +135,7 @@ type Property {
   isActive: Boolean!
   viewCount: Int!
   inquiryCount: Int!
-  createdAt: Date!
+  createdAt: Date
   updatedAt: Date!
   publishedAt: String
   createdByAdminId: ID
@@ -153,6 +153,11 @@ type Property {
   listingId : Int
   availablilityStatus: landStatus!
 }
+
+type createdByUser {
+  firstName: String
+  lastName: String
+}
 type propertyUser {
   firstName: String
    lastName: String
@@ -166,6 +171,7 @@ type properties {
   property: Property
   images: [PropertyImage]
   user: propertyUser
+  createdByUser: createdByUser
 }
 
 

@@ -81,6 +81,7 @@ type PropertyImage {
 type location {
   name: String
   address: String
+  coordinates: MapCoordinate
 }
 type Property {
   id: ID!
