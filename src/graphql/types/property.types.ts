@@ -39,6 +39,11 @@ enum ListingAs {
   BUILDER
 }
 
+enum landStatus {
+    AVAILABLE
+    SOLD
+}
+
 type Seo {
   id: ID!
   propertyId: ID!
@@ -146,7 +151,7 @@ type Property {
   lastReviewedBy: ID
   lastReviewedAt: String
   listingId : Int
- 
+  availablilityStatus: landStatus!
 }
 type propertyUser {
   firstName: String
@@ -192,6 +197,7 @@ type properties {
     GUNTA
     CENT
   }
+
 
   enum ListingAs {
     PROPERTY_OWNER

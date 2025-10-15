@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc,and } from "drizzle-orm";
 import { db } from "../../config/database";
 import * as schema from "../../database/schema/index";
 import { logger } from "../../utils/logger";
@@ -21,6 +21,7 @@ export interface ApprovalActionInput {
     reason?: string;
     ipAddress?: string;
     userAgent?: string;
+    availablilityStatus?: "AVAILABLE" | "SOLD";
 }
 
 export class PropertyApprovalService {
@@ -180,6 +181,34 @@ export class PropertyApprovalService {
             throw error;
         }
     }
+
+    // static async MarkSoldProperty(input: ApprovalActionInput) {
+    //     const { propertyId, adminId, message, adminNotes, reason, ipAddress, userAgent, availablilityStatus } = input;
+    //     try {
+    //         const [property] = await db.select().from(properties).where(and(eq(properties.id, propertyId.toString()),eq(properties.approvalStatus, 'APPROVED')));
+    //         if (!property) throw new Error("Property not found");
+    //         const normalizedStatus = availablilityStatus?.toUpperCase();
+    //         if (normalizedStatus !== 'SOLD' && normalizedStatus !== 'AVAILABLE') {
+    //             throw new Error("Invalid availability status. Must be either 'AVAILABLE' or 'SOLD'.");
+    //         }
+    //         let status = '';
+    //         if(normalizedStatus ==='SOLD'){
+    //             status = 'SOLD';
+    //         }else{
+    //             status = 'AVAILABLE'
+    //         }
+    //         const [updatedProperty] = await db.update(properties).set({
+    //             availablilityStatus: status || "AVAILABLE" as "AVAILABLE" | "SOLD",
+    //             lastReviewedBy: adminId.toString(),
+    //             lastReviewedAt: new Date(),
+    //             adminNotes: adminNotes || property.adminNotes,
+    //             updatedAt: new Date(),
+    //         }).where(eq(properties.id, propertyId.toString())).returning();
+    //     }catch (error) {
+    //         logger.error(`Error marking property ${propertyId} as sold:`, error);
+    //         throw error;
+    //     }   
+    // }
 
     static async verifyProperty(input: ApprovalActionInput) {
         const { propertyId, adminId, message, adminNotes } = input;
