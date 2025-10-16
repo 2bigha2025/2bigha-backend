@@ -477,6 +477,17 @@ enum PropertyStatus {
     ogImage: String
    
   }
+ input LocationBasedPropertiesInput {
+  lat: Float
+  lng: Float
+  radius: Int
+  limit: Int = 10
+}
+
+input ViewCountPropertiesInput {
+  limit: Int = 10
+  minViewCount: Int
+}   
 
   type GeoJsonFeature {
   id: ID!
@@ -500,7 +511,8 @@ enum PropertyStatus {
          getSeoPageByUrl(url: String!): SeoPage
     # Get user by ID
     getUser(id: ID!): PlatformUser
-    
+    getPropertiesByLocation(input: LocationBasedPropertiesInput!): [properties!]!
+    getPropertiesByViewCount(input: ViewCountPropertiesInput!): [properties!]!
     # Search users (agents/owners)
     searchUsers(
       query: String

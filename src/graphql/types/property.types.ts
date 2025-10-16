@@ -474,13 +474,13 @@ type PaginatedProperties {
     # Dashboard totals
     topProperties(limit: Int): [Property!]!
     getPropertyTotals(state: String, district: String): PropertyTotals!
+    # Location and view count based queries
     # property(id: ID, uuid: String, slug: String): Property
     # featuredProperties(limit: Int): [Property!]!
     # nearbyProperties(latitude: Float!, longitude: Float!, radius: Float!, limit: Int): [Property!]!
     # propertiesCount(filter: PropertyFilters): Int!
     # propertiesInBounds(minLat: Float!, maxLat: Float!, minLng: Float!, maxLng: Float!, limit: Int): [Property!]!
     # propertiesNearPoint(lat: Float!, lng: Float!, radiusKm: Float!, limit: Int): [Property!]!
-    
     # # Amenities
     # propertyAmenities(category: String): [PropertyAmenity!]!
     
