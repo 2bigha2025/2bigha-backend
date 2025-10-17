@@ -274,7 +274,39 @@ export const platformUserResolvers = {
 
             return results;
         },
+         getPropertiesByLocation: async (
+      _: any,
+      { input }: { input: { lat?: number; lng?: number; radius?: number; limit?: number } }
+    ) => {
+      try {
+        const results = await PropertyService.getPropertiesByLocation(
+          input.lat,
+          input.lng,
+          input.radius,
+          input.limit || 10
+        );
+        return results;
+      } catch (error) {
+        console.error("❌ Resolver error in getPropertiesByLocation:", error);
+        throw new Error("Unable to fetch properties by location");
+      }
+    },
 
+    getPropertiesByViewCount: async (
+      _: any,
+      { input }: { input: { limit?: number; minViewCount?: number } }
+    ) => {
+      try {
+        const results = await PropertyService.getPropertiesByViewCount(
+          input.limit || 10,
+          input.minViewCount
+        );
+        return results;
+      } catch (error) {
+        console.error("❌ Resolver error in getPropertiesByViewCount:", error);
+        throw new Error("Unable to fetch properties by view count");
+      }
+    },
         getTopProperties: async (
             _: any,
             { },

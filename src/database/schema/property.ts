@@ -45,6 +45,11 @@ export const publishedStatusEnum = pgEnum("published_status", [
   "PUBLISHED",
 ])
 
+export const availablilityStatus = pgEnum("availiblity_status", [
+  "AVAILABLE",
+  "SOLD",
+])
+
 
 
 // Area unit enum
@@ -131,7 +136,7 @@ export const properties = pgTable("properties", {
   isFeatured: boolean("is_featured").notNull().default(false),
   isVerified: boolean("is_verified").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),
-
+  availablilityStatus: availablilityStatus("availiblity_status").notNull().default("AVAILABLE"),
   // Analytics
   viewCount: integer("view_count").notNull().default(0),
   inquiryCount: integer("inquiry_count").notNull().default(0),

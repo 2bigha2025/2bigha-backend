@@ -39,6 +39,11 @@ enum ListingAs {
   BUILDER
 }
 
+enum landStatus {
+    AVAILABLE
+    SOLD
+}
+
 type Seo {
   id: ID!
   propertyId: ID!
@@ -146,7 +151,12 @@ type Property {
   lastReviewedBy: ID
   lastReviewedAt: String
   listingId : Int
- 
+  availablilityStatus: landStatus!
+}
+
+type createdByUser {
+  firstName: String
+  lastName: String
 }
 type propertyUser {
   firstName: String
@@ -161,6 +171,7 @@ type properties {
   property: Property
   images: [PropertyImage]
   user: propertyUser
+  createdByUser: createdByUser
 }
 
 
@@ -192,6 +203,7 @@ type properties {
     GUNTA
     CENT
   }
+
 
   enum ListingAs {
     PROPERTY_OWNER
@@ -462,13 +474,13 @@ type PaginatedProperties {
     # Dashboard totals
     topProperties(limit: Int): [Property!]!
     getPropertyTotals(state: String, district: String): PropertyTotals!
+    # Location and view count based queries
     # property(id: ID, uuid: String, slug: String): Property
     # featuredProperties(limit: Int): [Property!]!
     # nearbyProperties(latitude: Float!, longitude: Float!, radius: Float!, limit: Int): [Property!]!
     # propertiesCount(filter: PropertyFilters): Int!
     # propertiesInBounds(minLat: Float!, maxLat: Float!, minLng: Float!, maxLng: Float!, limit: Int): [Property!]!
     # propertiesNearPoint(lat: Float!, lng: Float!, radiusKm: Float!, limit: Int): [Property!]!
-    
     # # Amenities
     # propertyAmenities(category: String): [PropertyAmenity!]!
     

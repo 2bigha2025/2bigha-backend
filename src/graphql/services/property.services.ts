@@ -1,4 +1,4 @@
-import { eq, and, gte, lte, like, desc, asc, sql, or, ilike} from "drizzle-orm";
+import { eq, and, gte, lte, like, desc, asc, sql, or, ilike, isNotNull} from "drizzle-orm";
 import { db } from "../../database/connection";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -180,6 +180,155 @@ export class PropertyService {
             throw new Error(`Image processing failed: ${error}`);
         }
     }
+
+
+ static async getPropertiesByLocation(
+    lat?: number,
+    lng?: number,
+    radius?: number,
+    limit: number = 15
+) {
+    try {
+        const createdByUser = alias(platformUsers, 'createdByUser');
+
+        if (lat && lng) {
+            // Query properties within radius using PostGIS ST_DWithin function
+            const results = await db
+                .select({
+                    property: properties,
+                    seo: propertySeo,
+                    verification: propertyVerification,
+                    user: {
+                        firstName: createdByUser.firstName,
+                        lastName: createdByUser.lastName,
+                    },
+                    images: sql`
+                        COALESCE(json_agg(${propertyImages}.*) 
+                        FILTER (WHERE ${propertyImages}.id IS NOT NULL), '[]')
+                    `.as("images"),
+                })
+                .from(properties)
+                .innerJoin(
+                    propertyVerification,
+                    eq(properties.id, propertyVerification.propertyId)
+                )
+                .innerJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
+                .leftJoin(createdByUser, eq(properties.createdByUserId, createdByUser.id))
+                .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
+                .where(
+                    and(
+                        eq(properties.approvalStatus, "APPROVED"),
+                        eq(properties.isActive, true),
+                        isNotNull(properties.centerPoint),
+                        // Use PostGIS to find properties within radius (in meters)
+                        sql`ST_DWithin(
+                            ${properties.centerPoint}::geography,
+                            ST_Point(${lng}, ${lat})::geography,
+                            ${radius || 5000}
+                        )`
+                    )
+                )
+                .groupBy(properties.id, propertySeo.id, propertyVerification.id, createdByUser.id)
+                .orderBy(desc(properties.createdAt))
+                .limit(limit);
+
+            return results;
+        } else {
+            // Return random properties if no coordinates provided
+            const results = await db
+                .select({
+                    property: properties,
+                    seo: propertySeo,
+                    verification: propertyVerification,
+                    user: {
+                        firstName: createdByUser.firstName,
+                        lastName: createdByUser.lastName,
+                    },
+                    images: sql`
+                        COALESCE(json_agg(${propertyImages}.*) 
+                        FILTER (WHERE ${propertyImages}.id IS NOT NULL), '[]')
+                    `.as("images"),
+                })
+                .from(properties)
+                .innerJoin(
+                    propertyVerification,
+                    eq(properties.id, propertyVerification.propertyId)
+                )
+                .innerJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
+                .leftJoin(createdByUser, eq(properties.createdByUserId, createdByUser.id))
+                .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
+                .where(
+                    and(
+                        eq(properties.approvalStatus, "APPROVED"),
+                        eq(properties.isActive, true)
+                    )
+                )
+                .groupBy(properties.id, propertySeo.id, propertyVerification.id, createdByUser.id)
+                .orderBy(sql`RANDOM()`) // Random order
+                .limit(limit);
+
+            return results;
+        }
+    } catch (error) {
+        console.error("Error fetching properties by location:", error);
+        throw new Error("Failed to fetch properties by location");
+    }
+}
+
+/**
+ * Service to fetch properties ordered by viewCount
+ */
+ static async getPropertiesByViewCount(
+    limit: number = 10,
+    minViewCount?: number
+) {
+    try {
+        const createdByUser = alias(platformUsers, 'createdByUser');
+
+        const whereConditions = [
+            eq(properties.approvalStatus, "APPROVED"),
+            eq(properties.isActive, true)
+        ];
+
+        // Add minimum view count filter if provided
+        if (minViewCount !== undefined) {
+            whereConditions.push(sql`${properties.viewCount} >= ${minViewCount}`);
+        }
+
+        const results = await db
+            .select({
+                property: properties,
+                seo: propertySeo,
+                verification: propertyVerification,
+                user: {
+                    firstName: createdByUser.firstName,
+                    lastName: createdByUser.lastName,
+                },
+                images: sql`
+                    COALESCE(json_agg(${propertyImages}.*) 
+                    FILTER (WHERE ${propertyImages}.id IS NOT NULL), '[]')
+                `.as("images"),
+            })
+            .from(properties)
+            .innerJoin(
+                propertyVerification,
+                eq(properties.id, propertyVerification.propertyId)
+            )
+            .innerJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
+            .leftJoin(createdByUser, eq(properties.createdByUserId, createdByUser.id))
+            .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
+            .where(and(...whereConditions))
+            .groupBy(properties.id, propertySeo.id, propertyVerification.id, createdByUser.id)
+            .orderBy(desc(properties.viewCount)) // Order by view count descending
+            .limit(limit);
+
+        return results;
+    } catch (error) {
+        console.error("Error fetching properties by view count:", error);
+        throw new Error("Failed to fetch properties by view count");
+    }
+}
+
 
     static async getProperties(page: number, limit: number, searchTerm?: string) {
         const offset = (page - 1) * limit;
@@ -470,6 +619,14 @@ export class PropertyService {
                         role: sql`CASE WHEN COALESCE(${createdByUser.role}, ${ownerUser.role}) = 'USER' THEN 'OWNER' ELSE COALESCE(${createdByUser.role}, ${ownerUser.role}) END`,
                         phone: platformUserProfile?.phone ?? platformOwnerProfile?.phone ?? properties.ownerPhone,
                     },
+                    createdByUser: {
+                        firstName: sql`
+                          COALESCE(${createdByUser.firstName}, ${adminUsers.firstName})
+                        `.as("firstName"),
+                        lastName: sql`
+                          COALESCE(${createdByUser.lastName}, ${adminUsers.lastName})
+                        `.as("lastName"),
+                      },
                 })
                 .from(properties)
                 .innerJoin(propertyVerification, eq(properties.id, propertyVerification.propertyId))
@@ -477,6 +634,7 @@ export class PropertyService {
                 .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
                 .leftJoin(createdByUser, eq(properties.createdByUserId, createdByUser.id))
                 .leftJoin(ownerUser, eq(properties.ownerId, ownerUser.id))
+                .leftJoin(adminUsers, eq(properties.createdByAdminId, adminUsers.id))
                 .leftJoin(platformUserProfile, eq(platformUserProfile.userId, createdByUser.id))
                 .leftJoin(platformOwnerProfile, eq(platformOwnerProfile.userId, createdByUser.id))
                 .where(whereCondition)
@@ -487,7 +645,8 @@ export class PropertyService {
                     createdByUser.id,
                     ownerUser.id,
                     platformOwnerProfile.id,
-                    platformUserProfile.id
+                    platformUserProfile.id,
+                    adminUsers.id
                 )
                 .orderBy(desc(properties.createdAt))
                 .limit(limit)
