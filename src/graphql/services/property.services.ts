@@ -333,10 +333,11 @@ export class PropertyService {
     static async getProperties(page: number, limit: number, searchTerm?: string) {
         const offset = (page - 1) * limit;
         const baseCondition = eq(properties.approvalStatus, "APPROVED");
-        const searchCondition = this.buildSearchCondition(searchTerm);
-        const whereCondition = searchCondition ? and(baseCondition, searchCondition) : baseCondition;
         const createdByUser = alias(platformUsers, 'createdByUser');
         const createdByAdmin = alias(adminUsers, 'createdByAdmin');
+        const userAlias = properties.createdByUserId ? createdByUser : createdByAdmin;
+        const searchCondition = this.buildSearchCondition(searchTerm,userAlias);
+        const whereCondition = searchCondition ? and(baseCondition, searchCondition) : baseCondition;
 
         const results = await db
             .select({
@@ -374,7 +375,7 @@ export class PropertyService {
         const [{ count }] = await db
             .select({ count: sql<number>`COUNT(*)` })
             .from(properties)
-            .leftJoin(platformUsers, eq(properties.createdByUserId, platformUsers.id))
+            .leftJoin(userAlias, eq(properties.createdByUserId, userAlias.id))
             .where(whereCondition);
 
         return {
@@ -564,11 +565,11 @@ export class PropertyService {
         };
     }
 
-    static buildSearchCondition(searchTerm?: string) {
+    static buildSearchCondition(searchTerm?: string, createdByUser?: ReturnType<typeof alias>) {
         if (!searchTerm || !searchTerm.trim()) return null;
 
         const likePattern = `%${searchTerm.trim()}%`;
-
+        const userAlias = createdByUser || platformUsers;
         return or(
             ilike(properties.title, likePattern),
             ilike(properties.city, likePattern),
@@ -580,9 +581,9 @@ export class PropertyService {
             ilike(properties.khasraNumber, likePattern),
             ilike(properties.murabbaNumber, likePattern),
             ilike(properties.khewatNumber, likePattern),
-            ilike(platformUsers.firstName, likePattern),
-            ilike(platformUsers.lastName, likePattern),
-            ilike(platformUsers.email, likePattern)
+            ilike(userAlias.firstName, likePattern),
+            ilike(userAlias.lastName, likePattern),
+            ilike(userAlias.email, likePattern)
         );
     }
 
@@ -595,13 +596,12 @@ export class PropertyService {
         const offset = (page - 1) * limit;
 
         const baseCondition = eq(properties.approvalStatus, status);
-        const searchCondition = this.buildSearchCondition(searchTerm);
-        const whereCondition = searchCondition ? and(baseCondition, searchCondition) : baseCondition;
         const createdByUser = alias(platformUsers, 'createdByUser');
         const ownerUser = alias(platformUsers, 'ownerUser');
         const platformUserProfile = alias(platformUserProfiles, 'platformUserProfile');
         const platformOwnerProfile = alias(platformUserProfiles, 'platformOwnerProfile');
-
+        const searchCondition = this.buildSearchCondition(searchTerm, createdByUser);
+        const whereCondition = searchCondition ? and(baseCondition, searchCondition) : baseCondition;
         try {
             const results = await db
                 .select({
@@ -655,7 +655,7 @@ export class PropertyService {
             const [{ count }] = await db
                 .select({ count: sql<number>`COUNT(*)` })
                 .from(properties)
-                .leftJoin(platformUsers, eq(properties.createdByUserId, platformUsers.id))
+                .leftJoin(createdByUser, eq(properties.createdByUserId, createdByUser.id))
                 .where(whereCondition);
 
             return {
