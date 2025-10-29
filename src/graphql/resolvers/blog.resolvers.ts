@@ -53,26 +53,19 @@ export const blogResolvers = {
       }
     },
 
-    getAllBlogs: async (_: any, args: { status?: string }) => {
-      const { status } = args
+    getAllBlogs: async (_: any, args: { status?: string , page: number, limit?:number}) => {
+      const { status,page,limit } = args
       try {
-        const blogs = await BlogService.getAllBlogs(status)
-        return blogs.map(blog => ({
-          ...blog,
-          id: blog.id.toString(),
-          authorId: blog.authorId.toString(),
-          authorName: (blog as any).authorName ?? null,
-          publishedAt: blog.publishedAt?.toISOString(),
-          createdAt: blog.createdAt.toISOString(),
-          updatedAt: blog.updatedAt.toISOString(),
-        }))
+        const blogs = await BlogService.getAllBlogs(status,page,limit)
+        console.log(blogs);
+        return blogs;
       } catch (error) {
         throw new GraphQLError(`Failed to get blogs: ${(error as Error).message}`, {
           extensions: { code: "INTERNAL_ERROR" },
         })
       }
-    },
-  },
+  }
+},
   Mutation: {
 
     createBlog: async (_: any, { input }: any, context: AdminContext) => {

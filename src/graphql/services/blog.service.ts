@@ -161,21 +161,29 @@ export class BlogService {
   }
 
 
-  static async getAllBlogs(status?: string) {
-    if (status) {
-      return await db
-        .select({
-          ...getTableColumns(blogPosts),
-          authorName: sql`${adminUsers.firstName} || ' ' || ${adminUsers.lastName}`.as("authorName"),
-        }).from(blogPosts)
-        .leftJoin(adminUsers, eq(blogPosts.authorId, adminUsers.id))
-        .where(eq(blogPosts.status, status as any)).orderBy(desc(blogPosts.createdAt));;
-    } else {
-      return await db.select({
+static async getAllBlogs(status?: string,page:number=1,limit?:number) {
+    const offset = (page - 1) * (limit || 20);
+      const data = db.select({
         ...getTableColumns(blogPosts),
         authorName: sql`${adminUsers.firstName} || ' ' || ${adminUsers.lastName}`.as("authorName"),
-      }).from(blogPosts)
-      .leftJoin(adminUsers, eq(blogPosts.authorId, adminUsers.id)).orderBy(desc(blogPosts.createdAt));
-    }
+      }).from(blogPosts).where(status ? eq(blogPosts.status, status as any) : sql`1=1`)
+      .leftJoin(adminUsers, eq(blogPosts.authorId, adminUsers.id))
+      .orderBy(desc(blogPosts.createdAt))
+      .limit(limit || 50)
+      .offset(offset || 0);
+    const totalCountQuery = db.select({
+      count: sql`COUNT(*)`.as("count"),
+    }).from(blogPosts).where(status ? eq(blogPosts.status, status as any) : sql`1=1`);
+    const [blogs, totalCountResult] = await Promise.all([data, totalCountQuery]);
+    const totalCount = parseInt(totalCountResult[0].count as string, 10);
+    console.log(blogs);
+    return {
+      data: blogs,
+      meta: { 
+      totalCount,
+      currentPage: page,
+      totalPages: limit ? Math.ceil(totalCount / limit) : 1,
+      }
+    };
   }
 }

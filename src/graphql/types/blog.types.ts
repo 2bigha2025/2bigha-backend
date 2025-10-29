@@ -29,6 +29,7 @@ export const blogTypeDefs = `#graphql
     category : String
   }
 
+
   # Blog Input Types
   input CreateBlogInput {
     title: String!
@@ -58,11 +59,24 @@ export const blogTypeDefs = `#graphql
     seoDescription: String
     publishedAt: Date
   }
+  
+   # First define the metadata type properly
+  type BlogMeta {
+    totalCount: Int!
+    currentPage: Int!
+    totalPages: Int!
+  }
+
+  # Then use it in the response type
+  type BlogResponse {
+    data: [Blog!]!
+    meta: BlogMeta!
+  }
 
   extend type Query {
     getBlog(id: ID!): Blog
     getBlogBySlug(slug: String!): Blog
-    getAllBlogs(status: String): [Blog!]!
+    getAllBlogs(status: String, page: Int=1, limit: Int): BlogResponse!
   }
 
   extend type Mutation {
@@ -70,4 +84,4 @@ export const blogTypeDefs = `#graphql
     updateBlog(id: ID!, input: UpdateBlogInput!): Blog!
     deleteBlog(id: ID!): Boolean!
   }
-` 
+`
