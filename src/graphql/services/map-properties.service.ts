@@ -79,6 +79,7 @@ export class MapPropertiesService {
                 listingAs: properties.listingAs,
                 isVerified: properties?.isVerified,
                 createdAt: properties.createdAt,
+                updatedAt:properties.updatedAt,
                 daysOnMarket: sql<number>`EXTRACT(DAY FROM NOW() - ${properties.createdAt})`,
                 slug: schema.propertySeo.slug,
                 seo : schema.propertySeo,
