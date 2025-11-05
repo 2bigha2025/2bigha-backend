@@ -152,6 +152,17 @@ type Property {
   lastReviewedAt: String
   listingId : Int
   availablilityStatus: landStatus!
+  waterLevel : Int
+  landMark : String
+  category : String
+  highwayConn : Boolean
+  landZoning : String
+  ownersCount : Int
+  ownershipYes : Boolean
+  soilType: String
+  roadAccess: Boolean
+  roadAccessDistance: Int
+  highwayName: String
 }
 
 type createdByUser {

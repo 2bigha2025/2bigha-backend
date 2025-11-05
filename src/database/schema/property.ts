@@ -163,6 +163,17 @@ export const properties = pgTable("properties", {
   adminNotes: text("admin_notes"), // Private admin notes
   lastReviewedBy: uuid("last_reviewed_by").references(() => adminUsers.id),
   lastReviewedAt: timestamp("last_reviewed_at"),
+  waterLevel: integer("water_level"),
+  landMark: text("land_mark"),
+  category: text("category"),
+  highwayConn: boolean("highway_conn"),
+  landZoning: text("land_zoning"),
+  ownersCount: integer("owners_count"),
+  ownershipYes: boolean("ownership_yes"),
+  soilType: text("soil_type"),
+  roadAccess: boolean("road_access"),
+  roadAccessDistance: integer("road_access_distance"),
+  highwayName: text("highway_name"),
 })
 
 export const propertyVerification = pgTable("property_verification", {

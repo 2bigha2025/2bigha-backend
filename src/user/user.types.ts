@@ -135,6 +135,18 @@ type Property {
   lastReviewedAt: String
   saved: Boolean
   listingId : Int
+  landZoning : String
+  ownersCount : Int
+  waterLevel : Int
+  landMark : String
+  category : String
+  highwayConn : Boolean
+  ownershipYes : Boolean
+  soilType: String
+  roadAccess: Boolean
+  roadAccessDistance: Int
+  highwayName: String
+  landType : String
  
 }
 type properties {
@@ -235,6 +247,18 @@ input PropertyDetailsSchemaInput {
   areaUnit: String
   totalPrice: String
   pricePerUnit: String
+  waterLevel : Int
+  landMark : String
+  category : String
+  highwayConn : Boolean
+  landZoning : String
+  ownersCount : Int
+  ownershipYes : Boolean
+  soilType: String,
+  roadAccess: Boolean,
+  roadAccessDistance: Int,
+  description: String,
+  highwayName: String
 }
 
 
