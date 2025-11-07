@@ -307,100 +307,87 @@ export class PlatformUserService {
         }
     }
 
-    // Search users by name, email, phone, or id
-    // page is 1-based (default 1)
-    static async searchUsers(searchTerm: string, limit: number = 30, page: number = 1) {
-        try {
-            const trimmed = (searchTerm || "").trim()
-            if (!trimmed) {
-                throw new Error("Search term is required")
-            }
-            const queryParts = trimmed.split(" ").filter(Boolean)
-            // const wildcard = `%${query[0]}%`
-            //   console.log(wildcard);
-            // sanitize pagination
-            const safeLimit = Math.max(1, Math.min(100, Number(limit) || 10))
-            const safePage = Math.max(1, Number(page) || 1)
-            const offset = (safePage - 1) * safeLimit
+static async searchUsers(searchTerm: string, limit: number = 30, page: number = 1) {
+  try {
+    const trimmed = (searchTerm || "").trim();
+    if (!trimmed) throw new Error("Search term is required");
 
-            let filters = [
-                ilike(platformUsers.firstName, `%${queryParts[0]}%`),
-                ilike(platformUsers.lastName, `%${queryParts[0]}%`),
-                ilike(platformUserProfiles.phone as any, `%${queryParts[0]}%`),
-            ];
+    const queryParts = trimmed.split(" ").filter(Boolean);
+    const safeLimit = Math.max(1, Math.min(100, Number(limit) || 10));
+    const safePage = Math.max(1, Number(page) || 1);
+    const offset = (safePage - 1) * safeLimit;
 
-            // Handle multi-word full name search
-            if (queryParts.length >= 2) {
-                const fullName = queryParts.join(" ");
-                filters.push(
-                    ilike(
-                        sql`${platformUsers.firstName} || ' ' || ${platformUsers.lastName}`,
-                        `%${fullName}%`
-                    )
-                );
-                filters.push(
-                    ilike(
-                        sql`${platformUsers.lastName} || ' ' || ${platformUsers.firstName}`,
-                        `%${fullName}%`
-                    )
-                );
-            }
+    let whereClause;
 
-            // Build where clause once and reuse for count
-            const whereClause = or(...filters)
+    if (queryParts.length === 1) {
+      // 🔹 Single-word search (case-insensitive)
+      whereClause = or(
+        ilike(platformUsers.firstName, `%${queryParts[0]}%`),
+        ilike(platformUsers.lastName, `%${queryParts[0]}%`)
+      );
+    } else if (queryParts.length >= 2) {
+      const [first, last] = queryParts;
 
-            const results = await db
-                .select({
-                    user: {
-                        id: platformUsers.id,
-                        firstName: platformUsers.firstName,
-                        lastName: platformUsers.lastName,
-                        email: platformUsers?.email || "",
-                        role: platformUsers.role,
-                        isActive: platformUsers.isActive,
-                        lastLoginAt: platformUsers.lastLoginAt,
-                        updatedAt: platformUsers.updatedAt,
-                        createdAt: platformUsers.createdAt,
-                        adminId: platformUsers.createdByAdminId,
-                    },
-                    profile: platformUserProfiles,
-                })
-                .from(platformUsers)
-                .leftJoin(platformUserProfiles, eq(platformUsers.id, platformUserProfiles.userId))
-                .where(whereClause)
-                .limit(safeLimit)
-                .offset(offset)
-
-            const users = (results || []).map((row: any) => ({
-                ...row.user,
-                profile: row.profile,
-            }))
-
-            const [{ count }] = await db
-                .select({ count: sql<number>`COUNT(*)` })
-                .from(platformUsers)
-                .leftJoin(platformUserProfiles, eq(platformUsers.id, platformUserProfiles.userId))
-                .where(whereClause)
-
-            const total = Number(count || 0)
-            const totalPages = Math.max(1, Math.ceil(total / safeLimit))
-
-            logInfo("Search users executed", { searchTerm: trimmed, returned: users.length, total })
-            console.log(users);
-            return {
-                data: users,
-                meta: {
-                    total,
-                    page: safePage,
-                    limit: safeLimit,
-                    totalPages,
-                },
-            }
-        } catch (error) {
-            logError("Failed to search users", error as Error, { searchTerm })
-            throw error
-        }
+      if (last && last.length > 0) {
+        // 🔹 Two words → both must match (case-insensitive)
+        whereClause = and(
+          ilike(platformUsers.firstName, `%${first}%`),
+          ilike(platformUsers.lastName, `%${last}%`)
+        );
+      } else {
+        // 🔹 Fallback if last name is empty
+        whereClause = or(
+          ilike(platformUsers.firstName, `%${first}%`),
+          ilike(platformUsers.lastName, `%${first}%`)
+        );
+      }
     }
+
+    const results = await db
+      .select({
+        user: {
+          id: platformUsers.id,
+          firstName: platformUsers.firstName,
+          lastName: platformUsers.lastName,
+          email: platformUsers.email,
+          role: platformUsers.role,
+          isActive: platformUsers.isActive,
+          lastLoginAt: platformUsers.lastLoginAt,
+          updatedAt: platformUsers.updatedAt,
+          createdAt: platformUsers.createdAt,
+        },
+        profile: platformUserProfiles,
+      })
+      .from(platformUsers)
+      .leftJoin(platformUserProfiles, eq(platformUsers.id, platformUserProfiles.userId))
+      .where(whereClause)
+      .limit(safeLimit)
+      .offset(offset);
+
+    const users = (results || []).map((row: any) => ({
+      ...row.user,
+      profile: row.profile,
+    }));
+
+    const [{ count }] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(platformUsers)
+      .leftJoin(platformUserProfiles, eq(platformUsers.id, platformUserProfiles.userId))
+      .where(whereClause);
+
+    const total = Number(count || 0);
+    const totalPages = Math.max(1, Math.ceil(total / safeLimit));
+
+    return {
+      data: users,
+      meta: { total, page: safePage, limit: safeLimit, totalPages },
+    };
+  } catch (error) {
+    logError("Failed to search users", error as Error, { searchTerm });
+    throw error;
+  }
+}
+
 
     // Update last login
     static async updateLastLogin(userId: string) {

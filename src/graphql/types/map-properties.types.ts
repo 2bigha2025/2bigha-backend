@@ -40,6 +40,7 @@ type PropertyImageVariants {
     isVerified: Boolean!
     boundaries: JSON
     createdAt: String
+    updatedAt : Date
     listingType: String
     ownerName: String
     propertyType: String
