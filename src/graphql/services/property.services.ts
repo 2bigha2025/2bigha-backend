@@ -717,6 +717,8 @@ export class PropertyService {
                   p.price,
                   p.price_per_unit as "PricePerUnit",
                   p.area,
+                  p.land_mark as "landMark",
+                  p.landmark_name as "landMarkName",
                   p.approval_status as "status",
                   p.area_unit as "areaUnit",
                   p.khasra_number as "khasraNumber",
@@ -867,7 +869,7 @@ export class PropertyService {
                 soilType: propertyData.propertyDetailsSchema.soilType,
                 roadAccess: propertyData.propertyDetailsSchema.roadAccess,
                 roadAccessDistance: propertyData.propertyDetailsSchema.roadAccessDistance,
-                highwayName: propertyData.propertyDetailsSchema.highwayName,
+                landMarkName: propertyData.propertyDetailsSchema.landMarkName,
             }).returning({listing_id:properties.listingId});
 
             const generateSeo = await SeoGenerator.generateSEOFields(
@@ -1000,7 +1002,7 @@ export class PropertyService {
                 soilType: propertyData.propertyDetailsSchema.soilType,
                 roadAccess: propertyData.propertyDetailsSchema.roadAccess,
                 roadAccessDistance: propertyData.propertyDetailsSchema.roadAccessDistance,
-                highwayName: propertyData.propertyDetailsSchema.highwayName,
+                landMarkName: propertyData.propertyDetailsSchema.landMarkName,
             }).returning({listing_id:properties.listingId});
 
             const generateSeo = await SeoGenerator.generateSEOFields(

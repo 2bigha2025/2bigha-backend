@@ -145,7 +145,7 @@ type Property {
   soilType: String
   roadAccess: Boolean
   roadAccessDistance: Int
-  highwayName: String
+  landMarkName: String
   landType : String
  
 }
@@ -248,7 +248,7 @@ input PropertyDetailsSchemaInput {
   totalPrice: String
   pricePerUnit: String
   waterLevel : Int
-  landMark : String
+  landMark : [String]
   category : String
   highwayConn : Boolean
   landZoning : String
@@ -258,7 +258,7 @@ input PropertyDetailsSchemaInput {
   roadAccess: Boolean,
   roadAccessDistance: Int,
   description: String,
-  highwayName: String
+  landMarkName: JSON
 }
 
 

@@ -164,7 +164,6 @@ export const properties = pgTable("properties", {
   lastReviewedBy: uuid("last_reviewed_by").references(() => adminUsers.id),
   lastReviewedAt: timestamp("last_reviewed_at"),
   waterLevel: integer("water_level"),
-  landMark: text("land_mark"),
   category: text("category"),
   highwayConn: boolean("highway_conn"),
   landZoning: text("land_zoning"),
@@ -173,7 +172,8 @@ export const properties = pgTable("properties", {
   soilType: text("soil_type"),
   roadAccess: boolean("road_access"),
   roadAccessDistance: integer("road_access_distance"),
-  highwayName: text("highway_name"),
+  landMark: jsonb("land_mark").$type<string[]>(),
+  landMarkName: jsonb("landmark_name").$type<Record<string,string>>(),
 })
 
 export const propertyVerification = pgTable("property_verification", {

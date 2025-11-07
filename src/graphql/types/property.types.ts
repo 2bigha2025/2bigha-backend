@@ -153,7 +153,6 @@ type Property {
   listingId : Int
   availablilityStatus: landStatus!
   waterLevel : Int
-  landMark : String
   category : String
   highwayConn : Boolean
   landZoning : String
@@ -162,7 +161,8 @@ type Property {
   soilType: String
   roadAccess: Boolean
   roadAccessDistance: Int
-  highwayName: String
+  landMark: [String]
+  landMarkName: [String]
 }
 
 type createdByUser {
