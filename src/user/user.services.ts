@@ -424,7 +424,7 @@ static async searchUsers(searchTerm: string, limit: number = 30, page: number = 
         phone: string,
     ): Promise<{ success: boolean; expiresIn: number; remainingAttempts: number }> {
         try {
-            const user = await this.findUserByPhone(phone)
+            const user = await this.findUserByPhone(phone.slice(3))
             if (!user) {
                 throw new Error("User not found with this phone number")
             }
@@ -447,9 +447,9 @@ static async searchUsers(searchTerm: string, limit: number = 30, page: number = 
             const attemptsUsed = recentOTPs.length
             const remainingAttempts = Math.max(0, maxAttempts - attemptsUsed)
 
-            if (remainingAttempts === 0) {
-                throw new Error("Too many OTP attempts. Please try again later.")
-            }
+            // if (remainingAttempts === 0) {
+            //     throw new Error("Too many OTP attempts. Please try again later.")
+            // }
 
             // Generate OTP
             const otp = Math.floor(100000 + Math.random() * 900000).toString()
