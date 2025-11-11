@@ -138,15 +138,17 @@ type Property {
   landZoning : String
   ownersCount : Int
   waterLevel : Int
-  landMark : String
   category : String
   highwayConn : Boolean
   ownershipYes : Boolean
   soilType: String
   roadAccess: Boolean
   roadAccessDistance: Int
+  landMark: String
   landMarkName: String
   landType : String
+  roadAccessWidth : Int
+  roadAccessDistanceUnit : String
  
 }
 type properties {
@@ -220,7 +222,7 @@ type properties {
 }
 
 type PaginatedProperties {
-  data: [properties !]!
+  data: [properties!]!
   meta: PaginationMeta
 }
 
@@ -259,6 +261,8 @@ input PropertyDetailsSchemaInput {
   roadAccessDistance: Int,
   description: String,
   landMarkName: JSON
+  roadAccessWidth : Int
+  roadAccessDistanceUnit : String
 }
 
 
