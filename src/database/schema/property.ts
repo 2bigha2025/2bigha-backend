@@ -174,6 +174,8 @@ export const properties = pgTable("properties", {
   roadAccessDistance: integer("road_access_distance"),
   landMark: jsonb("land_mark").$type<string[]>(),
   landMarkName: jsonb("landmark_name").$type<Record<string,string>>(),
+  roadAccessWidth: integer("road_access_width"),
+  roadAccessDistanceUnit: text("road_access_distance_unit"),
 })
 
 export const propertyVerification = pgTable("property_verification", {
