@@ -95,24 +95,24 @@ export const properties = pgTable("properties", {
   listingId : serial("listing_id"),
   title: text("title"),
   description: text("description"),
-  propertyType: propertyTypeEnum("property_type").notNull(),
+  propertyType: propertyTypeEnum("property_type"),
 
-  status: publishedStatusEnum("published_status").notNull().default("DRAFT"),
-  price: real("price").notNull(),
+  status: publishedStatusEnum("published_status").default("DRAFT"),
+  price: real("price"),
   pricePerUnit: real("price_per_unit"), // Calculated field
 
-  area: real("area").notNull(),
-  areaUnit: areaUnitEnum("area_unit").notNull().default("SQFT"),
+  area: real("area"),
+  areaUnit: areaUnitEnum("area_unit").default("SQFT"),
 
   khasraNumber: text("khasra_number"), // Land record number
   murabbaNumber: text("murabba_number"), // Revenue village subdivision
   khewatNumber: text("khewat_number"), // Ownership record number
 
   // Location Information
-  address: text("address").notNull(),
-  city: text("city").notNull(),
+  address: text("address"),
+  city: text("city"),
   district: text("district"), // Added from UI
-  state: text("state").notNull(),
+  state: text("state"),
   country: text("country").default("India"),
   pinCode: text("pin_code"), // Changed from postalCode to pinCode
 

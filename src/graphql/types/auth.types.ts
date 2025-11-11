@@ -70,6 +70,7 @@ type Permission {
     id: ID!
     bio: String
     avatar: String
+    whatsappNumber: String
     phone: String
     address: String
     city: String
@@ -93,6 +94,7 @@ type Permission {
     bio: String
     avatar: Upload
     phone: String
+    whatsappNumber: String
     address: String
     city: String
     state: String
