@@ -90,6 +90,16 @@ export const savedPropertiesResolvers = {
         publicSavedCollections: async (_: any, { limit = 20, offset = 0 }: any) => {
             return await SavedPropertiesService.getPublicCollections(limit, offset)
         },
+        propertySearchByStateOrCity: async (_, { input }) => {
+              const { state, city, page = 1, limit = 5 } = input;
+        
+              const result = await SavedPropertiesService.searchPropertyByStateOrCity(page, limit, state, city);
+        
+              return {
+                data: result.data,
+                meta: result.meta,
+              };
+            },
     },
 
     Mutation: {
