@@ -717,6 +717,8 @@ export class PropertyService {
                   p.price,
                   p.price_per_unit as "PricePerUnit",
                   p.area,
+                  p.road_access_width as "roadAccessWidth",
+                  p.road_access_distance_unit as "roadAccessDistanceUnit",
                   p.land_mark as "landMark",
                   p.landmark_name as "landMarkName",
                   p.approval_status as "status",
@@ -870,6 +872,8 @@ export class PropertyService {
                 roadAccess: propertyData.propertyDetailsSchema.roadAccess,
                 roadAccessDistance: propertyData.propertyDetailsSchema.roadAccessDistance,
                 landMarkName: propertyData.propertyDetailsSchema.landMarkName,
+                roadAccessWidth: propertyData.propertyDetailsSchema.roadAccessWidth,
+                roadAccessDistanceUnit: propertyData.propertyDetailsSchema.roadAccessDistanceUnit,
             }).returning({listing_id:properties.listingId});
 
             const generateSeo = await SeoGenerator.generateSEOFields(
@@ -1003,6 +1007,8 @@ export class PropertyService {
                 roadAccess: propertyData.propertyDetailsSchema.roadAccess,
                 roadAccessDistance: propertyData.propertyDetailsSchema.roadAccessDistance,
                 landMarkName: propertyData.propertyDetailsSchema.landMarkName,
+                roadAccessWidth: propertyData.propertyDetailsSchema.roadAccessWidth,
+                roadAccessDistanceUnit: propertyData.propertyDetailsSchema.roadAccessDistanceUnit,
             }).returning({listing_id:properties.listingId});
 
             const generateSeo = await SeoGenerator.generateSEOFields(
