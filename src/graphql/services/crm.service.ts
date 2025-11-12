@@ -41,6 +41,21 @@ export class CrmService {
         };
     }
 
+
+     static async updateLead(id: any, input: any) {
+        const { leadSource, leadType, groupId } = input;
+        await db.update(lead).set({
+            leadSource: leadSource,
+            leadType: leadType,
+            groupId: groupId,
+        }).where(eq(lead.Id, id))
+
+        return {
+            message: "Lead updated successfully",
+            STATUS_CODES: 200
+        }
+    }
+
     static async createLeadProperty(input: any, adminId: string) {
         const { lead, property, propertyMetaData, callLogs } = input;
 
@@ -292,19 +307,35 @@ export class CrmService {
 
 
     // CallLogs CRUD Operations
-    static async createCallLogs(input: any, adminId: string) {
-        const { groupName, groupIcon, isAvailable } = input;
-        const result = await db.insert(propertyGroups).values({
-            groupName: groupName,
-            groupIcon,
-            isAvailable,
-            createdBy: adminId,
-        }).returning();
+    static async getAllCallLogs() {
+        const result = await db.select({
+            ...getTableColumns(callLogs),
+            clientName: sql`${schema.platformUsers.firstName} || ' ' || ${schema.platformUsers.lastName}`.as("clientName"),
+            clientNumber: schema.platformUserProfiles.phone,
+            agentName: sql`${adminUsers.firstName} || ' ' || ${adminUsers.lastName}`.as("agentName"),
+            agentNumber: adminUsers.phone,            
+        }).from(callLogs).leftJoin(adminUsers, eq(callLogs.AgentId, adminUsers.id)).leftJoin(schema.platformUsers, eq(callLogs.clientId, schema.platformUsers.id)).leftJoin(schema.platformUserProfiles, eq(callLogs.clientId, schema.platformUserProfiles.userId))
+            .orderBy(desc(callLogs.createdAt));
         return {
-            result: result[0],
-            message: "Group created successfully",
-            STATUS_CODES: 201
+            result,
+            message: "Call Logs fetched successfully",
+            STATUS_CODES: 200
         }
     }
+
+    // static async createCallLogs(input: any, adminId: string) {
+    //     const { groupName, groupIcon, isAvailable } = input;
+    //     const result = await db.insert(propertyGroups).values({
+    //         groupName: groupName,
+    //         groupIcon,
+    //         isAvailable,
+    //         createdBy: adminId,
+    //     }).returning();
+    //     return {
+    //         result: result[0],
+    //         message: "Group created successfully",
+    //         STATUS_CODES: 201
+    //     }
+    // }
 
 }

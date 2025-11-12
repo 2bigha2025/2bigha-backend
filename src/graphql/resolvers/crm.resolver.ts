@@ -45,7 +45,6 @@ export const crmResolver = {
       getGroupById: async (_: any, { id }: any) => {
          try {
             const group = await CrmService.getGroupById(id)
-            console.log(group);
             return group;
          } catch (error) {
             throw new GraphQLError(`Failed to get group: ${(error as Error).message}`, {
@@ -59,7 +58,6 @@ export const crmResolver = {
       getAllBroadcasts: async (_: any) => {
          try {
             const broadcast = await CrmService.getAllBroadcasts()
-            console.log(broadcast);
             return broadcast;
          } catch (error) {
             throw new GraphQLError(`Failed to get broadcast: ${(error as Error).message}`, {
@@ -71,14 +69,24 @@ export const crmResolver = {
       getBroadcastById: async (_: any, { id }: any) => {
          try {
             const broadcast = await CrmService.getBroadcastById(id)
-            console.log(broadcast);
             return broadcast;
          } catch (error) {
             throw new GraphQLError(`Failed to get broadcast: ${(error as Error).message}`, {
                extensions: { code: "INTERNAL_ERROR" },
             })
          }
-      }
+      },
+      // call logs
+      getAllCallLogs: async (_: any,) => {
+         try {
+            const calls = await CrmService.getAllCallLogs()
+            return calls;
+         } catch (error) {
+            throw new GraphQLError(`Failed to get call logs: ${(error as Error).message}`, {
+               extensions: { code: "INTERNAL_ERROR" },
+            })
+         }
+      },
 
    }
    ,
@@ -117,6 +125,23 @@ export const crmResolver = {
             })
          }
 
+      },
+        updateLead: async (_: any, { id, input }: any, context: AdminContext) => {
+         if (!context.admin?.adminId) {
+            throw new GraphQLError("Authentication required", {
+               extensions: { code: "UNAUTHENTICATED" },
+            })
+         }
+         try {
+            const data = await CrmService.updateLead(id, input);
+            return data;
+         } catch (error) {
+            console.log(error);
+            throw new GraphQLError(`Failed to create Lead: ${(error as Error).message}`, {
+               extensions: { code: "INTERNAL_ERROR" },
+            })
+         }
+
       }
       ,
       createGroup: async (_: any, { input }: any, context: AdminContext) => {
@@ -127,7 +152,6 @@ export const crmResolver = {
          }
          try {
             const data = await CrmService.createGroup(input, context.admin.adminId);
-            console.log("create group resolver", data);
             return data;
          } catch (error) {
             console.log(error);
