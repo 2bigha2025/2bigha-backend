@@ -43,10 +43,20 @@ input CreateLeadInput {
     groupId : ID
 }
 
+
+
+input UpdateLeadInput {
+    leadSource : String
+    leadType : String
+    groupId : ID
+}
+
+
 input LeadIdInput {
     Id: ID!
     clientId : ID!
 }
+
 
 type CreateLeadResponse{
     result: LeadData
@@ -185,6 +195,51 @@ type CreateGroupResponse {
     STATUS_CODES: Int
 }
 
+type CallLogs{
+    Id:ID!
+    leadId:ID!
+    propertyId:String
+    status:String
+    clientId:ID!
+    AgentId:ID!
+    duration:String
+    recordingUrl:String
+    callType:String
+    disconnectedBy:String
+    feedback: String
+    followUp: Date
+    createdAt: Date!
+    clientName:String
+    clientNumber:String
+    agentName:String
+    agentNumber:String
+}
+
+type CallLogesResponse{
+    result:[CallLogs]
+    message:String!
+    STATUS_CODES: Int!
+}
+
+type Notes{
+    Id: ID!
+    propertyId: ID!
+    note: String
+    createdAt: Date!
+    createdBy:ID!
+}
+
+type Template{
+    Id:ID!
+    name:String!
+    category:String
+    status:String
+    language:String
+    createdBy:ID!
+    createdAt:Date!
+    updatedAt:Date!
+}
+
 type ResponseMessage{
     message:String!
     STATUS_CODES:Int!
@@ -199,13 +254,13 @@ extend type Query {
 
     getAllBroadcasts: BroadcastResponse
     getBroadcastById(id:ID!):CreateBroadcastResponse
-
+    getAllCallLogs: CallLogesResponse
 }
 
   extend type Mutation {
     createLead(input: CreateLeadInput!): CreateLeadResponse!
     createLeadProperty(input: CreateCallPropertyInput!): ResponseMessage
-    
+    updateLead(id: ID!, input: UpdateLeadInput!): ResponseMessage!
     createGroup(input: CreateGroupInput):CreateGroupResponse
     updateGroup(id: ID!, input: CreateGroupInput!): CreateGroupResponse!
     updateActiveGroup(id: ID!, input: CreateGroupActiveInput!): ResponseMessage!
