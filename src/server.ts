@@ -38,6 +38,8 @@ const startServer = async () => {
   const server = new ApolloServer<MyContext>({
     schema,
     plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
+    csrfPrevention: false, // ✅ allow server-to-server POSTs (e.g. Kommuno callbacks)
+    introspection: true, // ✅ allow introspection for debugging
   })
 
   await server.start()
