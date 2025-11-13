@@ -52,6 +52,34 @@ const startServer = async () => {
   // Handle GraphQL file uploads
   app.use(graphqlUploadExpress({ maxFileSize: 100 * 1024 * 1024, maxFiles: 10 }))
 
+
+  app.post("/kommuno/callback", express.json(), async (req, res) => {
+    try {
+      console.log(">>>>>>>Callback>>>>", req,res);
+      const payload = req.body;
+      console.log("Kommuno callback received:", payload);
+
+      // Determine the type of payload
+      if (payload.live_event) {
+        // This is a live call event (ringing, connected, etc.)
+        console.log("Live Event:", payload.live_event);
+        // TODO: insert into kommuno_call_events table
+      } else if (payload.call_details?.live_event === "evt_completed_with_recording") {
+        // This is a completed call with recording
+        console.log("Recording Event:", payload.call_details.recording_details?.recording_path);
+        // TODO: insert into kommuno_recordings table
+      } else {
+        console.log("Other callback payload");
+      }
+
+      // Always respond 200 quickly
+      res.status(200).json({ status: "ok" });
+    } catch (err) {
+      console.error("Kommuno callback error:", err);
+      res.status(500).json({ error: "internal error" });
+    }
+  });
+
   // Apollo middleware
   app.use(
     '/graphql',
@@ -79,32 +107,7 @@ const startServer = async () => {
 
 
   // Kommuno webhook for call events
-  app.post("/kommuno/callback", express.json(), async (req, res) => {
-    try {
-      console.log(">>>>>>>Callback>>>>", req,res);
-      const payload = req.body;
-      console.log("Kommuno callback received:", payload);
-
-      // Determine the type of payload
-      if (payload.live_event) {
-        // This is a live call event (ringing, connected, etc.)
-        console.log("Live Event:", payload.live_event);
-        // TODO: insert into kommuno_call_events table
-      } else if (payload.call_details?.live_event === "evt_completed_with_recording") {
-        // This is a completed call with recording
-        console.log("Recording Event:", payload.call_details.recording_details?.recording_path);
-        // TODO: insert into kommuno_recordings table
-      } else {
-        console.log("Other callback payload");
-      }
-
-      // Always respond 200 quickly
-      res.status(200).json({ status: "ok" });
-    } catch (err) {
-      console.error("Kommuno callback error:", err);
-      res.status(500).json({ error: "internal error" });
-    }
-  });
+  
 
 
 
