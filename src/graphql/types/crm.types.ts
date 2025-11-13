@@ -101,16 +101,6 @@ input PropertyMetaInput{
 }
 
 
-
-type CallLogs{
-    Id:ID!
-    propertyId:ID!
-    callStatus: String!
-    feedback: String
-    followUp: Date!
-    createdAt: Date!
-}
-
 type Notes{
     Id: ID!
     propertyId: ID!
