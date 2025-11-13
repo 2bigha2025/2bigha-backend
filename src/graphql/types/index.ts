@@ -10,5 +10,7 @@ import { seoTypeDefs } from './seo.types';
 import { userPropertyTypeDefs } from './save-user-property.types';
 import { geoJsonTypeDefs } from './geoJson.types';
 import { reportDefs } from './reports.types';
-export const typeDefs = mergeTypeDefs([userPropertyTypeDefs, authTypeDefs, propertyTypeDefs, rbacTypeDefs, propertyApprovalEnhancedTypeDefs, adminDashboardTypeDefs, mapPropertiesTypeDefs, blogTypeDefs, seoTypeDefs, geoJsonTypeDefs,reportDefs]);
+import { crmTypeDefs } from './crm.types';
+import { ivrTypeDefs } from './ivr.types';
+export const typeDefs = mergeTypeDefs([ivrTypeDefs,userPropertyTypeDefs, authTypeDefs, propertyTypeDefs, rbacTypeDefs, propertyApprovalEnhancedTypeDefs, adminDashboardTypeDefs, mapPropertiesTypeDefs, blogTypeDefs, seoTypeDefs, geoJsonTypeDefs,reportDefs,crmTypeDefs]);
 

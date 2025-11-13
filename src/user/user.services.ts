@@ -26,7 +26,7 @@ export class PlatformUserService {
             if (existingUser) {
                 throw new Error("User already exists")
             }
-
+                      console.log("userData",userData);
             // Check if user already exists by phone
 
             // Hash password
@@ -71,6 +71,7 @@ export class PlatformUserService {
             await db.insert(platformUserProfiles).values({
                 userId: newUser.id,
                 phone: userData.phone,
+                whatsappNumber: userData.whatsappNumber,
                 avatar: avatarUrl,
                 address: userData.address
             })

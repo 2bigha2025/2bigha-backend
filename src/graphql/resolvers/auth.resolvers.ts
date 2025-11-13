@@ -230,6 +230,7 @@ export const adminAuthResolvers = {
                             const createUserData = {
                                 ...userData,
                                 phone: profile?.phone,
+                                whatsappNumber: profile?.whatsappNumber,
                                 profileImage: profile?.avatar,
                                 address: profile?.address,
                             };
