@@ -111,6 +111,10 @@ const startServer = async () => {
   // Kommuno webhook for call events
   
 
+// Debug: list all registered Express routes
+app._router.stack
+  .filter((r: any) => r.route)
+  .forEach((r: any) => console.log("✅ Registered route:", r.route.path));
 
 
   const PORT = process.env.ADMIN_PORT || 5000
