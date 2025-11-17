@@ -152,17 +152,24 @@ input PropertySearchByStateOrCityInput {
   limit: Int = 5
   state: String
   city: String
+  minPrice: Float
+  maxPrice: Float
+  landType: String
+  sortBy: String
 }
 
-#  Meta info for pagination
+# Meta info for pagination
 type PropertySearchMeta {
   total: Int
   page: Int
   limit: Int
   totalPages: Int
+  avgPrice: Float
+  minPrice: Float
+  maxPrice: Float
 }
 
-#  Owner info (for response)
+# Owner info (for response)
 type PropertyOwner {
   firstName: String
   lastName: String
@@ -182,11 +189,12 @@ type PropertySearchItem {
   images: [PropertyImage]
 }
 
-#  Main paginated response
+# Main paginated response
 type PropertySearchByStateOrCityResponse {
   data: [PropertySearchItem]
   meta: PropertySearchMeta
 }
+
 
 extend type Query {
   savedProperty(id: ID!): Property!

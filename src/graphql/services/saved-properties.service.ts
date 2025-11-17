@@ -1,4 +1,17 @@
-import { eq, and, desc, asc, sql, like, gte, lte, count, isNotNull, ilike } from "drizzle-orm";
+import {
+  eq,
+  and,
+  desc,
+  asc,
+  sql,
+  like,
+  gte,
+  lte,
+  count,
+  isNotNull,
+  ilike,
+  or,
+} from "drizzle-orm";
 import { db } from "../../database/connection";
 import * as schema from "../../database/schema/index";
 import { alias } from "drizzle-orm/gel-core";
@@ -638,47 +651,102 @@ export class SavedPropertiesService {
   }
 
   // search property by location (state or city)
-static async searchPropertyByStateOrCity(
-  page: number = 1,
-  limit: number = 5,
-  state?: string,
-  city?: string
-) {
+  static async searchPropertyByStateOrCity(
+    page: number = 1,
+    limit: number = 5,
+    state?: string,
+    city?: string,
+    minPrice?: number,
+    maxPrice?: number,
+    landType?: string,
+    sortBy?: string
+  ) {
+    console.log("inputs", {
+      page,
+      limit,
+      state,
+      city,
+      minPrice,
+      maxPrice,
+      landType,
+      sortBy,
+    });
 
-  try {
-    const offset = (page - 1) * limit;
+    try {
+      const offset = (page - 1) * limit;
 
-    // --- Aliases ---
-    const ownerUser = alias(platformUsers, "ownerUser");
-    const createdByUser = alias(platformUsers, "createdByUser");
-    const adminUser = alias(adminUsers, "adminUser");
-    const ownerProfile = alias(platformUserProfiles, "ownerProfile");
-    const createdByProfile = alias(platformUserProfiles, "createdByProfile");
+      const ownerUser = alias(platformUsers, "ownerUser");
+      const createdByUser = alias(platformUsers, "createdByUser");
+      const adminUser = alias(adminUsers, "adminUser");
+      const ownerProfile = alias(platformUserProfiles, "ownerProfile");
+      const createdByProfile = alias(platformUserProfiles, "createdByProfile");
 
-    // --- WHERE conditions ---
-    const baseCondition = and(
-      eq(properties.approvalStatus, "APPROVED"),
-      eq(properties.isActive, true)
-    );
+      const filterConditions: any[] = [];
 
-    let whereCondition = baseCondition;
-    if (state && city) {
-      whereCondition = and(
-        baseCondition,
-        ilike(properties.state, `%${state}%`),
-        ilike(properties.city, `%${city}%`)
-      );
-    } else if (state) {
-      whereCondition = and(baseCondition, ilike(properties.state, `%${state}%`));
-    }
+      filterConditions.push(eq(properties.approvalStatus, "APPROVED"));
 
-    // --- Main query ---
-    const results = await db
-      .select({
-        property: properties,
-        seo: propertySeo,
-        verification: propertyVerification,
-        images: sql`
+      if (state) {
+        filterConditions.push(
+          sql`LOWER(TRIM(${properties.state})) ILIKE ${
+            "%" + state.toLowerCase() + "%"
+          }`
+        );
+      }
+
+      if (city) {
+        filterConditions.push(
+          sql`LOWER(TRIM(${properties.city})) ILIKE ${
+            "%" + city.toLowerCase() + "%"
+          }`
+        );
+      }
+
+      if (minPrice) filterConditions.push(gte(properties.price, minPrice));
+      if (maxPrice) filterConditions.push(lte(properties.price, maxPrice));
+
+      if (landType) {
+        filterConditions.push(
+          sql`LOWER(${properties.propertyType}::text) ILIKE ${
+            "%" + landType.toLowerCase() + "%"
+          }`
+        );
+      }
+ 
+      console.log("=======>=======", filterConditions);
+      
+      let orderByClause: any;
+
+      switch (sortBy) {
+        case "Price Low to High":
+          orderByClause = asc(properties.price);
+          break;
+
+        case "Price High to Low":
+          orderByClause = desc(properties.price);
+          break;
+
+        case "New Properties":
+          orderByClause = desc(properties.createdAt);
+          break;
+
+        case "Trending Properties":
+          orderByClause = desc(sql`COALESCE(${properties.viewCount}, 0)`);
+          break;
+
+        default:
+          orderByClause = desc(properties.createdAt);
+      }
+
+      // -----------------------------
+      // ⭐ MAIN DATA FETCH
+      // -----------------------------
+      const results = await db
+        .select({
+          property: properties,
+          seo: propertySeo,
+          verification: propertyVerification,
+
+          images: sql`
           COALESCE(
             json_agg(${propertyImages}.*)
             FILTER (WHERE ${propertyImages}.id IS NOT NULL),
@@ -686,104 +754,124 @@ static async searchPropertyByStateOrCity(
           )
         `.as("images"),
 
-        // 👇 Fallback logic for owner details
-        owner: {
-          firstName: sql`
+          owner: {
+            firstName: sql`
             COALESCE(
-              ${ownerUser.firstName},
               ${createdByUser.firstName},
-              ${adminUser.firstName}
+              ${adminUser.firstName},
+              ${ownerUser.firstName}
             )
           `.as("firstName"),
-          lastName: sql`
+
+            lastName: sql`
             COALESCE(
-              ${ownerUser.lastName},
               ${createdByUser.lastName},
-              ${adminUser.lastName}
+              ${adminUser.lastName},
+              ${ownerUser.lastName}
             )
           `.as("lastName"),
-          email: sql`
+
+            email: sql`
             COALESCE(
-              ${ownerUser.email},
               ${createdByUser.email},
-              ${adminUser.email}
+              ${adminUser.email},
+              ${ownerUser.email}
             )
           `.as("email"),
-          phone: sql`
+
+            phone: sql`
             COALESCE(
-              ${ownerProfile.phone},
               ${createdByProfile.phone},
+              ${adminUser.phone},
+              ${ownerProfile.phone},
               ${properties.ownerPhone}
             )
           `.as("phone"),
-          city: sql`
+
+            city: sql`
             COALESCE(
-              ${ownerProfile.city},
               ${createdByProfile.city},
+              ${ownerProfile.city},
               ${properties.city}
             )
           `.as("city"),
-          state: sql`
+
+            state: sql`
             COALESCE(
-              ${ownerProfile.state},
               ${createdByProfile.state},
+              ${ownerProfile.state},
               ${properties.state}
             )
           `.as("state"),
-          avatar: sql`
+
+            avatar: sql`
             COALESCE(
-              ${ownerProfile.avatar},
-              ${createdByProfile.avatar}
+              ${createdByProfile.avatar},
+              ${ownerProfile.avatar}
             )
           `.as("avatar"),
-        },
-      })
-      .from(properties)
-      // 👇 Use LEFT JOINs to avoid losing rows if any relation is missing
-      .leftJoin(propertyVerification, eq(properties.id, propertyVerification.propertyId))
-      .leftJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
-      .leftJoin(ownerUser, eq(properties.ownerId, ownerUser.id))
-      .leftJoin(createdByUser, eq(properties.createdByUserId, createdByUser.id))
-      .leftJoin(adminUser, eq(properties.createdByAdminId, adminUser.id))
-      .leftJoin(ownerProfile, eq(ownerProfile.userId, ownerUser.id))
-      .leftJoin(createdByProfile, eq(createdByProfile.userId, createdByUser.id))
-      .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
-      .where(whereCondition)
-      .groupBy(
-        properties.id,
-        propertySeo.id,
-        propertyVerification.id,
-        ownerUser.id,
-        createdByUser.id,
-        adminUser.id,
-        ownerProfile.id,
-        createdByProfile.id
-      )
-      .orderBy(desc(properties.createdAt))
-      .limit(limit)
-      .offset(offset);
+          },
+        })
+        .from(properties)
+        .leftJoin(
+          propertyVerification,
+          eq(properties.id, propertyVerification.propertyId)
+        )
+        .leftJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
+        .leftJoin(ownerUser, eq(properties.ownerId, ownerUser.id))
+        .leftJoin(
+          createdByUser,
+          eq(properties.createdByUserId, createdByUser.id)
+        )
+        .leftJoin(adminUser, eq(properties.createdByAdminId, adminUser.id))
+        .leftJoin(ownerProfile, eq(ownerProfile.userId, ownerUser.id))
+        .leftJoin(
+          createdByProfile,
+          eq(createdByProfile.userId, createdByUser.id)
+        )
+        .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
+        .where(and(...filterConditions))
+        .groupBy(
+          properties.id,
+          propertySeo.id,
+          propertyVerification.id,
+          ownerUser.id,
+          createdByUser.id,
+          adminUser.id,
+          ownerProfile.id,
+          createdByProfile.id
+        )
+        .orderBy(orderByClause)
+        .limit(limit)
+        .offset(offset);
 
-    // --- Count for pagination ---
-    const [{ total }] = await db
-      .select({ total: sql<number>`COUNT(*)` })
-      .from(properties)
-      .where(whereCondition);
+      // -----------------------------
+      // ⭐ META QUERY
+      // -----------------------------
+      const [metaRow] = await db
+        .select({
+          total: sql<number>`COUNT(*)`,
+          avgPrice: sql<number>`AVG(${properties.price})`,
+          minPrice: sql<number>`MIN(${properties.price})`,
+          maxPrice: sql<number>`MAX(${properties.price})`,
+        })
+        .from(properties)
+        .where(and(...filterConditions));
 
-    return {
-      data: results,
-      meta: {
-        total,
+      const meta = {
+        total: Number(metaRow.total) || 0,
         page,
         limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
-  } catch (error) {
-    console.error("❌ Error in searchPropertyByStateOrCity:", error);
-    throw new Error("Failed to fetch properties by state or city");
+        totalPages: Math.ceil(Number(metaRow.total) / limit),
+        avgPrice: Number(metaRow.avgPrice) || 0,
+        minPrice: Number(metaRow.minPrice) || 0,
+        maxPrice: Number(metaRow.maxPrice) || 0,
+      };
+
+      return { data: results, meta };
+    } catch (error) {
+      console.error("❌ Error in searchPropertyByStateOrCity:", error);
+      throw new Error("Failed to fetch properties by state or city");
+    }
   }
-}
-
-
-
 }
