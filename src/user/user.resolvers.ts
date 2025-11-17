@@ -772,6 +772,9 @@ export const platformUserResolvers = {
             { input }: { input: any },
             context: PlatformUserContext
         ) => {
+            console.log("🔐 Context user:", context.user);
+            console.log("📥 Input received:", JSON.stringify(input, null, 2));
+            
             if (!context.user) {
                 throw new GraphQLError("Not authenticated", {
                     extensions: { code: "UNAUTHENTICATED" },
@@ -779,15 +782,21 @@ export const platformUserResolvers = {
             }
 
             try {
-                const property = await PropertyService.createPropertyByUser(
+                const result = await PropertyService.createPropertyByUser(
                     input,
                     context.user.userId
                 );
-                return property;
-            } catch (error) {
-                console.log(error)
+                return result;
+            } catch (error: any) {
+                console.log("❌ Create property error:", error)
                 console.error("Create property error:", error);
-                throw new GraphQLError("Failed to create property", {
+                
+                // Log the actual error message
+                const errorMessage = error?.message || "Unknown error";
+                console.error("Error message:", errorMessage);
+                console.error("Error stack:", error?.stack);
+                
+                throw new GraphQLError(`Failed to create property: ${errorMessage}`, {
                     extensions: { code: "INTERNAL_ERROR" },
                 });
             }

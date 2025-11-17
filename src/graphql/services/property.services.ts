@@ -44,7 +44,12 @@ type RawPolygonInput = {
         };
     };
 };
-export function parsePropertyPolygon(data: RawPolygonInput) {
+export function parsePropertyPolygon(data: RawPolygonInput | null) {
+    // Return empty object if data is null or invalid
+    if (!data || !data.boundaries || !data.boundaries[0] || !data.location) {
+        return {}; 
+    }
+    
     const { location, boundaries } = data;
     const boundaryData = boundaries[0];
 
@@ -950,21 +955,16 @@ export class PropertyService {
 
         const images = propertyData.images;
 
-        const parse = await parsePropertyPolygon(propertyData?.map);
+        const parse = propertyData?.map ? await parsePropertyPolygon(propertyData.map) : {};
 
         let processedImages: PropertyImageData[] = [];
         if (images && images.length > 0) {
-            if (images && images.length > 0) {
-                const resolvedUploads = await Promise.all(
-                    images.map(async (upload: any) => {
-                        return await upload.promise;
-                    })
-                );
+            console.log("🖼️ Received images:", images);
+            
+            // Process images directly - they should already be FileUpload objects from graphql-upload
+            processedImages = await this.processPropertyImages(images);
 
-                processedImages = await this.processPropertyImages(resolvedUploads);
-
-                console.log("🖼️ Processed images:", processedImages);
-            }
+            console.log("🖼️ Processed images:", processedImages);
         }
 
        
@@ -976,7 +976,8 @@ export class PropertyService {
                 id: propertyId,
                 propertyType:
                     propertyData.propertyDetailsSchema.propertyType.toUpperCase(),
-                status: "PUBLISHED",
+                status: "DRAFT",  // Changed from PUBLISHED to DRAFT
+                approvalStatus: "PENDING",  // Set to PENDING for approval queue
                 price: parseFloat(propertyData.propertyDetailsSchema.totalPrice),
                 area: parseFloat(propertyData.propertyDetailsSchema.area),
                 pricePerUnit: parseFloat(
@@ -991,9 +992,9 @@ export class PropertyService {
                 district: propertyData.location.district,
                 state: propertyData.location.state,
                 pinCode: propertyData.location.pincode,
-                ...parse,
+                ...(parse || {}),
                 isActive: true,
-                publishedAt: new Date(),
+                // Do not set publishedAt - property is not published yet
                 createdByType: "USER",
                 createdByUserId: userID,
                 waterLevel: propertyData.propertyDetailsSchema.waterLevel,
@@ -1010,6 +1011,11 @@ export class PropertyService {
                 roadAccessWidth: propertyData.propertyDetailsSchema.roadAccessWidth,
                 roadAccessDistanceUnit: propertyData.propertyDetailsSchema.roadAccessDistanceUnit,
             }).returning({listing_id:properties.listingId});
+
+            // Check if property was created successfully
+            if (!createdProperty || !createdProperty[0] || !createdProperty[0].listing_id) {
+                throw new Error("Failed to create property in database");
+            }
 
             const generateSeo = await SeoGenerator.generateSEOFields(
                 createdProperty[0].listing_id,
@@ -1070,10 +1076,12 @@ export class PropertyService {
             .select()
             .from(propertyImages)
             .where(eq(propertyImages.propertyId, propertyId));
+        
+        // Return structure matching the properties type
         const result = {
-            ...property,
-            seo,
-            verification,
+            property: property,
+            seo: seo,
+            verification: verification,
             images: imagesResult,
         };
 
