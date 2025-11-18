@@ -712,7 +712,6 @@ export class SavedPropertiesService {
         );
       }
  
-      console.log("=======>=======", filterConditions);
       
       let orderByClause: any;
 
@@ -867,7 +866,8 @@ export class SavedPropertiesService {
         minPrice: Number(metaRow.minPrice) || 0,
         maxPrice: Number(metaRow.maxPrice) || 0,
       };
-
+      console.log("results : ",results);
+      
       return { data: results, meta };
     } catch (error) {
       console.error("❌ Error in searchPropertyByStateOrCity:", error);
