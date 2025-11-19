@@ -150,7 +150,7 @@ type savedPropertiesData {
 input PropertySearchByStateOrCityInput {
   page: Int = 1
   limit: Int = 5
-  state: String
+  state: [String]
   city: String
   minPrice: Float
   maxPrice: Float
