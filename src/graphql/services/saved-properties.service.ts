@@ -853,7 +853,7 @@ if (city) {
         minPrice: Number(metaRow.minPrice) || 0,
         maxPrice: Number(metaRow.maxPrice) || 0,
       };
-
+   console.log("result: ", results)
       return { data: results, meta };
     } catch (error) {
       console.error("❌ Error in searchPropertyByStateOrCity:", error);
