@@ -29,7 +29,8 @@
     "test:approval": "tsx scripts/test-property-approval-notifications.ts",
     "test:platform": "tsx scripts/test-platform-user-apis.ts",
     "test:profile-update": "tsx scripts/test-profile-update-apis.ts",
-    "start:platform": "ts-node-dev --respawn --transpile-only src/platform-user-server.ts"
+    "start:platform": "ts-node-dev --respawn --transpile-only src/platform-user-server.ts",
+    "start:manage": "ts-node-dev --respawn --transpile-only src/manage-server.ts"
   },
   "keywords": [
     "graphql",

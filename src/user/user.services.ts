@@ -4,7 +4,7 @@ import * as schema from "../database/schema/index"
 import bcrypt from 'bcryptjs';
 import crypto from "crypto"
 import { logInfo, logError } from "../utils/logger"
-import { validateInput, createUserSchema, updateUserSchema, updateAddressInfoSchema, updateOnlinePresenceSchema, updateProfessionalInfoSchema, } from "../utils/validation"
+import { validateInput, createUserSchema, updateUserSchema} from "../utils/validation"
 import { azureEmailService } from "../../src/graphql/services/email.service"
 import { createSession, getSession, deleteSession } from "../config/auth"
 import { twilioSMSService } from "../graphql/services/twilio-sms.service"
@@ -26,7 +26,7 @@ export class PlatformUserService {
             if (existingUser) {
                 throw new Error("User already exists")
             }
-                      console.log("userData",userData);
+            console.log("userData", userData);
             // Check if user already exists by phone
 
             // Hash password
@@ -51,39 +51,42 @@ export class PlatformUserService {
                     avatarUrl = urls.large || urls.original || Object.values(urls)[0]
                 }
             }
+            const result = await db.transaction(async (tx) => {
+                // Create user
+                const [newUser] = await tx
+                    .insert(platformUsers)
+                    .values({
+                        email: validatedData.email,
+                        firstName: validatedData.firstName,
+                        lastName: validatedData.lastName,
+                        password: hashedPassword,
+                        role: normalizedRole,
+                        isActive: true,
+                        isVerified: false,
+                        createdByAdminId: adminId || null,
+                    })
+                    .returning();
 
-            // Create user
-            const [newUser] = await db
-                .insert(platformUsers)
-                .values({
-                    email: validatedData.email,
-                    firstName: validatedData.firstName,
-                    lastName: validatedData.lastName,
-                    password: hashedPassword,
-                    role: normalizedRole,
-                    isActive: true,
-                    isVerified: false,
-                    createdByAdminId: adminId || null,
-                })
-                .returning()
+                // Create user profile
+                await tx.insert(platformUserProfiles).values({
+                    userId: newUser.id,
+                    phone: userData.phone || null,
+                    whatsappNumber: userData.whatsappNumber,
+                    avatar: avatarUrl || null,
+                    address: userData.address || null,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                });
 
-            // Create user profile
-            await db.insert(platformUserProfiles).values({
-                userId: newUser.id,
-                phone: userData.phone,
-                whatsappNumber: userData.whatsappNumber,
-                avatar: avatarUrl,
-                address: userData.address
-            })
-
+                return newUser;
+            });
             // Send welcome email
-            if (validatedData.email) {
+            if (validatedData.email && validatedData.firstName) {
                 await azureEmailService.sendWelcomeEmail(validatedData.email, validatedData.firstName)
             }
 
-            logInfo("Platform user created successfully", { userId: newUser.id, email: validatedData.email })
-
-            return newUser
+            logInfo("Platform user created successfully", { userId: result.id, email: validatedData.email })
+            return result
         } catch (error) {
             logError("Failed to create platform user", error as Error, { email: userData.email, phone: userData.phone })
             throw error
@@ -96,17 +99,18 @@ export class PlatformUserService {
             if (!userId || typeof userId !== "string") {
                 throw new Error("Invalid userId");
             }
-
+             console.log("userId", userId);
             // Fetch current user once
             const existingUser = await this.findUserById(userId);
             if (!existingUser) {
                 throw new Error(`User with ID ${userId} not found`);
             }
+            console.log("existinguser",existingUser);
             console.log("userdata", userData);
             const validatedData = validateInput(updateUserSchema.partial(), userData);
             // Handle optional avatar upload to Azure (users folder)
             let avatarUrl: string | undefined
-            const normalizedRole = ((validatedData.role || "USER").toUpperCase() as "OWNER" | "AGENT" | "USER")
+            const normalizedRole = ((validatedData.role||'USER').toUpperCase() as "OWNER" | "AGENT" | "USER")
             const resolveUpload = async (maybeUpload: any) => {
                 if (!maybeUpload) return null
                 return typeof maybeUpload?.promise === 'function' ? await maybeUpload.promise : maybeUpload
@@ -124,7 +128,7 @@ export class PlatformUserService {
                 }
             }
             // update user
-            console.log("validatedData", validatedData);
+            // console.log("validatedData", validatedData);
             const userUpdates = filterDefined({
                 email: validatedData.email?.trim().toLowerCase(),
                 firstName: validatedData.firstName?.trim(),
@@ -147,14 +151,14 @@ export class PlatformUserService {
             const [userRow] = await db
                 .update(platformUsers)
                 .set(userUpdates)
-                .where(eq(platformUsers.id, userId))
+                .where(eq(platformUsers.id, existingUser.id))
                 .returning(); // Returns updated row
             updatedUserRow = userRow;
 
             const [profileRow] = await db
                 .update(platformUserProfiles)
                 .set(profileUpdates)
-                .where(eq(platformUserProfiles.userId, userId))
+                .where(eq(platformUserProfiles.userId, existingUser.id))
                 .returning(); // Returns updated row
             updatedProfileRow = profileRow;
 
@@ -308,86 +312,86 @@ export class PlatformUserService {
         }
     }
 
-static async searchUsers(searchTerm: string, limit: number = 30, page: number = 1) {
-  try {
-    const trimmed = (searchTerm || "").trim();
-    if (!trimmed) throw new Error("Search term is required");
+    static async searchUsers(searchTerm: string, limit: number = 30, page: number = 1) {
+        try {
+            const trimmed = (searchTerm || "").trim();
+            if (!trimmed) throw new Error("Search term is required");
 
-    const queryParts = trimmed.split(" ").filter(Boolean);
-    const safeLimit = Math.max(1, Math.min(100, Number(limit) || 10));
-    const safePage = Math.max(1, Number(page) || 1);
-    const offset = (safePage - 1) * safeLimit;
+            const queryParts = trimmed.split(" ").filter(Boolean);
+            const safeLimit = Math.max(1, Math.min(100, Number(limit) || 10));
+            const safePage = Math.max(1, Number(page) || 1);
+            const offset = (safePage - 1) * safeLimit;
 
-    let whereClause;
+            let whereClause;
 
-    if (queryParts.length === 1) {
-      // 🔹 Single-word search (case-insensitive)
-      whereClause = or(
-        ilike(platformUsers.firstName, `%${queryParts[0]}%`),
-        ilike(platformUsers.lastName, `%${queryParts[0]}%`)
-      );
-    } else if (queryParts.length >= 2) {
-      const [first, last] = queryParts;
+            if (queryParts.length === 1) {
+                // 🔹 Single-word search (case-insensitive)
+                whereClause = or(
+                    ilike(platformUsers.firstName, `%${queryParts[0]}%`),
+                    ilike(platformUsers.lastName, `%${queryParts[0]}%`)
+                );
+            } else if (queryParts.length >= 2) {
+                const [first, last] = queryParts;
 
-      if (last && last.length > 0) {
-        // 🔹 Two words → both must match (case-insensitive)
-        whereClause = and(
-          ilike(platformUsers.firstName, `%${first}%`),
-          ilike(platformUsers.lastName, `%${last}%`)
-        );
-      } else {
-        // 🔹 Fallback if last name is empty
-        whereClause = or(
-          ilike(platformUsers.firstName, `%${first}%`),
-          ilike(platformUsers.lastName, `%${first}%`)
-        );
-      }
+                if (last && last.length > 0) {
+                    // 🔹 Two words → both must match (case-insensitive)
+                    whereClause = and(
+                        ilike(platformUsers.firstName, `%${first}%`),
+                        ilike(platformUsers.lastName, `%${last}%`)
+                    );
+                } else {
+                    // 🔹 Fallback if last name is empty
+                    whereClause = or(
+                        ilike(platformUsers.firstName, `%${first}%`),
+                        ilike(platformUsers.lastName, `%${first}%`)
+                    );
+                }
+            }
+
+            const results = await db
+                .select({
+                    user: {
+                        id: platformUsers.id,
+                        firstName: platformUsers.firstName,
+                        lastName: platformUsers.lastName,
+                        email: platformUsers.email,
+                        role: platformUsers.role,
+                        isActive: platformUsers.isActive,
+                        lastLoginAt: platformUsers.lastLoginAt,
+                        updatedAt: platformUsers.updatedAt,
+                        createdAt: platformUsers.createdAt,
+                    },
+                    profile: platformUserProfiles,
+                })
+                .from(platformUsers)
+                .leftJoin(platformUserProfiles, eq(platformUsers.id, platformUserProfiles.userId))
+                .where(whereClause)
+                .limit(safeLimit)
+                .offset(offset);
+
+            const users = (results || []).map((row: any) => ({
+                ...row.user,
+                profile: row.profile,
+            }));
+
+            const [{ count }] = await db
+                .select({ count: sql<number>`COUNT(*)` })
+                .from(platformUsers)
+                .leftJoin(platformUserProfiles, eq(platformUsers.id, platformUserProfiles.userId))
+                .where(whereClause);
+
+            const total = Number(count || 0);
+            const totalPages = Math.max(1, Math.ceil(total / safeLimit));
+
+            return {
+                data: users,
+                meta: { total, page: safePage, limit: safeLimit, totalPages },
+            };
+        } catch (error) {
+            logError("Failed to search users", error as Error, { searchTerm });
+            throw error;
+        }
     }
-
-    const results = await db
-      .select({
-        user: {
-          id: platformUsers.id,
-          firstName: platformUsers.firstName,
-          lastName: platformUsers.lastName,
-          email: platformUsers.email,
-          role: platformUsers.role,
-          isActive: platformUsers.isActive,
-          lastLoginAt: platformUsers.lastLoginAt,
-          updatedAt: platformUsers.updatedAt,
-          createdAt: platformUsers.createdAt,
-        },
-        profile: platformUserProfiles,
-      })
-      .from(platformUsers)
-      .leftJoin(platformUserProfiles, eq(platformUsers.id, platformUserProfiles.userId))
-      .where(whereClause)
-      .limit(safeLimit)
-      .offset(offset);
-
-    const users = (results || []).map((row: any) => ({
-      ...row.user,
-      profile: row.profile,
-    }));
-
-    const [{ count }] = await db
-      .select({ count: sql<number>`COUNT(*)` })
-      .from(platformUsers)
-      .leftJoin(platformUserProfiles, eq(platformUsers.id, platformUserProfiles.userId))
-      .where(whereClause);
-
-    const total = Number(count || 0);
-    const totalPages = Math.max(1, Math.ceil(total / safeLimit));
-
-    return {
-      data: users,
-      meta: { total, page: safePage, limit: safeLimit, totalPages },
-    };
-  } catch (error) {
-    logError("Failed to search users", error as Error, { searchTerm });
-    throw error;
-  }
-}
 
 
     // Update last login
@@ -425,9 +429,11 @@ static async searchUsers(searchTerm: string, limit: number = 30, page: number = 
         phone: string,
     ): Promise<{ success: boolean; expiresIn: number; remainingAttempts: number }> {
         try {
-            const user = await this.findUserByPhone(phone)
+            let user = await this.findUserByPhone(phone)
             if (!user) {
-                throw new Error("User not found with this phone number")
+                const newuser = await this.createUser({ role: 'USER', phone: phone });
+                user = newuser;
+                console.log("new user created", newuser);
             }
             console.log(user, "dsd")
 
@@ -473,12 +479,11 @@ static async searchUsers(searchTerm: string, limit: number = 30, page: number = 
                 expiresAt,
             })
 
-            // Send SMS via Azure
-            console.log(phone)
-            const smsSent = await twilioSMSService.sendOTP(phone, otp)
+            const smsSent = await twilioSMSService.sendOTP(`+91${phone}`, otp)
 
             if (!smsSent) {
                 logError("Failed to send SMS OTP", new Error("SMS service failed"), { phone, userId: user.id })
+                throw new Error("Failed to send SMS OTP");
             }
 
             logInfo("Phone OTP sent", { phone, userId: user.id, smsSent })
@@ -593,48 +598,6 @@ static async searchUsers(searchTerm: string, limit: number = 30, page: number = 
         }
     }
 
-    // Update user profile
-    // static async updateUserProfile(userId: string, profileData: any) {
-    //     try {
-    //         const validatedData = validateInput(updateUserSchema, profileData)
-
-    //         // Update user basic info
-    //         if (validatedData.phone && validatedData.firstName || validatedData.lastName) {
-    //             await db
-    //                 .update(platformUsers)
-    //                 .set({
-    //                     firstName: validatedData.firstName,
-    //                     lastName: validatedData.lastName,
-    //                     role:validatedData.role,
-    //                     updatedAt: new Date(),
-    //                 })
-    //                 .where(eq(platformUsers.id, userId))
-    //         }
-
-    //         // Update profile
-    //         const profileUpdateData: { [key: string]: any; firstName?: any; lastName?: any } = { ...validatedData }
-    //         delete profileUpdateData.firstName
-    //         delete profileUpdateData.lastName
-
-    //         if (Object.keys(profileUpdateData).length > 0) {
-    //             await db
-    //                 .update(platformUserProfiles)
-    //                 .set({
-    //                     ...profileUpdateData,
-    //                     updatedAt: new Date(),
-    //                 })
-    //                 .where(eq(platformUserProfiles.userId, userId))
-    //         }
-
-    //         // Return updated user
-    //         return await this.findUserById(userId)
-    //     } catch (error) {
-    //         logError("Failed to update user profile", error as Error, { userId })
-    //         throw error
-    //     }
-    // }
-
-
 
     // Send email verification
     static async sendEmailVerification(userId: string) {
@@ -710,137 +673,6 @@ static async searchUsers(searchTerm: string, limit: number = 30, page: number = 
             return await this.findUserById(tokenRecord?.platformUserId)
         } catch (error) {
             logError("Email verification failed", error as Error, { token })
-            throw error
-        }
-    }
-
-    // Update Basic Information
-    static async updateBasicInfo(userId: string, basicInfoData: any) {
-        try {
-            const validatedData = validateInput(updateBasicInfoSchema, basicInfoData)
-
-            // Update user basic info (firstName, lastName, email)
-            const userUpdateFields: { firstName?: string; lastName?: string; email?: string; updatedAt: Date } = {
-                updatedAt: new Date(),
-            }
-            if (validatedData.firstName !== undefined) userUpdateFields.firstName = validatedData.firstName
-            if (validatedData.lastName !== undefined) userUpdateFields.lastName = validatedData.lastName
-            if (validatedData.email !== undefined) userUpdateFields.email = validatedData.email
-
-            if (Object.keys(userUpdateFields).length > 1) {
-                await db.update(platformUsers).set(userUpdateFields).where(eq(platformUsers.id, userId))
-            }
-
-            // Update profile fields
-            const profileUpdateData: {
-                bio?: string
-                avatar?: string
-                phone?: string
-                updatedAt: Date
-            } = { updatedAt: new Date() }
-
-            if (validatedData.bio !== undefined) profileUpdateData.bio = validatedData.bio
-            if (validatedData.avatar !== undefined) profileUpdateData.avatar = validatedData.avatar
-            if (validatedData.phone !== undefined) profileUpdateData.phone = validatedData.phone
-
-            if (Object.keys(profileUpdateData).length > 1) {
-                await db.update(platformUserProfiles).set(profileUpdateData).where(eq(platformUserProfiles.userId, userId))
-            }
-
-            logInfo("Basic info updated successfully", { userId })
-            return await this.findUserById(userId)
-        } catch (error) {
-            logError("Failed to update basic info", error as Error, { userId })
-            throw error
-        }
-    }
-
-    // Update Address Information
-    static async updateAddressInfo(userId: string, addressInfoData: any) {
-        try {
-            const validatedData = validateInput(updateAddressInfoSchema, addressInfoData)
-
-            const profileUpdateData: {
-                address?: string
-                state?: string
-                city?: string
-                country?: string
-                pincode?: string
-                location?: string
-                updatedAt: Date
-            } = { updatedAt: new Date() }
-
-            if (validatedData.address !== undefined) profileUpdateData.address = validatedData.address
-            if (validatedData.state !== undefined) profileUpdateData.state = validatedData.state
-            if (validatedData.city !== undefined) profileUpdateData.city = validatedData.city
-            if (validatedData.country !== undefined) profileUpdateData.country = validatedData.country
-            if (validatedData.pincode !== undefined) profileUpdateData.pincode = validatedData.pincode
-            if (validatedData.location !== undefined) profileUpdateData.location = validatedData.location
-
-            if (Object.keys(profileUpdateData).length > 1) {
-                await db.update(platformUserProfiles).set(profileUpdateData).where(eq(platformUserProfiles.userId, userId))
-            }
-
-            logInfo("Address info updated successfully", { userId })
-            return await this.findUserById(userId)
-        } catch (error) {
-            logError("Failed to update address info", error as Error, { userId })
-            throw error
-        }
-    }
-
-    // Update Online Presence
-    static async updateOnlinePresence(userId: string, onlinePresenceData: any) {
-        try {
-            const validatedData = validateInput(updateOnlinePresenceSchema, onlinePresenceData)
-
-            const profileUpdateData: {
-                website?: string
-                socialLinks?: any
-                updatedAt: Date
-            } = { updatedAt: new Date() }
-
-            if (validatedData.website !== undefined) profileUpdateData.website = validatedData.website
-            if (validatedData.socialLinks !== undefined) profileUpdateData.socialLinks = validatedData.socialLinks
-
-            if (Object.keys(profileUpdateData).length > 1) {
-                await db.update(platformUserProfiles).set(profileUpdateData).where(eq(platformUserProfiles.userId, userId))
-            }
-
-            logInfo("Online presence updated successfully", { userId })
-            return await this.findUserById(userId)
-        } catch (error) {
-            logError("Failed to update online presence", error as Error, { userId })
-            throw error
-        }
-    }
-
-    // Update Professional Information
-    static async updateProfessionalInfo(userId: string, professionalInfoData: any) {
-        try {
-            const validatedData = validateInput(updateProfessionalInfoSchema, professionalInfoData)
-
-            const profileUpdateData: {
-                experience?: string
-                specializations?: any
-                languages?: any
-                serviceAreas?: any
-                updatedAt: Date
-            } = { updatedAt: new Date() }
-
-            if (validatedData.experience !== undefined) profileUpdateData.experience = String(validatedData.experience)
-            if (validatedData.specializations !== undefined) profileUpdateData.specializations = validatedData.specializations
-            if (validatedData.languages !== undefined) profileUpdateData.languages = validatedData.languages
-            if (validatedData.serviceAreas !== undefined) profileUpdateData.serviceAreas = validatedData.serviceAreas
-
-            if (Object.keys(profileUpdateData).length > 1) {
-                await db.update(platformUserProfiles).set(profileUpdateData).where(eq(platformUserProfiles.userId, userId))
-            }
-
-            logInfo("Professional info updated successfully", { userId })
-            return await this.findUserById(userId)
-        } catch (error) {
-            logError("Failed to update professional info", error as Error, { userId })
             throw error
         }
     }

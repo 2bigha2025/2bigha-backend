@@ -47,8 +47,8 @@ export const coordinatesSchema = z.object({
 // User validation schemas
 export const createUserSchema = z.object({
   email: emailSchema,
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
   password: passwordSchema,
   role: z.enum(["OWNER", "AGENT", "USER"]).optional(),
 })
@@ -122,39 +122,8 @@ export const updateUserSchema = z.object({
 })
 
 // Address Information validation schema
-export const updateAddressInfoSchema = z.object({
-  address: z.string().min(1, "Street address is required").optional(),
-  state: z.string().min(1, "State is required").optional(),
-  city: z.string().min(1, "City is required").optional(),
-  country: z.string().optional(),
-  pincode: z
-    .string()
-    .regex(/^\d{6}$/, "PIN code must be 6 digits")
-    .optional(),
-  location: z.string().optional(), // Location Description
-})
 
-// Online Presence validation schema
-export const updateOnlinePresenceSchema = z.object({
-  website: urlSchema.optional(),
-  socialLinks: z
-    .object({
-      linkedin: urlSchema.optional(),
-      twitter: urlSchema.optional(),
-      facebook: urlSchema.optional(),
-      instagram: urlSchema.optional(),
-      youtube: urlSchema.optional(),
-    })
-    .optional(),
-})
 
-// Professional Information validation schema
-export const updateProfessionalInfoSchema = z.object({
-  experience: z.number().int().min(0, "Experience must be a positive number").optional(),
-  specializations: z.array(z.string()).min(1, "At least one specialization is required").optional(),
-  languages: z.array(z.string()).min(1, "At least one language is required").optional(),
-  serviceAreas: z.array(z.string()).optional(),
-})
 
 // Combined schema for backward compatibility
 export const updatePlatformUserProfileSchema = z.object({
