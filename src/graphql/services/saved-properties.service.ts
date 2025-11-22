@@ -654,24 +654,14 @@ export class SavedPropertiesService {
   static async searchPropertyByStateOrCity(
     page: number = 1,
     limit: number = 5,
-    state?: string,
+    state?: string[],
     city?: string,
     minPrice?: number,
     maxPrice?: number,
     landType?: string,
     sortBy?: string
   ) {
-    console.log("inputs", {
-      page,
-      limit,
-      state,
-      city,
-      minPrice,
-      maxPrice,
-      landType,
-      sortBy,
-    });
-
+    console.log("States", state);
     try {
       const offset = (page - 1) * limit;
 
@@ -685,21 +675,22 @@ export class SavedPropertiesService {
 
       filterConditions.push(eq(properties.approvalStatus, "APPROVED"));
 
-      if (state) {
-        filterConditions.push(
-          sql`LOWER(TRIM(${properties.state})) ILIKE ${
-            "%" + state.toLowerCase() + "%"
-          }`
-        );
-      }
+if (state && Array.isArray(state) && state.length > 0) {
+  // Normalize and wrap each state as a SQL parameter
+  const normalizedStates = state.map((s) => sql`${s.toLowerCase().trim()}`);
 
-      if (city) {
-        filterConditions.push(
-          sql`LOWER(TRIM(${properties.city})) ILIKE ${
-            "%" + city.toLowerCase() + "%"
-          }`
-        );
-      }
+  filterConditions.push(
+    // Join with commas to make it a valid IN list
+    sql`LOWER(TRIM(${properties.state})) IN (${sql.join(normalizedStates, sql`, `)})`
+  );
+}
+
+if (city) {
+  filterConditions.push(
+    sql`LOWER(TRIM(${properties.city})) ILIKE ${'%' + city.toLowerCase() + '%'}`
+  );
+}
+
 
       if (minPrice) filterConditions.push(gte(properties.price, minPrice));
       if (maxPrice) filterConditions.push(lte(properties.price, maxPrice));
@@ -711,8 +702,7 @@ export class SavedPropertiesService {
           }`
         );
       }
- 
-      
+
       let orderByClause: any;
 
       switch (sortBy) {
@@ -736,9 +726,6 @@ export class SavedPropertiesService {
           orderByClause = desc(properties.createdAt);
       }
 
-      // -----------------------------
-      // ⭐ MAIN DATA FETCH
-      // -----------------------------
       const results = await db
         .select({
           property: properties,
@@ -844,9 +831,9 @@ export class SavedPropertiesService {
         .limit(limit)
         .offset(offset);
 
-      // -----------------------------
-      // ⭐ META QUERY
-      // -----------------------------
+
+        console.log("results", results.length)
+
       const [metaRow] = await db
         .select({
           total: sql<number>`COUNT(*)`,
@@ -866,8 +853,7 @@ export class SavedPropertiesService {
         minPrice: Number(metaRow.minPrice) || 0,
         maxPrice: Number(metaRow.maxPrice) || 0,
       };
-      console.log("results : ",results);
-      
+   console.log("result: ", results)
       return { data: results, meta };
     } catch (error) {
       console.error("❌ Error in searchPropertyByStateOrCity:", error);
