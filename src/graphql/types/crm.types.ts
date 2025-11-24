@@ -60,7 +60,6 @@ input BulkImportLeadInput{
     website:String
     leadType: String 
     leadSource: String
-    groupId: ID
 }
 
 type BulkImportLeadResponse{
@@ -232,13 +231,10 @@ type CallLogesResponse{
 }
 
 input BulkImportCallLogsInput{
-    leadId:String
     status:String 
     createdAt:String
     followUp:String
     feedback:String
-    clientId:String
-    AgentId:String
     clientNumber:String
     agentNumber:String
     duration:String

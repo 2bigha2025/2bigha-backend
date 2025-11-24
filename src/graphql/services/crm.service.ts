@@ -69,42 +69,41 @@ export class CrmService {
         }
     }
 
-    static async bulkImportLead(input: any, adminId: string) {
+
+    static async bulkImportLead(input: any[], adminId: string) {
         let inserted = 0;
-        const duplicateRows: any[] = [];
+        let duplicateRows: any[] = [];
 
-
-        // Chunk Processing
         await db.transaction(async (tx) => {
             for (let i = 0; i < input.length; i += CHUNK_SIZE) {
                 const chunk = input.slice(i, i + CHUNK_SIZE);
 
-                // Remove duplicates inside chunk
-                // remove duplicates by email but ignore blank
+                // Dedupe inside file by email and phone
                 const uniqueChunk1 = _.uniqBy(
                     chunk,
-                    (row: any) => row.email?.trim() || crypto.randomUUID()
+                    (row) => row.email?.trim() || crypto.randomUUID()
                 );
 
-                // remove duplicates by phone but ignore blank
                 const uniqueChunk = _.uniqBy(
                     uniqueChunk1,
-                    (row: any) => row.phone?.trim() || crypto.randomUUID()
+                    (row) => row.phone?.trim() || crypto.randomUUID()
                 );
 
-                // Check existing users in DB
+                // Extract emails & phones
                 const emails = uniqueChunk.map(r => r.email).filter(Boolean);
                 const phones = uniqueChunk.map(r => r.phone).filter(Boolean);
 
-                const existing = await tx
+                // Fetch existing users
+                const existingUsers = await tx
                     .select({
+                        id: schema.platformUsers.id,
                         email: schema.platformUsers.email,
-                        phone: schema.platformUserProfiles.phone,
+                        phone: schema.platformUserProfiles.phone
                     })
                     .from(schema.platformUsers)
                     .leftJoin(
                         schema.platformUserProfiles,
-                        eq(schema.platformUserProfiles.userId, schema.platformUsers.id)
+                        eq(schema.platformUsers.id, schema.platformUserProfiles.userId)
                     )
                     .where(
                         or(
@@ -113,88 +112,106 @@ export class CrmService {
                         )
                     );
 
+                const existingUserMap = new Map();
+                for (const u of existingUsers) {
+                    existingUserMap.set(u.email ?? u.phone, u.id);
+                }
 
-                const dbEmails = new Set(existing.map(e => e.email).filter(Boolean));
-                const dbPhones = new Set(existing.map(e => e.phone).filter(Boolean));
+                const userInsertData: any[] = [];
+                const profileInsertData: any[] = [];
+                const leadInsertData: any[] = [];
 
-                // Remove duplicates found in DB
-                const filteredChunk = uniqueChunk.filter(row => {
-                    const emailExists = row.email && dbEmails.has(row.email.trim());
-                    const phoneExists = row.phone && dbPhones.has(row.phone.trim());
-                    if (emailExists || phoneExists) duplicateRows.push({ name: row.firstName, email: row.email, phone: row.phone });
-                    return !(emailExists || phoneExists);
-                });
+                for (const row of uniqueChunk) {
+                    let userId: string | null = null;
 
-                if (filteredChunk.length === 0) continue;
+                    // Try locating existing user by email or phone
+                    if (row.email && existingUserMap.has(row.email)) {
+                        userId = existingUserMap.get(row.email);
+                    } else if (row.phone && existingUserMap.has(row.phone)) {
+                        userId = existingUserMap.get(row.phone);
+                    }
 
-                // Prepare data for 3 tables
-                const userInsertData = filteredChunk.map((row: any) => ({
-                    id: crypto.randomUUID(),
-                    firstName: row.firstName,
-                    lastName: row.lastName,
-                    role: row.role || "USER",
-                    email: row.email || null,
-                    createdByAdminId: adminId || null,
-                }));
+                    // If user DOES NOT exist → create new user
+                    if (!userId) {
+                        userId = crypto.randomUUID();
 
-                const insertedUsers = await tx
-                    .insert(schema.platformUsers)
-                    .values(userInsertData)
-                    .returning({ id: schema.platformUsers.id });
+                        userInsertData.push({
+                            id: userId,
+                            firstName: row.firstName,
+                            lastName: row.lastName,
+                            role: row.role || "USER",
+                            email: row.email || null,
+                            createdByAdminId: adminId,
+                        });
 
-                const validIds = new Set(insertedUsers.map(u => u.id));
+                        profileInsertData.push({
+                            userId,
+                            phone: row.phone || null,
+                            whatsappNumber: row.whatsappNumber || null,
+                            address: row.address || null,
+                            city: row.city || null,
+                            state: row.state || null,
+                            country: row.country || null,
+                            pincode: row.pincode || null,
+                            website: row.website || null,
+                        });
+                    }
 
-                // Prepare profile table insert
-                const profileInsertData = filteredChunk.map((row: any, index: any) => ({
-                    userId: userInsertData[index].id,
-                    phone: row.phone || null,
-                    whatsappNumber: row.whatsappNumber,
-                    address: row.address,
-                    city: row.city,
-                    state: row.state,
-                    country: row.country,
-                    pincode: row.pincode,
-                    website: row.website,
-                }));
+                    // STEP-2: Check if Lead Exists for this userId
+                    const existingLeadRows = await tx
+                        .select()
+                        .from(lead)
+                        .where(eq(lead.clientId, userId))
+                    const existingLead = existingLeadRows[0];
 
-                const filteredProfiles = profileInsertData.filter(p =>
-                    validIds.has(p.userId)
-                );
+                    if (existingLead) {
+                        duplicateRows.push({
+                            name: row.firstName,
+                            email: row.email,
+                            phone: row.phone,
+                        });
+                        continue;
+                    }
 
-                if (filteredProfiles.length > 0)
-                    await tx.insert(schema.platformUserProfiles).values(filteredProfiles);
+                    // Insert new lead (existing or new user)
+                    leadInsertData.push({
+                        id: crypto.randomUUID(),
+                        leadType: row.leadType,
+                        leadSource: row.leadSource,
+                        groupId: null,
+                        clientId: userId,
+                        createdBy: adminId,
+                    });
+                }
 
-                // Prepare lead table insert
-                const leadInsertData = filteredChunk.map((row: any, index: any) => ({
-                    id: crypto.randomUUID(),
-                    leadType: row.leadType,
-                    leadSource: row.leadSource,
-                    groupId: row.groupId || null,
-                    clientId: userInsertData[index].id,
-                    createdBy: adminId,
-                }));
+                // Insert new users
+                if (userInsertData.length > 0) {
+                    await tx.insert(schema.platformUsers).values(userInsertData);
+                }
 
-                const filteredLeads = leadInsertData.filter(l =>
-                    validIds.has(l.clientId)
-                );
+                // Insert user profiles
+                if (profileInsertData.length > 0) {
+                    await tx.insert(schema.platformUserProfiles).values(profileInsertData);
+                }
 
-                if (filteredLeads.length > 0)
-                    await tx.insert(lead).values(filteredLeads);
-
-                inserted += filteredChunk.length;
-
+                // Insert leads
+                if (leadInsertData.length > 0) {
+                    await tx.insert(lead).values(leadInsertData);
+                    inserted += leadInsertData.length;
+                }
             }
-        })
-        console.log(inserted, duplicateRows.length, duplicateRows)
+        });
+
         return {
             inserted,
             duplicatesInDB: duplicateRows.length,
             duplicateRows,
             duplicatesInFile: input.length - inserted,
-            message: "Lead imported successfully",
+            message: "Lead import completed",
             STATUS_CODES: 200
         };
     }
+
 
     static async createLeadProperty(input: any, adminId: string) {
         const { lead, property, propertyMetaData, callLogs } = input;
@@ -886,51 +903,108 @@ LEFT JOIN (
         }
     }
 
-    static parseValidDate(value: any) {
-        if (!value || typeof value !== "string") return null;
+    static parseValidDate(value: any): Date | undefined {
+        if (!value || typeof value !== "string") return undefined;
 
         const trimmed = value.trim();
-        if (!trimmed) return null;
+        if (!trimmed) return undefined;
 
         // Check for DD/MM/YYYY format
         if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmed)) {
             const [d, m, y] = trimmed.split("/").map(Number);
             const date = new Date(y, m - 1, d);
-            return isNaN(date.getTime()) ? null : date;
+            return isNaN(date.getTime()) ? undefined : date;
         }
 
         const d = new Date(trimmed);
-        return isNaN(d.getTime()) ? null : d;
+        return isNaN(d.getTime()) ? undefined : d;
     }
 
+    static async bulkImportCallLogs(input: any[], adminId: string) {
 
-    static async bulkImportCallLogs(input: any, adminId: string) {
-        // Chunk Processing
         await db.transaction(async (tx) => {
             for (let i = 0; i < input.length; i += CHUNK_SIZE) {
-                const chunk = input.slice(i, i + CHUNK_SIZE);
-                // Prepare data
-                const callLogsData = chunk.map((row: any) => ({
-                    leadId: row.leadId,
-                    status: row.status,
-                    createdAt: CrmService.parseValidDate(row.createdAt),
-                    followUp: CrmService.parseValidDate(row.followUp),
-                    feedback: row.feedback,
-                    clientId: row.clientId,
-                    AgentId: adminId,
-                    clientNumber: row.customerNumber,
-                    agentNumber: row.agentNumber,
-                    duration: String(row.duration),
-                    recordingUrl: row?.recordingUrl || null,
-                    callType: row.callType,
-                    disconnectedBy: row.disconnectedBy,
-                }));
 
-                await tx
-                    .insert(callLogs)
-                    .values(callLogsData);
+                const chunk = input.slice(i, i + CHUNK_SIZE);
+
+                // Extract phone numbers for batch lookup
+                const clientPhones = [...new Set(chunk.map(r => r.clientNumber).filter(Boolean))];
+                const agentPhones = [...new Set(chunk.map(r => r.agentNumber).filter(Boolean))];
+
+                // Fetch clients (users) by phone — single DB call
+                const clientUsers = await tx
+                    .select({
+                        userId: schema.platformUserProfiles.userId,
+                        phone: schema.platformUserProfiles.phone
+                    })
+                    .from(schema.platformUserProfiles)
+                    .where(inArray(schema.platformUserProfiles.phone, clientPhones));
+
+                const clientMap = new Map();
+                clientUsers.forEach(u => clientMap.set(u.phone, u.userId));
+
+                // Fetch agents by phone — single DB call
+                const agents = await tx
+                    .select({
+                        userId: schema.adminUsers.id,
+                        phone: schema.adminUsers.phone
+                    })
+                    .from(schema.adminUsers)
+                    .where(inArray(schema.adminUsers.phone, agentPhones));
+
+                const agentMap = new Map();
+                agents.forEach(a => agentMap.set(a.phone, a.userId));
+
+                // Fetch leads for ALL clientIds — single DB call
+                const allClientIds = [...new Set(clientUsers.map(c => c.userId))];
+
+                const leads = await tx
+                    .select({
+                        id: lead.Id,
+                        clientId: lead.clientId
+                    })
+                    .from(lead)
+                    .where(inArray(lead.clientId, allClientIds));
+
+                const leadMap = new Map();
+                leads.forEach(l => leadMap.set(l.clientId, l.id));
+
+                // Build final call logs payload
+                const logsToInsert = [];
+
+                for (const row of chunk) {
+                    const clientNumber = row.clientNumber;
+                    const agentNumber = row.agentNumber;
+
+                    const clientId = clientMap.get(clientNumber) || null;
+                    const AgentId = agentMap.get(agentNumber) || null;
+
+                    const leadId = clientId ? leadMap.get(clientId) || null : null;
+
+                    logsToInsert.push({
+                        leadId,
+                        status: row.status,
+                        createdAt: CrmService.parseValidDate(row.createdAt),
+                        followUp: CrmService.parseValidDate(row.followUp),
+                        feedback: row.feedback || null,
+                        clientId,
+                        AgentId,
+                        clientNumber: clientNumber || null,
+                        agentNumber: agentNumber || null,
+                        duration: String(row.duration || "0"),
+                        recordingUrl: row?.recordingUrl || null,
+                        callType: row.callType || null,
+                        disconnectedBy: row.disconnectedBy || null,
+                    });
+                }
+
+                // Bulk Insert Only Once Per Chunk
+                if (logsToInsert.length > 0) {
+                    await tx.insert(callLogs).values(logsToInsert);
+                }
             }
-        })
+        });
+
         return {
             message: "Call Logs imported successfully",
             STATUS_CODES: 200
