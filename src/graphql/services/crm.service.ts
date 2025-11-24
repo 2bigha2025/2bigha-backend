@@ -41,7 +41,6 @@ export class CrmService {
         };
     }
 
-
      static async updateLead(id: any, input: any) {
         const { leadSource, leadType, groupId } = input;
         await db.update(lead).set({
@@ -338,4 +337,19 @@ export class CrmService {
     //     }
     // }
 
+
+    // static async createCallLogs(input: any, adminId: string) {
+    //     const { groupName, groupIcon, isAvailable } = input;
+    //     const result = await db.insert(propertyGroups).values({
+    //         groupName: groupName,
+    //         groupIcon,
+    //         isAvailable,
+    //         createdBy: adminId,
+    //     }).returning();
+    //     return {
+    //         result: result[0],
+    //         message: "Group created successfully",
+    //         STATUS_CODES: 201
+    //     }
+    // }
 }
