@@ -15,7 +15,7 @@ export const ivrResolvers = {
                 const { sessionId, data } = await KommunoService.clickToCall(input,context.admin?.adminId);
                 return {
                     success: true,
-                    sessionId,
+                    sessionId:sessionId[0].sessionId,
                     message: "Call initiated successfully",
                     data,
                 };

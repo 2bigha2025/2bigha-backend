@@ -15,7 +15,7 @@ export const adminUsers = pgTable("admin_users", {
   // Admin specific fields
   department: text("department"), // IT, Operations, Marketing, etc.
   employeeId: text("employee_id"),
-  phone: text("phone"),
+  phone: text("phone").unique(),
   avatar: text("avatar"),
   bio: text("bio"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

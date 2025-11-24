@@ -14,6 +14,7 @@ import { platformUsers } from "./platform-user";
 export const callStatusTypeEnum = pgEnum("call_status", [
   "",
   "CONNECTED",
+  "MISSED CALLED",
   "NOT ANSWERED",
   "BUSY",
   "WRONG NUMBER",
@@ -84,6 +85,7 @@ export const callLogs = pgTable("call_logs", {
   }),
   propertyId:text("property_id"),
   status: callStatusTypeEnum(""),
+  systemStatus: text("system_status"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   followUp: timestamp("follow_up"),
   feedback: text("feedback"),
@@ -93,7 +95,10 @@ export const callLogs = pgTable("call_logs", {
   AgentId: uuid("agent_id").references(() => adminUsers.id, {
     onDelete: "set null",
   }),
+  clientNumber:text("client_number"),
+  agentNumber:text("agent_number"),
   duration: text("duration"),
+  longCode:text("long_code"),
   recordingUrl: text("recording_url"),
   callType: text("call_type"),
   disconnectedBy: text("disconnected_by"),

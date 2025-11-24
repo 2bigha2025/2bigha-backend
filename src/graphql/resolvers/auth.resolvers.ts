@@ -7,6 +7,7 @@ export interface AdminContext {
         adminId: string;
         email: string;
         roles: string[];
+        phone: string;
     };
     req: any;
 }
@@ -172,7 +173,8 @@ export const adminAuthResolvers = {
                 const sessionId = AdminAuthService.createAdminSession(
                     admin.id,
                     admin.email,
-                    roles
+                    roles,
+                    admin.phone || ""
                 );
 
                 await AdminAuthService.updateLastLogin(admin.id);
@@ -320,7 +322,8 @@ export const adminAuthResolvers = {
                 const sessionId = AdminAuthService.createAdminSession(
                     admin.id,
                     admin.email,
-                    roles
+                    roles,
+                    admin?.phone || ""
                 );
 
                 return {
@@ -480,12 +483,12 @@ export const adminAuthResolvers = {
                     admin.id
                 );
                 const roles = adminData?.roles.map((role) => role.roleSlug) || [];
-
                 // Create new tokens
                 const newAccessToken = createSession(
                     admin.id,
                     admin.email,
-                    roles.join(",")
+                    roles.join(","),
+                    admin?.phone || ""
                 );
                 const newRefreshToken = await AdminAuthService.createRefreshToken(
                     admin.id,

@@ -20,6 +20,8 @@ type Lead{
     propertyCount: Int
     lastCallAt:Date
     callStatus:String
+    feedback: String
+    followUp:String
     groupName:String
     adminNumber:String
 }
@@ -41,6 +43,39 @@ input CreateLeadInput {
     leadType : String
     clientId : ID!
     groupId : ID
+}
+
+input BulkImportLeadInput{
+    firstName:String
+    lastName:String 
+    role:String
+    email:String
+    phone:String
+    whatsappNumber:String
+    address:String
+    city:String
+    state:String
+    country:String
+    pincode:String
+    website:String
+    leadType: String 
+    leadSource: String
+    groupId: ID
+}
+
+type BulkImportLeadResponse{
+    inserted:Int
+    duplicatesInDB:Int
+    duplicateRows:[DuplicateRow]
+    duplicatesInFile:Int
+    message: String
+    STATUS_CODES: Int
+}
+
+type DuplicateRow{
+        name:String
+        phone:String
+        email:String
 }
 
 input UpdateLeadInput {
@@ -66,6 +101,12 @@ type LeadResponse{
     message: String
     STATUS_CODES: Int
 }
+
+# type LeadByIdResponse{
+#     result: Lead
+#     message: String
+#     STATUS_CODES: Int
+# }
 
 input CreateCallPropertyInput {
     property : CreatePropertyInput
@@ -168,8 +209,9 @@ type CallLogs{
     leadId:ID!
     propertyId:String
     status:String
-    clientId:ID!
-    AgentId:ID!
+    customStatus:String
+    clientId:ID
+    AgentId:ID
     duration:String
     recordingUrl:String
     callType:String
@@ -187,6 +229,108 @@ type CallLogesResponse{
     result:[CallLogs]
     message:String!
     STATUS_CODES: Int!
+}
+
+input BulkImportCallLogsInput{
+    leadId:String
+    status:String 
+    createdAt:String
+    followUp:String
+    feedback:String
+    clientId:String
+    AgentId:String
+    clientNumber:String
+    agentNumber:String
+    duration:String
+    recordingUrl:String
+    callType: String 
+    disconnectedBy: String
+}
+
+input UpdateCallStatusInput{
+    leadId:String
+    callStatus: String
+    feedback: String
+    followUpDate: Date
+}
+
+type CallAgentPerformanceResponse {
+    result: [AgentPerformanceSummary]
+    message:String
+    STATUS_CODES: Int
+}
+
+type AgentPerformanceSummary{
+    adminId:ID
+    firstName:String
+    lastName:String
+    leadCount:Int
+    propertyCount:Int
+    totalCalls:Int
+    todaysCalls:Int
+    todaysConnected:Int
+}
+
+type SpecificCallAgentPerformanceResponse {
+    result: SpecificAgentPerformance
+    message:String
+    STATUS_CODES: Int
+}
+
+type SpecificAgentPerformance{
+    adminId:ID
+    firstName:String
+    lastName:String
+    role:String
+    totalLeads:Int
+    todayLeads:Int
+    totalProperties:Int
+    todayProperties:Int
+    totalCalls:Int
+    todayCalls:Int
+    todayConnected:Int
+    totalMissed:Int
+    todayMissed:Int
+    todayBusy:Int
+    totalConnected:Int
+    totalBusy:Int
+    notAnswered:Int
+    wrongNumber:Int
+    callbackSchedule:Int
+    interested:Int
+    notInterested:Int
+    callbackLater:Int
+    invalidNumber:Int
+    leftMessage:Int
+    other:Int
+    leadSourceWebsite:Int
+    leadSourceMedia:Int
+    leadSourceReferral:Int
+    leadSourceDirectCall:Int
+    leadsLastWeek:[ArrayObject]
+    callsLastWeek:[ArrayObject]
+}
+
+type ArrayObject{
+    date:String
+    count: Int
+}
+
+type CallSummary{
+    totalIncomingCalls:Int
+    totalOutgoingCalls:Int
+    totalConnectedCalls:Int
+    todayIncomingCalls:Int
+    todayOutgoingCalls:Int
+    todayConnectedCalls:Int
+    todayUniqueClientsCalled:Int
+    todayUniqueAgentsCalled:Int
+}
+
+type CallSummaryResponse{
+    result:CallSummary
+    message:String
+    STATUS_CODES:Int
 }
 
 type Notes{
@@ -214,8 +358,8 @@ type ResponseMessage{
 }
 
 extend type Query {
-    # getLeadById(id: ID!): Lead
     getAllLead: LeadResponse
+    getLeadById(id: ID!): LeadResponse
 
     getAllGroup: GroupResponse
     getGroupById(id:ID!):CreateGroupResponse
@@ -224,6 +368,11 @@ extend type Query {
     getBroadcastById(id:ID!):CreateBroadcastResponse
 
     getAllCallLogs: CallLogesResponse
+    getCallSummary: CallSummaryResponse
+    getCallAgentCallLogs: CallLogesResponse
+    getCallAgentSummary:CallSummaryResponse
+    getCallAgentPerformanceSummary: CallAgentPerformanceResponse
+    getSpecificCallAgentPerformance(id:ID!): SpecificCallAgentPerformanceResponse
 
 }
 
@@ -231,7 +380,8 @@ extend type Query {
     createLead(input: CreateLeadInput!): CreateLeadResponse!
     createLeadProperty(input: CreateCallPropertyInput!): ResponseMessage
     updateLead(id: ID!, input: UpdateLeadInput!): ResponseMessage!
-    
+    bulkImportLead(input: [BulkImportLeadInput]!): BulkImportLeadResponse!
+
     createGroup(input: CreateGroupInput):CreateGroupResponse
     updateGroup(id: ID!, input: CreateGroupInput!): CreateGroupResponse!
     updateActiveGroup(id: ID!, input: CreateGroupActiveInput!): ResponseMessage!
@@ -240,5 +390,8 @@ extend type Query {
     createBroadcast(input: CreateBroadcastInput):CreateBroadcastResponse
     updateBroadcast(id: ID!, input: CreateBroadcastInput!): CreateBroadcastResponse!
     deleteBroadcast(id: ID!): ResponseMessage
+
+    bulkImportCallLogs(input: [BulkImportCallLogsInput]!): ResponseMessage!
+    updateCallStatus(id: ID!, input: UpdateCallStatusInput!): ResponseMessage!
   }
 `;

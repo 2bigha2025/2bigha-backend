@@ -167,8 +167,8 @@ export class AdminAuthService {
     }
 
     // Create admin session
-    static createAdminSession(adminId: string, email: string, roles: string[]): string {
-        return createSession(adminId, email, roles.join(","))
+    static createAdminSession(adminId: string, email: string, roles: string[],phone:string): string {
+        return createSession(adminId, email, roles.join(","),phone)
     }
 
     // Get admin session
