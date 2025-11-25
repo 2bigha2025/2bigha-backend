@@ -1,9 +1,9 @@
 import { GraphQLError } from "graphql"
-import { eq, sql, desc, getTableColumns, or, inArray } from "drizzle-orm"
+import { eq, sql, desc, getTableColumns, or, inArray, and } from "drizzle-orm"
 import { db } from "../../database/connection"
 import * as schema from "../../database/schema/index";
 import { PropertyService } from "./property.services";
-import { propertyMeta, lead, callLogs, propertyGroups, broadcast } from "../../database/schema/crm-model";
+import { propertyMeta, lead, callLogs, propertyGroups, broadcast, callHistoryNotes } from "../../database/schema/crm-model";
 import { adminUsers } from "../../database/schema/admin-user";
 import _ from "lodash";
 
@@ -12,7 +12,7 @@ export class CrmService {
 
     // Leads CRUD Operations
     static async createLead(input: any, adminId: string) {
-        const { leadSource, leadType, clientId, groupId } = input;
+        const { leadSource, leadType, clientId, groupId, note } = input;
 
         const existing = await db
             .select()
@@ -30,6 +30,7 @@ export class CrmService {
             clientId: clientId,
             createdBy: adminId,
             groupId: groupId,
+            note: note
         }).returning();
 
         const [creator] = await db.select({
@@ -56,11 +57,12 @@ export class CrmService {
     }
 
     static async updateLead(id: any, input: any) {
-        const { leadSource, leadType, groupId } = input;
+        const { leadSource, leadType, groupId, note } = input;
         await db.update(lead).set({
             leadSource: leadSource,
             leadType: leadType,
             groupId: groupId,
+            note: note
         }).where(eq(lead.Id, id))
 
         return {
@@ -68,7 +70,6 @@ export class CrmService {
             STATUS_CODES: 200
         }
     }
-
 
     static async bulkImportLead(input: any[], adminId: string) {
         let inserted = 0;
@@ -212,7 +213,6 @@ export class CrmService {
         };
     }
 
-
     static async createLeadProperty(input: any, adminId: string) {
         const { lead, property, propertyMetaData, callLogs } = input;
 
@@ -243,7 +243,7 @@ export class CrmService {
     }
 
     static async getAllLeads(agentDetail: any) {
-
+        console.log("Leads", agentDetail)
         if (agentDetail.roles.includes("super_admin")) {
             const result = await db.select({
                 ...getTableColumns(lead),
@@ -307,6 +307,7 @@ export class CrmService {
             }).from(lead).leftJoin(adminUsers, eq(lead.createdBy, adminUsers.id)).leftJoin(schema.platformUsers, eq(lead.clientId, schema.platformUsers.id)).leftJoin(schema.platformUserProfiles, eq(lead.clientId, schema.platformUserProfiles.userId)).leftJoin(propertyGroups, eq(lead.groupId, propertyGroups.Id))
                 .orderBy(desc(lead.createdAt))
 
+            console.log("Leads", result)
             return {
                 result,
                 message: "Lead fetched successfully",
@@ -361,13 +362,103 @@ export class CrmService {
                     `.as("callStatus"),
         }).from(lead).leftJoin(adminUsers, eq(lead.createdBy, adminUsers.id)).leftJoin(schema.platformUsers, eq(lead.clientId, schema.platformUsers.id)).leftJoin(schema.platformUserProfiles, eq(lead.clientId, schema.platformUserProfiles.userId)).leftJoin(propertyGroups, eq(lead.groupId, propertyGroups.Id)).where(eq(lead.createdBy, id))
             .orderBy(desc(lead.createdAt))
-
+        console.log("Leads2", result)
         return {
             result,
             message: "Lead fetched successfully",
             STATUS_CODES: 200
         }
     };
+
+    static async getAllNotesByLeadId(leadId: any) {
+        const result = await db
+            .select({
+                ...getTableColumns(callHistoryNotes),
+                createdByName: sql`${adminUsers.firstName} || ' ' || ${adminUsers.lastName}`.as("createdByName"),
+            })
+            .from(callHistoryNotes)
+            .leftJoin(
+                adminUsers,
+                eq(callHistoryNotes.createdBy, adminUsers.id)
+            )
+            .where(eq(callHistoryNotes.leadId, leadId))
+            .orderBy(desc(callHistoryNotes.createdAt));
+
+        return {
+            result,
+            message: "Notes fetched successfully",
+            STATUS_CODES: 200
+        };
+    }
+
+
+    static async createNote(input: any, adminId: string) {
+        const { leadId, note } = input;
+        const result = await db.insert(callHistoryNotes).values({
+            leadId: leadId,
+            note,
+            createdBy: adminId,
+        }).returning();
+
+        const [creator] = await db.select({
+            firstName: adminUsers.firstName,
+            lastName: adminUsers.lastName,
+        }).from(adminUsers).where(eq(adminUsers.id, adminId));
+
+
+        return {
+            result: {
+                ...result[0],
+                createdByName: creator
+                    ? `${creator.firstName} ${creator.lastName}`
+                    : null,
+            },
+            message: "Note added successfully",
+            STATUS_CODES: 201
+        }
+    }
+
+    static async updateNote(id: any, input: any) {
+        const { note } = input;
+        await db.update(callHistoryNotes).set({
+            note,
+            updateAt: new Date(),
+        }).where(eq(callHistoryNotes.Id, id))
+
+        return {
+            message: "Note updated successfully",
+            STATUS_CODES: 200
+        }
+    }
+
+    static async getClientById(id: any) {
+
+        const result = await db
+            .select({
+                email: schema.platformUsers.email,
+                clientName: sql`${schema.platformUsers.firstName} || ' ' || ${schema.platformUsers.lastName}`.as("clientName"),
+                role: schema.platformUsers.role,
+                createdAt: schema.platformUsers.createdAt,
+                phone: schema.platformUserProfiles.phone,
+                whatsappNumber: schema.platformUserProfiles.whatsappNumber,
+                avatar: schema.platformUserProfiles.avatar,
+                leadType: lead.leadType,
+                leadSource: lead.leadSource,
+                groupName: propertyGroups.groupName
+            })
+            .from(schema.platformUsers)
+            .leftJoin(schema.platformUserProfiles, eq(schema.platformUserProfiles.userId, schema.platformUsers.id))
+            .leftJoin(lead, eq(lead.clientId, schema.platformUsers.id))
+            .leftJoin(propertyGroups, eq(propertyGroups.Id, lead.groupId))
+            .where(eq(schema.platformUsers.id, id));
+
+
+        return {
+            result: result[0],
+            message: "Client data fetched successfully",
+            STATUS_CODES: 200
+        }
+    }
 
     // Groups CRUD Operations
     static async getAllGroup() {
@@ -614,6 +705,30 @@ export class CrmService {
 
         return {
             result,
+            message: "Call Logs fetched successfully",
+            STATUS_CODES: 200
+        }
+
+    }
+
+    static async getClientCallHistoryById(leadId: string) {
+        const result = await db.select({
+            ...getTableColumns(callLogs),
+            clientName: sql`${schema.platformUsers.firstName} || ' ' || ${schema.platformUsers.lastName}`.as("clientName"),
+            // clientNumber: schema.platformUserProfiles.phone,
+            agentName: sql`${adminUsers.firstName} || ' ' || ${adminUsers.lastName}`.as("agentName"),
+            // agentNumber: adminUsers.phone,
+        }).from(callLogs).leftJoin(adminUsers, eq(callLogs.AgentId, adminUsers.id)).leftJoin(schema.platformUsers, eq(callLogs.clientId, schema.platformUsers.id)).leftJoin(schema.platformUserProfiles, eq(callLogs.clientId, schema.platformUserProfiles.userId)).where(
+            eq(callLogs.leadId, leadId),
+        ).orderBy(desc(callLogs.createdAt));
+
+        const [client] = await db.select({ clientId: lead.clientId }).from(lead).where(eq(lead.Id, leadId));
+
+        const clientData = await CrmService.getClientById(client.clientId)
+        console.log(clientData.result)
+        return {
+            result,
+            clientData: clientData.result,
             message: "Call Logs fetched successfully",
             STATUS_CODES: 200
         }
@@ -920,7 +1035,7 @@ LEFT JOIN (
         return isNaN(d.getTime()) ? undefined : d;
     }
 
-    static async bulkImportCallLogs(input: any[], adminId: string) {
+    static async bulkImportCallLogs(input: any[]) {
 
         await db.transaction(async (tx) => {
             for (let i = 0; i < input.length; i += CHUNK_SIZE) {

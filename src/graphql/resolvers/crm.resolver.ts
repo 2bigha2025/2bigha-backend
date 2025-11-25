@@ -26,7 +26,7 @@ export const crmResolver = {
       //       })
       //    }
       // },
-      getAllLead: async (_: any,__:any,context:AdminContext) => {
+      getAllLead: async (_: any, __: any, context: AdminContext) => {
          try {
             if (!context.admin?.adminId) {
                throw new GraphQLError("Authentication required", {
@@ -43,6 +43,27 @@ export const crmResolver = {
          }
       },
 
+      getAllNotesByLeadId: async (_: any,{leadId}:any) => {
+         try {
+            const notes = await CrmService.getAllNotesByLeadId(leadId)
+            return notes;
+         } catch (error) {
+            throw new GraphQLError(`Failed to get notes: ${(error as Error).message}`, {
+               extensions: { code: "INTERNAL_ERROR" },
+            })
+         }
+      },
+
+      getClientById: async (_: any, { id }: any) => {
+         try {
+            const client = await CrmService.getClientById(id)
+            return client;
+         } catch (error) {
+            throw new GraphQLError(`Failed to get client: ${(error as Error).message}`, {
+               extensions: { code: "INTERNAL_ERROR" },
+            })
+         }
+      },
 
       // Group Resolvers
       getAllGroup: async (_: any) => {
@@ -55,6 +76,7 @@ export const crmResolver = {
             })
          }
       },
+
       getGroupById: async (_: any, { id }: any) => {
          try {
             const group = await CrmService.getGroupById(id)
@@ -65,7 +87,7 @@ export const crmResolver = {
             })
          }
       }
-    ,
+      ,
 
       // Broadcast Resolvers
       getAllBroadcasts: async (_: any) => {
@@ -89,6 +111,7 @@ export const crmResolver = {
             })
          }
       },
+
       // call logs
       getAllCallLogs: async (_: any,) => {
          try {
@@ -126,6 +149,16 @@ export const crmResolver = {
                extensions: { code: "INTERNAL_ERROR" },
             })
          }
+      },
+      getClientCallHistoryById: async (_: any, { leadId }: any) => {
+         try {
+            const calls = await CrmService.getClientCallHistoryById(leadId)
+            return calls;
+         } catch (error) {
+            throw new GraphQLError(`Failed to get calls: ${(error as Error).message}`, {
+               extensions: { code: "INTERNAL_ERROR" },
+            })
+         }
       }
       ,
       getCallAgentSummary: async (_: any, __: any, context: AdminContext) => {
@@ -154,6 +187,7 @@ export const crmResolver = {
             })
          }
       },
+
       getSpecificCallAgentPerformance: async (_: any, { id }: any) => {
          try {
             const performance = await CrmService.getSpecificCallAgentPerformance(id)
@@ -202,6 +236,7 @@ export const crmResolver = {
          }
 
       },
+
       updateLead: async (_: any, { id, input }: any, context: AdminContext) => {
          if (!context.admin?.adminId) {
             throw new GraphQLError("Authentication required", {
@@ -238,6 +273,43 @@ export const crmResolver = {
 
       }
       ,
+      createNote: async (_: any, { input }: any, context: AdminContext) => {
+         if (!context.admin?.adminId) {
+            throw new GraphQLError("Authentication required", {
+               extensions: { code: "UNAUTHENTICATED" },
+            })
+         }
+         try {
+            const data = await CrmService.createNote(input, context.admin.adminId);
+            return data;
+         } catch (error) {
+            console.log(error);
+            throw new GraphQLError(`Failed to create Note: ${(error as Error).message}`, {
+               extensions: { code: "INTERNAL_ERROR" },
+            })
+         }
+
+      },
+      updateNote: async (_: any, { id, input }: any, context: AdminContext) => {
+         if (!context.admin?.adminId) {
+            throw new GraphQLError("Authentication required", {
+               extensions: { code: "UNAUTHENTICATED" },
+            })
+         }
+         try {
+            const data = await CrmService.updateNote(id, input);
+            return data;
+         } catch (error) {
+            console.log(error);
+            throw new GraphQLError(`Failed to create Note: ${(error as Error).message}`, {
+               extensions: { code: "INTERNAL_ERROR" },
+            })
+         }
+
+      },
+
+
+      // Group
       createGroup: async (_: any, { input }: any, context: AdminContext) => {
          if (!context.admin?.adminId) {
             throw new GraphQLError("Authentication required", {
@@ -288,56 +360,56 @@ export const crmResolver = {
             })
          }
       }
-    ,
+      ,
 
-    deleteGroup: async (_: any, { id }: any, context: AdminContext) => {
-      if (!context.admin?.adminId) {
-        throw new GraphQLError("Authentication required", {
-          extensions: { code: "UNAUTHENTICATED" },
-        });
-      }
-      try {
-        const data = await CrmService.deleteGroup(id);
-        return data;
-      } catch (error) {
-        throw new GraphQLError(`Failed to delete Group: ${(error as Error).message}`, {
-          extensions: { code: "INTERNAL_ERROR" },
-        });
-      }
-    },
+      deleteGroup: async (_: any, { id }: any, context: AdminContext) => {
+         if (!context.admin?.adminId) {
+            throw new GraphQLError("Authentication required", {
+               extensions: { code: "UNAUTHENTICATED" },
+            });
+         }
+         try {
+            const data = await CrmService.deleteGroup(id);
+            return data;
+         } catch (error) {
+            throw new GraphQLError(`Failed to delete Group: ${(error as Error).message}`, {
+               extensions: { code: "INTERNAL_ERROR" },
+            });
+         }
+      },
 
-    // Broadcast Mutations
-    createBroadcast: async (_: any, { input }: any, context: AdminContext) => {
-      if (!context.admin?.adminId) {
-        throw new GraphQLError("Authentication required", {
-          extensions: { code: "UNAUTHENTICATED" },
-        });
-      }
-      try {
-        const data = await CrmService.createBroadcast(input, context.admin.adminId);
-        return data;
-      } catch (error) {
-        throw new GraphQLError(`Failed to create Broadcast: ${(error as Error).message}`, {
-          extensions: { code: "INTERNAL_ERROR" },
-        });
-      }
-    },
+      // Broadcast Mutations
+      createBroadcast: async (_: any, { input }: any, context: AdminContext) => {
+         if (!context.admin?.adminId) {
+            throw new GraphQLError("Authentication required", {
+               extensions: { code: "UNAUTHENTICATED" },
+            });
+         }
+         try {
+            const data = await CrmService.createBroadcast(input, context.admin.adminId);
+            return data;
+         } catch (error) {
+            throw new GraphQLError(`Failed to create Broadcast: ${(error as Error).message}`, {
+               extensions: { code: "INTERNAL_ERROR" },
+            });
+         }
+      },
 
-    updateBroadcast: async (_: any, { id, input }: any, context: AdminContext) => {
-      if (!context.admin?.adminId) {
-        throw new GraphQLError("Authentication required", {
-          extensions: { code: "UNAUTHENTICATED" },
-        });
+      updateBroadcast: async (_: any, { id, input }: any, context: AdminContext) => {
+         if (!context.admin?.adminId) {
+            throw new GraphQLError("Authentication required", {
+               extensions: { code: "UNAUTHENTICATED" },
+            });
+         }
+         try {
+            const data = await CrmService.updateBroadcast(id, input);
+            return data;
+         } catch (error) {
+            throw new GraphQLError(`Failed to update Broadcast: ${(error as Error).message}`, {
+               extensions: { code: "INTERNAL_ERROR" },
+            });
+         }
       }
-      try {
-        const data = await CrmService.updateBroadcast(id, input);
-        return data;
-      } catch (error) {
-        throw new GraphQLError(`Failed to update Broadcast: ${(error as Error).message}`, {
-          extensions: { code: "INTERNAL_ERROR" },
-        });
-      }
-   }
       ,
       deleteBroadcast: async (_: any, { id }: any, context: AdminContext) => {
          if (!context.admin?.adminId) {
@@ -357,14 +429,14 @@ export const crmResolver = {
 
       }
       ,
-       bulkImportCallLogs: async (_: any, { input }: any, context: AdminContext) => {
+      bulkImportCallLogs: async (_: any, { input }: any, context: AdminContext) => {
          if (!context.admin?.adminId) {
             throw new GraphQLError("Authentication required", {
                extensions: { code: "UNAUTHENTICATED" },
             })
          }
          try {
-            const data = await CrmService.bulkImportCallLogs(input, context.admin.adminId);
+            const data = await CrmService.bulkImportCallLogs(input);
             return data;
          } catch (error) {
             console.log(error);
@@ -387,5 +459,5 @@ export const crmResolver = {
 
       }
       ,
-    },
-  };
+   },
+};

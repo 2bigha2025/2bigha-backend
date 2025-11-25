@@ -9,6 +9,7 @@ type Lead{
     leadSource: String
     leadType: String
     clientId: ID
+    note: String
     clientName: String
     createdBy:ID!
     createdByName:String
@@ -36,6 +37,7 @@ type LeadData{
     createdByName:String
     createdAt:Date!
     groupName:String
+    note: String
 }
 
 input CreateLeadInput {
@@ -43,6 +45,7 @@ input CreateLeadInput {
     leadType : String
     clientId : ID!
     groupId : ID
+    note: String
 }
 
 input BulkImportLeadInput{
@@ -81,6 +84,7 @@ input UpdateLeadInput {
     leadSource : String
     leadType : String
     groupId : ID
+    note:String
 }
 
 input LeadIdInput {
@@ -97,6 +101,57 @@ type CreateLeadResponse{
 
 type LeadResponse{
     result: [Lead]
+    message: String
+    STATUS_CODES: Int
+}
+
+# notes
+type Note{
+    Id:ID
+    leadId:ID
+    note:String
+    createdBy:ID
+    createdAt:Date
+    updateAt:Date
+    createdByName:String
+}
+
+type NoteResponse{
+    result:[Note]
+    message:String
+    STATUS_CODES:String
+}
+
+input CreateNoteInput{
+    leadId:ID
+    note:String
+}
+
+type CreateNoteResponse{
+    result:Note
+    message:String
+    STATUS_CODES:String
+}
+
+input UpdateNoteInput{
+    note:String
+}
+
+type ClientData{
+    email: String
+    clientName: String
+    role: String
+    createdAt: Date
+    phone: String
+    whatsappNumber: String
+    avatar: String
+    leadType: String
+    leadSource: String
+    groupName: String
+}
+
+type ClientResponse{
+    result:ClientData
     message: String
     STATUS_CODES: Int
 }
@@ -230,6 +285,13 @@ type CallLogesResponse{
     STATUS_CODES: Int!
 }
 
+type ClientCallHistoryByIdResponse{
+    result:[CallLogs]
+    clientData:ClientData
+    message:String!
+    STATUS_CODES: Int!
+}
+
 input BulkImportCallLogsInput{
     status:String 
     createdAt:String
@@ -329,7 +391,7 @@ type CallSummaryResponse{
     STATUS_CODES:Int
 }
 
-type Notes{
+type PropertyNotes{
     Id: ID!
     propertyId: ID!
     note: String
@@ -356,6 +418,8 @@ type ResponseMessage{
 extend type Query {
     getAllLead: LeadResponse
     getLeadById(id: ID!): LeadResponse
+    getAllNotesByLeadId(leadId:ID!): NoteResponse
+    getClientById(id: ID!): ClientResponse
 
     getAllGroup: GroupResponse
     getGroupById(id:ID!):CreateGroupResponse
@@ -366,6 +430,7 @@ extend type Query {
     getAllCallLogs: CallLogesResponse
     getCallSummary: CallSummaryResponse
     getCallAgentCallLogs: CallLogesResponse
+    getClientCallHistoryById(leadId:String): ClientCallHistoryByIdResponse
     getCallAgentSummary:CallSummaryResponse
     getCallAgentPerformanceSummary: CallAgentPerformanceResponse
     getSpecificCallAgentPerformance(id:ID!): SpecificCallAgentPerformanceResponse
@@ -377,6 +442,8 @@ extend type Query {
     createLeadProperty(input: CreateCallPropertyInput!): ResponseMessage
     updateLead(id: ID!, input: UpdateLeadInput!): ResponseMessage!
     bulkImportLead(input: [BulkImportLeadInput]!): BulkImportLeadResponse!
+    createNote(input: CreateNoteInput!):CreateNoteResponse
+    updateNote(id: ID!, input: UpdateNoteInput!):ResponseMessage
 
     createGroup(input: CreateGroupInput):CreateGroupResponse
     updateGroup(id: ID!, input: CreateGroupInput!): CreateGroupResponse!
