@@ -519,11 +519,17 @@ export const platformUserResolvers = {
             context: PlatformUserContext
         ) => {
             try {
-                const user = await PlatformUserService.verifyPhoneOTP(
+                const result = await PlatformUserService.verifyPhoneOTP(
                     input.phone,
                     input.otp
                 );
-                console.log(user);
+                const user = result?.user as any
+                const profile = result?.profile
+                if (!user) {
+                    throw new GraphQLError("User not found", {
+                        extensions: { code: "USER_NOT_FOUND" },
+                    });
+                }
                 const sessionToken = PlatformUserService.createUserSession(
                     user.id,
                     user?.email || "",
@@ -551,6 +557,7 @@ export const platformUserResolvers = {
                         isVerified: user.isVerified,
                         lastLoginAt: new Date().toISOString(),
                     },
+                    profile: profile,
                 };
             } catch (error) {
                 logError("Phone OTP verification failed", error as Error, {

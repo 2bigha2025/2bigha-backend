@@ -263,8 +263,7 @@ export class PlatformUserService {
                 .from(platformUsers)
                 .innerJoin(platformUserProfiles, eq(platformUsers.id, platformUserProfiles.userId))
                 .where(eq(platformUserProfiles.phone, phone))
-
-            return result?.user
+                return result
         } catch (error) {
             logError("Failed to find user by phone", error as Error, { phone })
             return null
@@ -424,11 +423,11 @@ static async searchUsers(searchTerm: string, limit: number = 30, page: number = 
         phone: string,
     ): Promise<{ success: boolean; expiresIn: number; remainingAttempts: number }> {
         try {
-            const user = await this.findUserByPhone(phone.slice(3))
-            if (!user) {
+            const result = await this.findUserByPhone(phone.slice(3))
+            if (!result?.user) {
                 throw new Error("User not found with this phone number")
             }
-            console.log(user, "dsd")
+            const user = result?.user
 
             // Check rate limiting
             const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
@@ -496,7 +495,8 @@ static async searchUsers(searchTerm: string, limit: number = 30, page: number = 
     // Verify phone OTP
     static async verifyPhoneOTP(phone: string, otp: string) {
         try {
-            const user = await this.findUserByPhone(phone)
+            const result = await this.findUserByPhone(phone)
+            const user = result?.user as any
             if (!user) {
                 throw new Error("User not found with this phone number")
             }
@@ -528,7 +528,7 @@ static async searchUsers(searchTerm: string, limit: number = 30, page: number = 
 
             logInfo("Phone OTP verified successfully", { phone, userId: user.id })
 
-            return user
+            return result
         } catch (error) {
             logError("Phone OTP verification failed", error as Error, { phone })
             throw error
