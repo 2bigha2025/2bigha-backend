@@ -8,7 +8,7 @@ import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHt
 import { graphqlUploadExpress } from 'graphql-upload'
 import { makeExecutableSchema } from '@graphql-tools/schema'
 import { constraintDirective } from 'graphql-constraint-directive'
-
+import { handleLiveEvent,handleCompletedCall } from './graphql/services/kommuno.service'
 import { typeDefs } from './graphql/types'
 import { resolvers } from './graphql/resolvers'
 import { getSession } from './config/auth'
@@ -68,6 +68,7 @@ const startServer = async () => {
               adminId: session.userId,
               email: session.email,
               roles: session.role.split(','),
+              phone: session.phone,
             }
           }
         }
@@ -81,24 +82,20 @@ const startServer = async () => {
   // Kommuno webhook for call events
   app.post("/kommuno/callback", express.json(), async (req, res) => {
     try {
-      console.log(">>>>>>>Callback>>>>", req,res);
       const payload = req.body;
       console.log("Kommuno callback received:", payload);
 
-      // Determine the type of payload
+      // CASE 1: LIVE CALL EVENT (ringing, answered)
       if (payload.live_event) {
-        // This is a live call event (ringing, connected, etc.)
-        console.log("Live Event:", payload.live_event);
-        // TODO: insert into kommuno_call_events table
-      } else if (payload.call_details?.live_event === "evt_completed_with_recording") {
-        // This is a completed call with recording
-        console.log("Recording Event:", payload.call_details.recording_details?.recording_path);
-        // TODO: insert into kommuno_recordings table
-      } else {
-        console.log("Other callback payload");
+        await handleLiveEvent(payload);
       }
 
-      // Always respond 200 quickly
+      // CASE 2: COMPLETED CALL EVENT
+      else if (payload.call_details?.live_event === "evt_completed_with_recording") {
+        await handleCompletedCall(payload);
+      }
+
+      // Always respond OK
       res.status(200).json({ status: "ok" });
     } catch (err) {
       console.error("Kommuno callback error:", err);
