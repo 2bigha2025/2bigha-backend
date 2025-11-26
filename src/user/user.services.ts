@@ -429,14 +429,14 @@ export class PlatformUserService {
         phone: string,
     ): Promise<{ success: boolean; expiresIn: number; remainingAttempts: number }> {
         try {
-            let result = await this.findUserByPhone(phone.slice(3))
+            let result = await this.findUserByPhone(phone)
             let user = result?.user;
             if (!user) {
                 const newuser = await this.createUser({ role: 'USER', phone: phone });
                 user = newuser;
                 console.log("new user created", newuser);
             }
-
+//    console.log(phone, phone.slice(3));
             // Check rate limiting
             const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
             const recentOTPs = await db
@@ -470,7 +470,7 @@ export class PlatformUserService {
                 .where(
                     and(eq(otpTokens.platformUserId, user.id), eq(otpTokens.type, "PHONE_LOGIN"), eq(otpTokens.isUsed, false)),
                 )
-
+                console.log('>>>>>>user>>>>>',user)
             // Create new OTP
             await db.insert(otpTokens).values({
                 platformUserId: user.id,
@@ -507,7 +507,7 @@ export class PlatformUserService {
             if (!user) {
                 throw new Error("User not found with this phone number")
             }
-            console.log(user)
+            console.log('>>>>>>verifyUser>>>>>',user)
 
             // Find valid OTP
             const [otpRecord] = await db
@@ -522,7 +522,7 @@ export class PlatformUserService {
                         // gt(otpTokens.expiresAt, new Date()),
                     ),
                 )
-
+            console.log(otpRecord);
             if (!otpRecord) {
                 throw new Error("Invalid or expired OTP")
             }
