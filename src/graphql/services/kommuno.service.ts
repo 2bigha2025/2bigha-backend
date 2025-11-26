@@ -9,7 +9,6 @@ import { adminUsers } from "../../database/schema/admin-user";
 export class KommunoService {
     static async clickToCall(input: any, adminId: string) {
         const { leadId, clientId, customerNumber, agentNumber } = input;
-
         const sessionId = await db.insert(callLogs).values({
             leadId: leadId,
             clientId: clientId,
@@ -63,10 +62,10 @@ export async function handleLiveEvent(payload: any) {
     const agentNumber = agent_details?.agent_number || null;
     const clientNumber = from || null;
     let agentId = null;
-    let clientId= null;
-    if(call_direction==="INCOMING"){
-        agentId= await db.select({Id:adminUsers.id}).from(adminUsers).where(eq(adminUsers.phone, agentNumber));
-        clientId = await db.select({Id:schema.platformUserProfiles.userId}).from(schema.platformUserProfiles).where(eq(schema.platformUserProfiles.phone, clientNumber));
+    let clientId = null;
+    if (call_direction === "INCOMING") {
+        agentId = await db.select({ Id: adminUsers.id }).from(adminUsers).where(eq(adminUsers.phone, agentNumber));
+        clientId = await db.select({ Id: schema.platformUserProfiles.userId }).from(schema.platformUserProfiles).where(eq(schema.platformUserProfiles.phone, clientNumber));
     }
 
     // Convert session_id  → bigint
@@ -89,10 +88,10 @@ export async function handleLiveEvent(payload: any) {
             callType: call_direction,
             recordingUrl: null,
             createdAt: new Date(date_time),
-            clientId: clientId?clientId[0]?.Id:null, // unknown yet
-            AgentId: agentId?agentId[0]?.Id:null,
-            clientNumber:clientNumber,
-            agentNumber:agentNumber,
+            clientId: clientId ? clientId[0]?.Id : null, // unknown yet
+            AgentId: agentId ? agentId[0]?.Id : null,
+            clientNumber: clientNumber,
+            agentNumber: agentNumber,
         });
     } else {
         // UPDATE STATUS ONLY
