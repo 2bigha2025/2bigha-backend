@@ -327,7 +327,8 @@ export class PlatformUserService {
                 // 🔹 Single-word search (case-insensitive)
                 whereClause = or(
                     ilike(platformUsers.firstName, `%${queryParts[0]}%`),
-                    ilike(platformUsers.lastName, `%${queryParts[0]}%`)
+                    ilike(platformUsers.lastName, `%${queryParts[0]}%`),
+                    ilike(platformUserProfiles.phone, `%${queryParts[0]}%`)
                 );
             } else if (queryParts.length >= 2) {
                 const [first, last] = queryParts;
@@ -429,12 +430,12 @@ export class PlatformUserService {
     ): Promise<{ success: boolean; expiresIn: number; remainingAttempts: number }> {
         try {
             let result = await this.findUserByPhone(phone.slice(3))
-            if (!result?.user) {
+            let user = result?.user;
+            if (!user) {
                 const newuser = await this.createUser({ role: 'USER', phone: phone });
                 user = newuser;
                 console.log("new user created", newuser);
             }
-            const user = result?.user
 
             // Check rate limiting
             const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
