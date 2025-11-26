@@ -328,7 +328,8 @@ export class PlatformUserService {
                 // 🔹 Single-word search (case-insensitive)
                 whereClause = or(
                     ilike(platformUsers.firstName, `%${queryParts[0]}%`),
-                    ilike(platformUsers.lastName, `%${queryParts[0]}%`)
+                    ilike(platformUsers.lastName, `%${queryParts[0]}%`),
+                    ilike(platformUserProfiles.phone, `%${queryParts[0]}%`)
                 );
             } else if (queryParts.length >= 2) {
                 const [first, last] = queryParts;
