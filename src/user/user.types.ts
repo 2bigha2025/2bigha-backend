@@ -81,7 +81,11 @@ type PropertyImage {
 type location {
   name: String
   address: String
-  coordinates: MapCoordinate
+  coordinates: coordinates
+}
+type coordinates{
+  lat: Float
+  lng: Float
 }
 type Property {
   id: ID!
@@ -138,15 +142,17 @@ type Property {
   landZoning : String
   ownersCount : Int
   waterLevel : Int
-  landMark : String
   category : String
   highwayConn : Boolean
   ownershipYes : Boolean
   soilType: String
   roadAccess: Boolean
   roadAccessDistance: Int
+  landMark: String
   landMarkName: String
   landType : String
+  roadAccessWidth : Int
+  roadAccessDistanceUnit : String
  
 }
 type properties {
@@ -220,7 +226,7 @@ type properties {
 }
 
 type PaginatedProperties {
-  data: [properties !]!
+  data: [properties!]!
   meta: PaginationMeta
 }
 
@@ -259,6 +265,8 @@ input PropertyDetailsSchemaInput {
   roadAccessDistance: Int,
   description: String,
   landMarkName: JSON
+  roadAccessWidth : Int
+  roadAccessDistanceUnit : String
 }
 
 
@@ -446,32 +454,16 @@ enum PropertyStatus {
     deviceId: String
   }
 
-  input UpdateProfileInput {
-    firstName: String
-    lastName: String
-    bio: String
-    phone: String
-    address: String
-    city: String
-    state: String
-    country: String
-    pincode: String
-    website: String
-    socialLinks: JSON
-    preferences: JSON
-    specializations: JSON
-    serviceAreas: JSON
-    languages: JSON
-    experience: Int
-  }
+ input ProfileDataInput {
+    firstName: String,
+    lastName: String,
+    role: PlatformUserRole,
+    email: String,
+    phone: String,
+    address: String,
+    avatar: Upload,
+}
 
-    type EnhancedProfile {
-    basicInfo: BasicInfo!
-    addressInfo: AddressInfo
-    onlinePresence: OnlinePresence
-    professionalInfo: ProfessionalInfo
-    accountInfo: AccountInfo!
-  }
   type SeoPage {
     title: String!
     description: String
@@ -529,11 +521,10 @@ input ViewCountPropertiesInput {
   type Query {
     getHomePageSeo:homePageSeo
      getPropertyBySlug(input: inputGetPropertyBySlug!):properties 
-    getEnhancedProfile: EnhancedProfile
     getTopProperties: [properties]
     # Get current user profile
     me: PlatformUser
-         getSeoPageByUrl(url: String!): SeoPage
+    getSeoPageByUrl(url: String!): SeoPage
     # Get user by ID
     getUser(id: ID!): PlatformUser
     getPropertiesByLocation(input: LocationBasedPropertiesInput!): [properties!]!
@@ -555,97 +546,7 @@ input ViewCountPropertiesInput {
     getPropertiesByUser(input: GetPropertiesInput!): PaginatedProperties!
       findGeoJsonFeaturesWithinRadius(lat: Float!, lng: Float!, radiusKm: Float!): [GeoJsonFeature!]!
   }
-   input UpdateBasicInfoInput {
-    firstName: String
-    lastName: String
-    email: String
-    phone: String
-    bio: String
-    avatar: String
-  }
-    # Online Presence Input
-  input SocialLinksInput {
-    linkedin: String
-    twitter: String
-    facebook: String
-    instagram: String
-    youtube: String
-  }
 
-  input UpdateOnlinePresenceInput {
-    website: String
-    socialLinks: SocialLinksInput
-  }
-
-  # Professional Information Input
-  input UpdateProfessionalInfoInput {
-    experience: Int
-    specializations: [String!]
-    languages: [String!]
-    serviceAreas: [String!]
-  }
-
-   # Address Information Input
-  input UpdateAddressInfoInput {
-    address: String
-    state: String
-    city: String
-    country: String
-    pincode: String
-    location: String
-  }
-  type userProfile {
-    id: ID
-  }
-
-   # Enhanced Profile Types
-  type BasicInfo {
-    firstName: String
-    lastName: String
-    email: String!
-    phone: String
-    bio: String
-    avatar: String
-  }
-
-  type AddressInfo {
-    address: String
-    city: String
-    state: String
-    country: String
-    pincode: String
-    location: String
-  }
-
-  type OnlinePresence {
-    website: String
-    socialLinks: JSON
-  }
-
-  type ProfessionalInfo {
-    experience: Int
-    specializations: JSON
-    languages: JSON
-    serviceAreas: JSON
-    rating: Int
-    totalReviews: Int
-  }
-
-  type AccountInfo {
-    id: ID!
-  
-    role: PlatformUserRole!
-    isActive: Boolean!
-    isVerified: Boolean!
-    emailVerifiedAt: String
-    lastLoginAt: String
-    twoFactorEnabled: Boolean!
-    licenseNumber: String
-    companyName: String
-    businessType: String
-    createdAt: String!
-    updatedAt: String!
-  }
 
 
   # Mutations
@@ -656,6 +557,7 @@ input ViewCountPropertiesInput {
     # Email/Password Login
     loginUser(input: PlatformUserLoginInput!): PlatformAuthResponse!
     
+    updateProfile(userId:String, input: ProfileDataInput!): PlatformUser!
     # Phone OTP Login
     requestPhoneOTP(input: PhoneLoginInput!): PhoneOTPResponse!
     verifyPhoneOTP(input: VerifyPhoneOTPInput!): PlatformAuthResponse!
@@ -664,7 +566,6 @@ input ViewCountPropertiesInput {
     googleAuth(input: GoogleAuthInput!): GoogleAuthResponse!
     
     # Profile Management
-    updateProfile(input: UpdateProfileInput!): PlatformUser!
     
     # Email Verification
     sendEmailVerification: PlatformAuthResponse!
@@ -683,13 +584,6 @@ input ViewCountPropertiesInput {
     logout: PlatformAuthResponse!
 
     createPropertyByUser(input: CreatePropertyInput!): properties!
-
-
-       # Profile Management - New Specific APIs
-    updateBasicInfo(input: UpdateBasicInfoInput!): EnhancedProfile!
-    updateAddressInfo(input: UpdateAddressInfoInput!): EnhancedProfile!
-    updateOnlinePresence(input: UpdateOnlinePresenceInput!): EnhancedProfile!
-    updateProfessionalInfo(input: UpdateProfessionalInfoInput!): EnhancedProfile!
     
   }
 `;

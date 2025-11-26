@@ -145,6 +145,57 @@ type savedPropertiesData {
   totalCount: Int!
 }
 
+
+# Input for searching by state/city
+input PropertySearchByStateOrCityInput {
+  page: Int = 1
+  limit: Int = 5
+  state: [String]
+  city: String
+  minPrice: Float
+  maxPrice: Float
+  landType: String
+  sortBy: String
+}
+
+# Meta info for pagination
+type PropertySearchMeta {
+  total: Int
+  page: Int
+  limit: Int
+  totalPages: Int
+  avgPrice: Float
+  minPrice: Float
+  maxPrice: Float
+}
+
+# Owner info (for response)
+type PropertyOwner {
+  firstName: String
+  lastName: String
+  email: String
+  phone: String
+  city: String
+  state: String
+  avatar: String
+}
+
+# Individual property result
+type PropertySearchItem {
+  property: Property
+  seo: Seo
+  verification: Verification
+  owner: PropertyOwner
+  images: [PropertyImage]
+}
+
+# Main paginated response
+type PropertySearchByStateOrCityResponse {
+  data: [PropertySearchItem]
+  meta: PropertySearchMeta
+}
+
+
 extend type Query {
   savedProperty(id: ID!): Property!
   savedProperties(
@@ -163,6 +214,9 @@ extend type Query {
   savedPropertyCollection(id: ID!): SavedPropertyCollection!
   savedPropertyStats(timeframe: String): SavedPropertyStats!
   publicSavedCollections(limit: Int = 20, offset: Int = 0): [SavedPropertyCollection!]!
+
+   # # Search Property by state or City
+    propertySearchByStateOrCity(input: PropertySearchByStateOrCityInput): PropertySearchByStateOrCityResponse!
 }
 
 

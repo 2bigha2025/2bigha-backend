@@ -154,79 +154,6 @@ export const platformUserResolvers = {
             }
         },
 
-        getEnhancedProfile: async (_: any, __: any, context: PlatformUserContext) => {
-            if (!context.user) {
-                throw new GraphQLError("Not authenticated", {
-                    extensions: { code: "UNAUTHENTICATED" },
-                })
-            }
-
-            try {
-                const user = await PlatformUserService.findUserById(context.user.userId)
-                if (!user) {
-                    throw new GraphQLError("User not found", {
-                        extensions: { code: "NOT_FOUND" },
-                    })
-                }
-
-
-                return {
-                    basicInfo: {
-                        firstName: user.firstName,
-                        lastName: user.lastName,
-                        email: user.email,
-                        phone: user.profile?.phone,
-                        bio: user.profile?.bio,
-                        avatar: user.profile?.avatar,
-                    },
-                    addressInfo: user.profile
-                        ? {
-                            address: user.profile.address,
-                            city: user.profile.city,
-                            state: user.profile.state,
-                            country: user.profile.country,
-                            pincode: user.profile.pincode,
-                            location: user.profile.location,
-                        }
-                        : null,
-                    onlinePresence: user.profile
-                        ? {
-                            website: user.profile.website,
-                            socialLinks: user.profile.socialLinks,
-                        }
-                        : null,
-                    professionalInfo: user.profile
-                        ? {
-                            experience: user.profile.experience,
-                            specializations: user.profile.specializations,
-                            languages: user.profile.languages,
-                            serviceAreas: user.profile.serviceAreas,
-                            rating: user.profile.rating,
-                            totalReviews: user.profile.totalReviews,
-                        }
-                        : null,
-                    accountInfo: {
-                        id: user.id.toString(),
-
-                        role: user.role,
-                        isActive: user.isActive,
-                        isVerified: user.isVerified,
-                        emailVerifiedAt: user.emailVerifiedAt?.toISOString(),
-                        lastLoginAt: user.lastLoginAt?.toISOString(),
-                        twoFactorEnabled: user.twoFactorEnabled,
-
-                        createdAt: user.createdAt.toISOString(),
-                        updatedAt: user.updatedAt.toISOString(),
-                    },
-                }
-            } catch (error) {
-                logError("Failed to get enhanced profile", error as Error, { userId: context.user.userId })
-                throw new GraphQLError("Failed to get enhanced profile", {
-                    extensions: { code: "INTERNAL_ERROR" },
-                })
-            }
-        },
-
         getPropertiesByUser: async (
             _: any,
             { input }: { input: { page: number; limit: number } },
@@ -634,24 +561,24 @@ export const platformUserResolvers = {
             }
 
             try {
-                const updatedUser = await PlatformUserService.updateUserProfile(
+                const updatedUser = await PlatformUserService.updateUser(
+                    context.user.userId,
                     context.user.userId,
                     input
                 );
 
-                if (!updatedUser) {
-                    throw new GraphQLError("Failed to update profile", {
-                        extensions: { code: "UPDATE_FAILED" },
-                    });
-                }
+                // if (!updatedUser) {
+                //     throw new GraphQLError("Failed to update profile", {
+                //         extensions: { code: "UPDATE_FAILED" },
+                //     });
+                // }
 
-                logInfo("Profile updated successfully", {
-                    userId: context.user.userId,
-                });
+                // logInfo("Profile updated successfully", {
+                //     userId: context.user.userId,
+                // });
 
                 return {
                     id: updatedUser.id.toString(),
-
                     email: updatedUser.email,
                     firstName: updatedUser.firstName,
                     lastName: updatedUser.lastName,
@@ -798,271 +725,6 @@ export const platformUserResolvers = {
                     extensions: { code: "INTERNAL_ERROR" },
                 });
             }
-        },
-
-        // New specific profile update mutations
-        updateBasicInfo: async (_: any, { input }: { input: any }, context: PlatformUserContext) => {
-            if (!context.user) {
-                throw new GraphQLError("Not authenticated", {
-                    extensions: { code: "UNAUTHENTICATED" },
-                })
-            }
-
-            try {
-                const updatedUser = await PlatformUserService.updateBasicInfo(context.user.userId, input)
-
-                if (!updatedUser) {
-                    throw new GraphQLError("Failed to update basic information", {
-                        extensions: { code: "UPDATE_FAILED" },
-                    })
-                }
-
-                logInfo("Basic information updated successfully", { userId: context.user.userId })
-
-                return {
-                    success: true,
-                    message: "Basic information updated successfully",
-                    user: {
-                        id: updatedUser.id.toString(),
-                        uuid: updatedUser.uuid,
-                        email: updatedUser.email,
-                        firstName: updatedUser.firstName,
-                        lastName: updatedUser.lastName,
-                        role: updatedUser.role,
-                        isActive: updatedUser.isActive,
-                        isVerified: updatedUser.isVerified,
-                        updatedAt: new Date().toISOString(),
-                        profile: updatedUser.profile
-                            ? {
-                                id: updatedUser.profile.id.toString(),
-                                bio: updatedUser.profile.bio,
-                                avatar: updatedUser.profile.avatar,
-                                phone: updatedUser.profile.phone,
-                                address: updatedUser.profile.address,
-                                city: updatedUser.profile.city,
-                                state: updatedUser.profile.state,
-                                country: updatedUser.profile.country,
-                                pincode: updatedUser.profile.pincode,
-                                website: updatedUser.profile.website,
-                                socialLinks: updatedUser.profile.socialLinks,
-                                preferences: updatedUser.profile.preferences,
-                                specializations: updatedUser.profile.specializations,
-                                serviceAreas: updatedUser.profile.serviceAreas,
-                                languages: updatedUser.profile.languages,
-                                experience: updatedUser.profile.experience,
-                                rating: updatedUser.profile.rating,
-                                totalReviews: updatedUser.profile.totalReviews,
-                                location: updatedUser.profile.location,
-                                updatedAt: new Date().toISOString(),
-                            }
-                            : null,
-                    },
-                }
-            } catch (error) {
-                logError("Basic information update failed", error as Error, { userId: context.user.userId })
-
-                throw new GraphQLError((error as Error).message, {
-                    extensions: { code: "UPDATE_FAILED" },
-                })
-            }
-        },
-
-        updateAddressInfo: async (_: any, { input }: { input: any }, context: PlatformUserContext) => {
-            if (!context.user) {
-                throw new GraphQLError("Not authenticated", {
-                    extensions: { code: "UNAUTHENTICATED" },
-                })
-            }
-
-            try {
-                const updatedUser = await PlatformUserService.updateAddressInfo(context.user.userId, input)
-
-                if (!updatedUser) {
-                    throw new GraphQLError("Failed to update address information", {
-                        extensions: { code: "UPDATE_FAILED" },
-                    })
-                }
-
-                logInfo("Address information updated successfully", { userId: context.user.userId })
-
-                return {
-                    success: true,
-                    message: "Address information updated successfully",
-                    user: {
-                        id: updatedUser.id.toString(),
-                        uuid: updatedUser.uuid,
-                        email: updatedUser.email,
-                        firstName: updatedUser.firstName,
-                        lastName: updatedUser.lastName,
-                        role: updatedUser.role,
-                        isActive: updatedUser.isActive,
-                        isVerified: updatedUser.isVerified,
-                        updatedAt: new Date().toISOString(),
-                        profile: updatedUser.profile
-                            ? {
-                                id: updatedUser.profile.id.toString(),
-                                bio: updatedUser.profile.bio,
-                                avatar: updatedUser.profile.avatar,
-                                phone: updatedUser.profile.phone,
-                                address: updatedUser.profile.address,
-                                city: updatedUser.profile.city,
-                                state: updatedUser.profile.state,
-                                country: updatedUser.profile.country,
-                                pincode: updatedUser.profile.pincode,
-                                website: updatedUser.profile.website,
-                                socialLinks: updatedUser.profile.socialLinks,
-                                preferences: updatedUser.profile.preferences,
-                                specializations: updatedUser.profile.specializations,
-                                serviceAreas: updatedUser.profile.serviceAreas,
-                                languages: updatedUser.profile.languages,
-                                experience: updatedUser.profile.experience,
-                                rating: updatedUser.profile.rating,
-                                totalReviews: updatedUser.profile.totalReviews,
-                                location: updatedUser.profile.location,
-                                updatedAt: new Date().toISOString(),
-                            }
-                            : null,
-                    },
-                }
-            } catch (error) {
-                logError("Address information update failed", error as Error, { userId: context.user.userId })
-
-                throw new GraphQLError((error as Error).message, {
-                    extensions: { code: "UPDATE_FAILED" },
-                })
-            }
-        },
-
-        updateOnlinePresence: async (_: any, { input }: { input: any }, context: PlatformUserContext) => {
-            if (!context.user) {
-                throw new GraphQLError("Not authenticated", {
-                    extensions: { code: "UNAUTHENTICATED" },
-                })
-            }
-
-            try {
-                const updatedUser = await PlatformUserService.updateOnlinePresence(context.user.userId, input)
-
-                if (!updatedUser) {
-                    throw new GraphQLError("Failed to update online presence", {
-                        extensions: { code: "UPDATE_FAILED" },
-                    })
-                }
-
-                logInfo("Online presence updated successfully", { userId: context.user.userId })
-
-                return {
-                    success: true,
-                    message: "Online presence updated successfully",
-                    user: {
-                        id: updatedUser.id.toString(),
-                        uuid: updatedUser.uuid,
-                        email: updatedUser.email,
-                        firstName: updatedUser.firstName,
-                        lastName: updatedUser.lastName,
-                        role: updatedUser.role,
-                        isActive: updatedUser.isActive,
-                        isVerified: updatedUser.isVerified,
-                        updatedAt: new Date().toISOString(),
-                        profile: updatedUser.profile
-                            ? {
-                                id: updatedUser.profile.id.toString(),
-                                bio: updatedUser.profile.bio,
-                                avatar: updatedUser.profile.avatar,
-                                phone: updatedUser.profile.phone,
-                                address: updatedUser.profile.address,
-                                city: updatedUser.profile.city,
-                                state: updatedUser.profile.state,
-                                country: updatedUser.profile.country,
-                                pincode: updatedUser.profile.pincode,
-                                website: updatedUser.profile.website,
-                                socialLinks: updatedUser.profile.socialLinks,
-                                preferences: updatedUser.profile.preferences,
-                                specializations: updatedUser.profile.specializations,
-                                serviceAreas: updatedUser.profile.serviceAreas,
-                                languages: updatedUser.profile.languages,
-                                experience: updatedUser.profile.experience,
-                                rating: updatedUser.profile.rating,
-                                totalReviews: updatedUser.profile.totalReviews,
-                                location: updatedUser.profile.location,
-                                updatedAt: new Date().toISOString(),
-                            }
-                            : null,
-                    },
-                }
-            } catch (error) {
-                logError("Online presence update failed", error as Error, { userId: context.user.userId })
-
-                throw new GraphQLError((error as Error).message, {
-                    extensions: { code: "UPDATE_FAILED" },
-                })
-            }
-        },
-
-        updateProfessionalInfo: async (_: any, { input }: { input: any }, context: PlatformUserContext) => {
-            if (!context.user) {
-                throw new GraphQLError("Not authenticated", {
-                    extensions: { code: "UNAUTHENTICATED" },
-                })
-            }
-
-            try {
-                const updatedUser = await PlatformUserService.updateProfessionalInfo(context.user.userId, input)
-
-                if (!updatedUser) {
-                    throw new GraphQLError("Failed to update professional information", {
-                        extensions: { code: "UPDATE_FAILED" },
-                    })
-                }
-
-                logInfo("Professional information updated successfully", { userId: context.user.userId })
-
-                return {
-                    success: true,
-                    message: "Professional information updated successfully",
-                    user: {
-                        id: updatedUser.id.toString(),
-                        uuid: updatedUser.uuid,
-                        email: updatedUser.email,
-                        firstName: updatedUser.firstName,
-                        lastName: updatedUser.lastName,
-                        role: updatedUser.role,
-                        isActive: updatedUser.isActive,
-                        isVerified: updatedUser.isVerified,
-                        updatedAt: new Date().toISOString(),
-                        profile: updatedUser.profile
-                            ? {
-                                id: updatedUser.profile.id.toString(),
-                                bio: updatedUser.profile.bio,
-                                avatar: updatedUser.profile.avatar,
-                                phone: updatedUser.profile.phone,
-                                address: updatedUser.profile.address,
-                                city: updatedUser.profile.city,
-                                state: updatedUser.profile.state,
-                                country: updatedUser.profile.country,
-                                pincode: updatedUser.profile.pincode,
-                                website: updatedUser.profile.website,
-                                socialLinks: updatedUser.profile.socialLinks,
-                                preferences: updatedUser.profile.preferences,
-                                specializations: updatedUser.profile.specializations,
-                                serviceAreas: updatedUser.profile.serviceAreas,
-                                languages: updatedUser.profile.languages,
-                                experience: updatedUser.profile.experience,
-                                rating: updatedUser.profile.rating,
-                                totalReviews: updatedUser.profile.totalReviews,
-                                location: updatedUser.profile.location,
-                                updatedAt: new Date().toISOString(),
-                            }
-                            : null,
-                    },
-                }
-            } catch (error) {
-                logError("Professional information update failed", error as Error, { userId: context.user.userId })
-
-                throw new GraphQLError((error as Error).message, {
-                    extensions: { code: "UPDATE_FAILED" },
-                })
-            }
-        },
+        }
     },
 };

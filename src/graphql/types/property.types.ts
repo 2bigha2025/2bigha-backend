@@ -163,6 +163,8 @@ type Property {
   roadAccessDistance: Int
   landMark: [String]
   landMarkName: [String]
+  roadAccessWidth : Int
+  roadAccessDistanceUnit : String
 }
 
 type createdByUser {

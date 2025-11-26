@@ -32,6 +32,7 @@ export const platformUserProfiles = pgTable("platform_user_profiles", {
   bio: text("bio"),
   avatar: text("avatar"),
   phone: text("phone"),
+  whatsappNumber: text("whatsapp_number"),
   address: text("address"),
   city: text("city"),
   state: text("state"),

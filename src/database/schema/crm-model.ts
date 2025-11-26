@@ -1,34 +1,143 @@
-import { pgTable, serial, text, timestamp, boolean, jsonb, uuid, } from "drizzle-orm/pg-core"
-import { stat } from "fs"
+import {
+  pgTable,
+  text,
+  timestamp,
+  boolean,
+  uuid,
+  pgEnum,
+  bigint
+} from "drizzle-orm/pg-core";
+import { adminUsers } from "./admin-user";
+import { properties } from "./property";
+import { platformUsers } from "./platform-user";
 
-export const landStatuseads = pgTable("crm_models", {
-  id: uuid("id").defaultRandom().primaryKey(),
+export const callStatusTypeEnum = pgEnum("call_status", [
+  "",
+  "CONNECTED",
+  "NOT ANSWERED",
+  "BUSY",
+  "WRONG NUMBER",
+  "VOICEMAIL LEFT",
+  "CALLBACK SCHEDULED",
+  "INTERESTED",
+  "NOT INTERESTED",
+  "CALL BACK LATER",
+  "DISCONNECTED",
+  "INFORMATION SEND",
+  "FOLLOW UP REQUIRED",
+  "MEETING SCHEDULED",
+  "LEAD CONVERTED",
+  "INVALID NUMBER",
+  "LEFT MESSAGE",
+  "WRONG CONTACT PERSON",
+  "CUSTOMER QUERY RESOLVED",
+  "DO NOT CALL REQUEST",
+  "CALL CONNECTED",
+  "PROPOSAL SUBMITTED",
+  "OTHER",
+]);
+
+
+
+export const lead = pgTable("lead", {
+  Id: uuid("id").defaultRandom().primaryKey(),
+  leadType: text("lead_type"),
+  leadSource: text("lead_source"),
+  groupId: uuid("group_id").references(() => propertyGroups.Id, { onDelete: "set null", }),
+  clientId: uuid("client_id").references(() => platformUsers.id, { onDelete: "set null", }),
+  createdBy: uuid("created_by").references(()=>adminUsers.id,{onDelete:"set null"}),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const propertyMeta = pgTable("property_meta", {
+  Id: uuid("id").defaultRandom().primaryKey(),
+  propertyId: uuid("property_id").references(() => properties.id, { onDelete: "set null",}),
+  leadId: uuid("lead_id").references(() => lead.Id, { onDelete: "set null",}),
+  groupId: uuid("group_id").references(() => propertyGroups.Id, { onDelete: "set null", }),
+  assignedTo: uuid("assigned_to").references(() => adminUsers.id, {onDelete: "set null",}),
+  assignedBy: uuid("assigned_by").references(() => adminUsers.id, {onDelete: "set null",}),
+});
+
+export const propertyGroups = pgTable("property_group", {
+  Id: uuid("id").defaultRandom().primaryKey(),
+  groupName: text("name").notNull(),
+  groupIcon: text("icon"),
+  isAvailable: boolean("is_available").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdBy: uuid("created_by").references(() => adminUsers.id, {
+  onDelete: "set null",
+  }),
+});
+
+export const callLogs = pgTable("call_logs", {
+  Id: bigint("id", { mode: "number" })
+    .primaryKey()
+    .$defaultFn(() => {
+      const timestamp = Date.now().toString(); // 13 digits
+      const random = Math.floor(Math.random() * 1000)
+        .toString()
+        .padStart(3, "0"); // +3 digits
+      return Number(timestamp + random); // 16 digits total
+    }),
+  leadId: uuid("lead_id").references(() => lead.Id, {
+    onDelete: "set null",
+  }),
+  propertyId:text("property_id"),
+  status: callStatusTypeEnum(""),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  followUp: timestamp("follow_up"),
+  feedback: text("feedback"),
+  clientId: uuid("client_id").references(() => platformUsers.id, {
+    onDelete: "set null",
+  }),
+  AgentId: uuid("agent_id").references(() => adminUsers.id, {
+    onDelete: "set null",
+  }),
+  duration: text("duration"),
+  recordingUrl: text("recording_url"),
+  callType: text("call_type"),
+  disconnectedBy: text("disconnected_by"),
+});
+
+export const propertyNotes = pgTable("property_notes", {
+  Id: uuid("id").defaultRandom().primaryKey(),
+  propertyId: uuid("property_id").references(() => properties.id, {
+    onDelete: "set null",
+  }),
+  note: text("note"),
+  createdBy: uuid("created_by").references(() => adminUsers.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+
+
+export const template = pgTable("template", {
+  Id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
-  description: text("description"),
-  contact_number: text("contact_number"),
-  phone:text("phone"),
-  email: text("email"),
-  address: text("address"),
-  landsize: text("landsize"),
-  landprice: text("price"),
-  agent_name: text("agent_name"),
-  agent_contact: text("agent_contact"),
-  property_type: text("property_type"),
-  state:text("state"),
-  vilage:text("village"),
-  district:text("district"),
-  pincode:text("pincode"),
-  khasra_number:text("khasra_number"),
-  road_connection:text("road_connection"),
-  coordinates:text("coordinates"),
-  call_status: text("call_status").default("available"), // available, sold, pending
-  nearest_landmark: text("nearest_landmark"),
-  comments:text("comments"),
-  //Image:Image[]
-  team_member_id: uuid("team_member_id"),
-  isActive: boolean("is_active").notNull().default(true),
+  category: text("category"),
+  status: text("status"),
+  language: text("language"),
+  createdBy: uuid("created_by").references(() => adminUsers.id, {
+    onDelete: "set null",
+  }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  //group_id: uuid("group_id").references(() => landStatuseads.id),
+});
 
-})
+export const broadcast = pgTable("broadcast", {
+  Id: uuid("id").defaultRandom().primaryKey(),
+  campaignName: text("campaign_name").notNull(),
+  connectionNumber: text("phone").notNull(),
+  TemplateName: text("template_name").notNull(),
+  groupId: uuid("group_id").references(() => propertyGroups.Id, {
+    onDelete: "set null",
+  }),
+  callStatus: callStatusTypeEnum(""),
+  sentAt: timestamp("sent_at").notNull().defaultNow(),
+  sentBy: uuid("sent_by").references(() => adminUsers.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
