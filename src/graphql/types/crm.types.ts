@@ -260,7 +260,7 @@ type CreateGroupResponse {
 
 type CallLogs{
     Id:ID!
-    leadId:ID!
+    leadId:ID
     propertyId:String
     status:String
     customStatus:String

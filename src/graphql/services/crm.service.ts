@@ -243,7 +243,6 @@ export class CrmService {
     }
 
     static async getAllLeads(agentDetail: any) {
-        console.log("Leads", agentDetail)
         if (agentDetail.roles.includes("super_admin")) {
             const result = await db.select({
                 ...getTableColumns(lead),
@@ -307,7 +306,6 @@ export class CrmService {
             }).from(lead).leftJoin(adminUsers, eq(lead.createdBy, adminUsers.id)).leftJoin(schema.platformUsers, eq(lead.clientId, schema.platformUsers.id)).leftJoin(schema.platformUserProfiles, eq(lead.clientId, schema.platformUserProfiles.userId)).leftJoin(propertyGroups, eq(lead.groupId, propertyGroups.Id))
                 .orderBy(desc(lead.createdAt))
 
-            console.log("Leads", result)
             return {
                 result,
                 message: "Lead fetched successfully",
@@ -362,7 +360,6 @@ export class CrmService {
                     `.as("callStatus"),
         }).from(lead).leftJoin(adminUsers, eq(lead.createdBy, adminUsers.id)).leftJoin(schema.platformUsers, eq(lead.clientId, schema.platformUsers.id)).leftJoin(schema.platformUserProfiles, eq(lead.clientId, schema.platformUserProfiles.userId)).leftJoin(propertyGroups, eq(lead.groupId, propertyGroups.Id)).where(eq(lead.createdBy, id))
             .orderBy(desc(lead.createdAt))
-        console.log("Leads2", result)
         return {
             result,
             message: "Lead fetched successfully",
@@ -725,7 +722,6 @@ export class CrmService {
         const [client] = await db.select({ clientId: lead.clientId }).from(lead).where(eq(lead.Id, leadId));
 
         const clientData = await CrmService.getClientById(client.clientId)
-        console.log(clientData.result)
         return {
             result,
             clientData: clientData.result,
@@ -1128,7 +1124,6 @@ LEFT JOIN (
 
     static async updateCallStatus(id: any, input: any) {
         const { callStatus, feedback, followUpDate, leadId } = input;
-        console.log("input : ", id, input)
         if (id.trim()) {
             // Update directly using given ID
             await db.update(callLogs)

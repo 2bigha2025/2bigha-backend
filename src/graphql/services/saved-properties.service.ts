@@ -651,88 +651,88 @@ export class SavedPropertiesService {
   }
 
   // search property by location (state or city)
-  static async searchPropertyByStateOrCity(
-    page: number = 1,
-    limit: number = 5,
-    state?: string[],
-    city?: string,
-    minPrice?: number,
-    maxPrice?: number,
-    landType?: string,
-    sortBy?: string
-  ) {
-    console.log("States", state);
-    try {
-      const offset = (page - 1) * limit;
+static async searchPropertyByStateOrCity(
+  page: number = 1,
+  limit: number = 5,
+  state?: string[],
+  city?: string,
+  minPrice?: number,
+  maxPrice?: number,
+  landType?: string,
+  sortBy?: string
+) {
+  console.log("States", state);
+  try {
+    const offset = (page - 1) * limit;
 
-      const ownerUser = alias(platformUsers, "ownerUser");
-      const createdByUser = alias(platformUsers, "createdByUser");
-      const adminUser = alias(adminUsers, "adminUser");
-      const ownerProfile = alias(platformUserProfiles, "ownerProfile");
-      const createdByProfile = alias(platformUserProfiles, "createdByProfile");
+    const ownerUser = alias(platformUsers, "ownerUser");
+    const createdByUser = alias(platformUsers, "createdByUser");
+    const ownerProfile = alias(platformUserProfiles, "ownerProfile");
+    const createdByProfile = alias(platformUserProfiles, "createdByProfile");
 
-      const filterConditions: any[] = [];
+    const filterConditions: any[] = [];
+    filterConditions.push(eq(properties.approvalStatus, "APPROVED"));
 
-      filterConditions.push(eq(properties.approvalStatus, "APPROVED"));
+    if (state && Array.isArray(state) && state.length > 0) {
+      const normalizedStates = state.map((s) => sql`${s.toLowerCase().trim()}`);
 
-if (state && Array.isArray(state) && state.length > 0) {
-  // Normalize and wrap each state as a SQL parameter
-  const normalizedStates = state.map((s) => sql`${s.toLowerCase().trim()}`);
+      filterConditions.push(
+        sql`LOWER(TRIM(${properties.state})) IN (${sql.join(
+          normalizedStates,
+          sql`, `
+        )})`
+      );
+    }
 
-  filterConditions.push(
-    // Join with commas to make it a valid IN list
-    sql`LOWER(TRIM(${properties.state})) IN (${sql.join(normalizedStates, sql`, `)})`
-  );
-}
+    if (city) {
+      filterConditions.push(
+        sql`LOWER(TRIM(${properties.city})) ILIKE ${
+          "%" + city.toLowerCase() + "%"
+        }`
+      );
+    }
 
-if (city) {
-  filterConditions.push(
-    sql`LOWER(TRIM(${properties.city})) ILIKE ${'%' + city.toLowerCase() + '%'}`
-  );
-}
+    if (minPrice) filterConditions.push(gte(properties.price, minPrice));
+    if (maxPrice) filterConditions.push(lte(properties.price, maxPrice));
 
+    if (landType) {
+      filterConditions.push(
+        sql`LOWER(${properties.propertyType}::text) ILIKE ${
+          "%" + landType.toLowerCase() + "%"
+        }`
+      );
+    }
 
-      if (minPrice) filterConditions.push(gte(properties.price, minPrice));
-      if (maxPrice) filterConditions.push(lte(properties.price, maxPrice));
+    let orderByClause: any;
 
-      if (landType) {
-        filterConditions.push(
-          sql`LOWER(${properties.propertyType}::text) ILIKE ${
-            "%" + landType.toLowerCase() + "%"
-          }`
-        );
-      }
+    switch (sortBy) {
+      case "Price Low to High":
+        orderByClause = asc(properties.price);
+        break;
 
-      let orderByClause: any;
+      case "Price High to Low":
+        orderByClause = desc(properties.price);
+        break;
 
-      switch (sortBy) {
-        case "Price Low to High":
-          orderByClause = asc(properties.price);
-          break;
+      case "New Properties":
+        orderByClause = desc(properties.createdAt);
+        break;
 
-        case "Price High to Low":
-          orderByClause = desc(properties.price);
-          break;
+      case "Trending Properties":
+        orderByClause = desc(sql`COALESCE(${properties.viewCount}, 0)`);
+        break;
 
-        case "New Properties":
-          orderByClause = desc(properties.createdAt);
-          break;
+      default:
+        orderByClause = desc(properties.createdAt);
+    }
 
-        case "Trending Properties":
-          orderByClause = desc(sql`COALESCE(${properties.viewCount}, 0)`);
-          break;
+    const results = await db
+      .select({
+        property: properties,
+        seo: propertySeo,
+        verification: propertyVerification,
 
-        default:
-          orderByClause = desc(properties.createdAt);
-      }
-
-      const results = await db
-        .select({
-          property: properties,
-          seo: propertySeo,
-          verification: propertyVerification,
-
-          images: sql`
+        images: sql`
           COALESCE(
             json_agg(${propertyImages}.*)
             FILTER (WHERE ${propertyImages}.id IS NOT NULL),
@@ -740,41 +740,37 @@ if (city) {
           )
         `.as("images"),
 
-          owner: {
-            firstName: sql`
+        owner: {
+          firstName: sql`
             COALESCE(
               ${createdByUser.firstName},
-              ${adminUser.firstName},
               ${ownerUser.firstName}
             )
           `.as("firstName"),
 
-            lastName: sql`
+          lastName: sql`
             COALESCE(
               ${createdByUser.lastName},
-              ${adminUser.lastName},
               ${ownerUser.lastName}
             )
           `.as("lastName"),
 
-            email: sql`
+          email: sql`
             COALESCE(
               ${createdByUser.email},
-              ${adminUser.email},
               ${ownerUser.email}
             )
           `.as("email"),
 
-            phone: sql`
+          phone: sql`
             COALESCE(
               ${createdByProfile.phone},
-              ${adminUser.phone},
               ${ownerProfile.phone},
               ${properties.ownerPhone}
             )
           `.as("phone"),
 
-            city: sql`
+          city: sql`
             COALESCE(
               ${createdByProfile.city},
               ${ownerProfile.city},
@@ -782,7 +778,7 @@ if (city) {
             )
           `.as("city"),
 
-            state: sql`
+          state: sql`
             COALESCE(
               ${createdByProfile.state},
               ${ownerProfile.state},
@@ -790,74 +786,78 @@ if (city) {
             )
           `.as("state"),
 
-            avatar: sql`
+          avatar: sql`
             COALESCE(
               ${createdByProfile.avatar},
               ${ownerProfile.avatar}
             )
           `.as("avatar"),
-          },
-        })
-        .from(properties)
-        .leftJoin(
-          propertyVerification,
-          eq(properties.id, propertyVerification.propertyId)
-        )
-        .leftJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
-        .leftJoin(ownerUser, eq(properties.ownerId, ownerUser.id))
-        .leftJoin(
-          createdByUser,
-          eq(properties.createdByUserId, createdByUser.id)
-        )
-        .leftJoin(adminUser, eq(properties.createdByAdminId, adminUser.id))
-        .leftJoin(ownerProfile, eq(ownerProfile.userId, ownerUser.id))
-        .leftJoin(
-          createdByProfile,
-          eq(createdByProfile.userId, createdByUser.id)
-        )
-        .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
-        .where(and(...filterConditions))
-        .groupBy(
-          properties.id,
-          propertySeo.id,
-          propertyVerification.id,
-          ownerUser.id,
-          createdByUser.id,
-          adminUser.id,
-          ownerProfile.id,
-          createdByProfile.id
-        )
-        .orderBy(orderByClause)
-        .limit(limit)
-        .offset(offset);
 
+          role: sql`
+            COALESCE(
+              ${createdByUser.role},
+              ${ownerUser.role}
+            )
+          `.as("role"),
+        },
+      })
+      .from(properties)
+      .leftJoin(
+        propertyVerification,
+        eq(properties.id, propertyVerification.propertyId)
+      )
+      .leftJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
+      .leftJoin(ownerUser, eq(properties.ownerId, ownerUser.id))
+      .leftJoin(
+        createdByUser,
+        eq(properties.createdByUserId, createdByUser.id)
+      )
+      .leftJoin(ownerProfile, eq(ownerProfile.userId, ownerUser.id))
+      .leftJoin(
+        createdByProfile,
+        eq(createdByProfile.userId, createdByUser.id)
+      )
+      .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
+      .where(and(...filterConditions))
+      .groupBy(
+        properties.id,
+        propertySeo.id,
+        propertyVerification.id,
+        ownerUser.id,
+        createdByUser.id,
+        ownerProfile.id,
+        createdByProfile.id
+      )
+      .orderBy(orderByClause)
+      .limit(limit)
+      .offset(offset);
 
-        console.log("results", results.length)
+    const [metaRow] = await db
+      .select({
+        total: sql<number>`COUNT(*)`,
+        avgPrice: sql<number>`AVG(${properties.price})`,
+        minPrice: sql<number>`MIN(${properties.price})`,
+        maxPrice: sql<number>`MAX(${properties.price})`,
+      })
+      .from(properties)
+      .where(and(...filterConditions));
 
-      const [metaRow] = await db
-        .select({
-          total: sql<number>`COUNT(*)`,
-          avgPrice: sql<number>`AVG(${properties.price})`,
-          minPrice: sql<number>`MIN(${properties.price})`,
-          maxPrice: sql<number>`MAX(${properties.price})`,
-        })
-        .from(properties)
-        .where(and(...filterConditions));
-
-      const meta = {
-        total: Number(metaRow.total) || 0,
-        page,
-        limit,
-        totalPages: Math.ceil(Number(metaRow.total) / limit),
-        avgPrice: Number(metaRow.avgPrice) || 0,
-        minPrice: Number(metaRow.minPrice) || 0,
-        maxPrice: Number(metaRow.maxPrice) || 0,
-      };
-   console.log("result: ", results)
-      return { data: results, meta };
-    } catch (error) {
-      console.error("❌ Error in searchPropertyByStateOrCity:", error);
-      throw new Error("Failed to fetch properties by state or city");
-    }
+    const meta = {
+      total: Number(metaRow.total) || 0,
+      page,
+      limit,
+      totalPages: Math.ceil(Number(metaRow.total) / limit),
+      avgPrice: Number(metaRow.avgPrice) || 0,
+      minPrice: Number(metaRow.minPrice) || 0,
+      maxPrice: Number(metaRow.maxPrice) || 0,
+    };
+  
+     console.log("data : ", results)
+    return { data: results, meta };
+  } catch (error) {
+    console.error("❌ Error in searchPropertyByStateOrCity:", error);
+    throw new Error("Failed to fetch properties by state or city");
   }
+}
+
 }
