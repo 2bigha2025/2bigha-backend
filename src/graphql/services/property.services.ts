@@ -1001,7 +1001,7 @@ export class PropertyService {
           createdByType: "ADMIN",
           createdByAdminId: userID,
           approvalStatus: "PENDING",
-          ownerId: propertyData.propertyDetailsSchema.ownerId,
+          ownerId: propertyData.contactDetails.ownerId,
           waterLevel: propertyData.propertyDetailsSchema.waterLevel,
           landMark: propertyData.propertyDetailsSchema.landMark,
           category: propertyData.propertyDetailsSchema.category,
