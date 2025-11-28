@@ -14,6 +14,7 @@ import { platformUsers } from "./platform-user";
 export const callStatusTypeEnum = pgEnum("call_status", [
   "",
   "CONNECTED",
+  "MISSED CALLED",
   "NOT ANSWERED",
   "BUSY",
   "WRONG NUMBER",
@@ -45,17 +46,18 @@ export const lead = pgTable("lead", {
   leadSource: text("lead_source"),
   groupId: uuid("group_id").references(() => propertyGroups.Id, { onDelete: "set null", }),
   clientId: uuid("client_id").references(() => platformUsers.id, { onDelete: "set null", }),
-  createdBy: uuid("created_by").references(()=>adminUsers.id,{onDelete:"set null"}),
+  createdBy: uuid("created_by").references(() => adminUsers.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  note: text('note')
 });
 
 export const propertyMeta = pgTable("property_meta", {
   Id: uuid("id").defaultRandom().primaryKey(),
-  propertyId: uuid("property_id").references(() => properties.id, { onDelete: "set null",}),
-  leadId: uuid("lead_id").references(() => lead.Id, { onDelete: "set null",}),
+  propertyId: uuid("property_id").references(() => properties.id, { onDelete: "set null", }),
+  leadId: uuid("lead_id").references(() => lead.Id, { onDelete: "set null", }),
   groupId: uuid("group_id").references(() => propertyGroups.Id, { onDelete: "set null", }),
-  assignedTo: uuid("assigned_to").references(() => adminUsers.id, {onDelete: "set null",}),
-  assignedBy: uuid("assigned_by").references(() => adminUsers.id, {onDelete: "set null",}),
+  assignedTo: uuid("assigned_to").references(() => adminUsers.id, { onDelete: "set null", }),
+  assignedBy: uuid("assigned_by").references(() => adminUsers.id, { onDelete: "set null", }),
 });
 
 export const propertyGroups = pgTable("property_group", {
@@ -65,7 +67,7 @@ export const propertyGroups = pgTable("property_group", {
   isAvailable: boolean("is_available").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   createdBy: uuid("created_by").references(() => adminUsers.id, {
-  onDelete: "set null",
+    onDelete: "set null",
   }),
 });
 
@@ -82,8 +84,9 @@ export const callLogs = pgTable("call_logs", {
   leadId: uuid("lead_id").references(() => lead.Id, {
     onDelete: "set null",
   }),
-  propertyId:text("property_id"),
+  propertyId: text("property_id"),
   status: callStatusTypeEnum(""),
+  systemStatus: text("system_status"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   followUp: timestamp("follow_up"),
   feedback: text("feedback"),
@@ -93,7 +96,10 @@ export const callLogs = pgTable("call_logs", {
   AgentId: uuid("agent_id").references(() => adminUsers.id, {
     onDelete: "set null",
   }),
+  clientNumber: text("client_number"),
+  agentNumber: text("agent_number"),
   duration: text("duration"),
+  longCode: text("long_code"),
   recordingUrl: text("recording_url"),
   callType: text("call_type"),
   disconnectedBy: text("disconnected_by"),
@@ -109,9 +115,21 @@ export const propertyNotes = pgTable("property_notes", {
     onDelete: "set null",
   }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updateAt: timestamp("update_at").defaultNow(),
 });
 
-
+export const callHistoryNotes = pgTable("call_history_notes", {
+  Id: uuid("id").defaultRandom().primaryKey(),
+  leadId: uuid("lead_id").references(() => lead.Id, {
+    onDelete: "set null",
+  }),
+  note: text("note"),
+  createdBy: uuid("created_by").references(() => adminUsers.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updateAt: timestamp("update_at").defaultNow(),
+});
 
 export const template = pgTable("template", {
   Id: uuid("id").defaultRandom().primaryKey(),
