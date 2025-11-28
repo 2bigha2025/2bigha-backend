@@ -176,6 +176,7 @@ type PropertyOwner {
   email: String
   phone: String
   city: String
+  role: String
   state: String
   avatar: String
 }

@@ -268,8 +268,7 @@ export class PlatformUserService {
                 .from(platformUsers)
                 .innerJoin(platformUserProfiles, eq(platformUsers.id, platformUserProfiles.userId))
                 .where(eq(platformUserProfiles.phone, phone))
-
-            return result?.user
+                return result
         } catch (error) {
             logError("Failed to find user by phone", error as Error, { phone })
             return null
@@ -430,14 +429,14 @@ export class PlatformUserService {
         phone: string,
     ): Promise<{ success: boolean; expiresIn: number; remainingAttempts: number }> {
         try {
-            let user = await this.findUserByPhone(phone)
+            let result = await this.findUserByPhone(phone)
+            let user = result?.user;
             if (!user) {
                 const newuser = await this.createUser({ role: 'USER', phone: phone });
                 user = newuser;
                 console.log("new user created", newuser);
             }
-            console.log(user, "dsd")
-
+//    console.log(phone, phone.slice(3));
             // Check rate limiting
             const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
             const recentOTPs = await db
@@ -455,9 +454,9 @@ export class PlatformUserService {
             const attemptsUsed = recentOTPs.length
             const remainingAttempts = Math.max(0, maxAttempts - attemptsUsed)
 
-            if (remainingAttempts === 0) {
-                throw new Error("Too many OTP attempts. Please try again later.")
-            }
+            // if (remainingAttempts === 0) {
+            //     throw new Error("Too many OTP attempts. Please try again later.")
+            // }
 
             // Generate OTP
             const otp = Math.floor(100000 + Math.random() * 900000).toString()
@@ -471,7 +470,7 @@ export class PlatformUserService {
                 .where(
                     and(eq(otpTokens.platformUserId, user.id), eq(otpTokens.type, "PHONE_LOGIN"), eq(otpTokens.isUsed, false)),
                 )
-
+                console.log('>>>>>>user>>>>>',user)
             // Create new OTP
             await db.insert(otpTokens).values({
                 platformUserId: user.id,
@@ -503,11 +502,12 @@ export class PlatformUserService {
     // Verify phone OTP
     static async verifyPhoneOTP(phone: string, otp: string) {
         try {
-            const user = await this.findUserByPhone(phone)
+            const result = await this.findUserByPhone(phone)
+            const user = result?.user as any
             if (!user) {
                 throw new Error("User not found with this phone number")
             }
-            console.log(user)
+            console.log('>>>>>>verifyUser>>>>>',user)
 
             // Find valid OTP
             const [otpRecord] = await db
@@ -522,7 +522,7 @@ export class PlatformUserService {
                         // gt(otpTokens.expiresAt, new Date()),
                     ),
                 )
-
+            console.log(otpRecord);
             if (!otpRecord) {
                 throw new Error("Invalid or expired OTP")
             }
@@ -535,7 +535,7 @@ export class PlatformUserService {
 
             logInfo("Phone OTP verified successfully", { phone, userId: user.id })
 
-            return user
+            return result
         } catch (error) {
             logError("Phone OTP verification failed", error as Error, { phone })
             throw error

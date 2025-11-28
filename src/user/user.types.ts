@@ -384,6 +384,7 @@ enum PropertyStatus {
     token: String
     refreshToken: String
     user: PlatformUser
+    profile : PlatformUserProfile
     requiresEmailVerification: Boolean
     requiresPhoneVerification: Boolean
   }

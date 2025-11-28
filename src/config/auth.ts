@@ -9,18 +9,20 @@ export interface SessionData {
   email: string
   role: string
   sessionId: string
+  phone: string
 }
 
 // In-memory session store (use Redis in production)
 const sessions = new Map<string, SessionData>()
 
-export function createSession(userId: string, email: string, role: string): string {
+export function createSession(userId: string, email: string, role: string,phone: string): string {
   const sessionId = uuidv4()
   const sessionData: SessionData = {
     userId,
     email,
     role,
     sessionId,
+    phone
   }
 
   // Store session
@@ -34,6 +36,7 @@ export function createSession(userId: string, email: string, role: string): stri
       email,
       role,
       sessionId,
+      phone,
     },
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES_IN },
