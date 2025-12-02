@@ -161,8 +161,8 @@ type Property {
   soilType: String
   roadAccess: Boolean
   roadAccessDistance: Int
-  landMark: [String]
-  landMarkName: [String]
+  landMark: String
+  landMarkName: String
   roadAccessWidth : Int
   roadAccessDistanceUnit : String
 }
@@ -253,7 +253,20 @@ input PropertyDetailsSchemaInput {
   areaUnit: String
   totalPrice: String
   pricePerUnit: String
-  ownerId: String
+  waterLevel : Int
+  landMark : [String]
+  category : String
+  highwayConn : Boolean
+  landZoning : String
+  ownersCount : Int
+  ownershipYes : Boolean
+  soilType: String,
+  roadAccess: Boolean,
+  roadAccessDistance: Int,
+  description: String,
+  landMarkName: JSON
+  roadAccessWidth : Int
+  roadAccessDistanceUnit : String
 }
 
 input ContactDetailsInput {
@@ -261,6 +274,7 @@ input ContactDetailsInput {
   ownerName: String
   phoneNumber: String
   whatsappNumber: String
+  ownerId : String
 }
 
 input CoordinateInput {
