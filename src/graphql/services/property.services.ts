@@ -983,6 +983,7 @@ export class PropertyService {
           status: "PUBLISHED",
           price: parseFloat(propertyData.propertyDetailsSchema.totalPrice),
           area: parseFloat(propertyData.propertyDetailsSchema.area),
+          pricePerUnit: parseFloat(propertyData.propertyDetailsSchema.pricePerUnit),
           areaUnit: propertyData.propertyDetailsSchema.areaUnit.toUpperCase(),
           khasraNumber: propertyData.propertyDetailsSchema.khasraNumber,
           murabbaNumber: propertyData.propertyDetailsSchema.murabbaNumber,
