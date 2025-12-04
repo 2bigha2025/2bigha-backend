@@ -845,9 +845,10 @@ export class PropertyService {
     }
   }
 
-  static async getPropertyById(id: string) {
-    try {
-      const [property] = await db.execute(sql`
+
+    static async getPropertyById(id: string) {
+        try {
+            const [property] = await db.execute(sql`
                 SELECT
                   p.id,
                   p.listing_id as "listingId",
@@ -855,7 +856,7 @@ export class PropertyService {
                   p.description,
                   p.property_type as "propertyType",
                   p.price,
-                  p.price_per_unit as "PricePerUnit",
+                  p.price_per_unit as "pricePerUnit",
                   p.area,
                   p.road_access_width as "roadAccessWidth",
                   p.road_access_distance_unit as "roadAccessDistanceUnit",
