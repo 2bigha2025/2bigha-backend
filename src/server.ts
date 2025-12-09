@@ -8,7 +8,7 @@ import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHt
 import { graphqlUploadExpress } from 'graphql-upload'
 import { makeExecutableSchema } from '@graphql-tools/schema'
 import { constraintDirective } from 'graphql-constraint-directive'
-import { handleLiveEvent,handleCompletedCall } from './graphql/services/kommuno.service'
+import { KommunoService } from './graphql/services/kommuno.service'
 import { typeDefs } from './graphql/types'
 import { resolvers } from './graphql/resolvers'
 import { getSession } from './config/auth'
@@ -87,12 +87,12 @@ const startServer = async () => {
 
       // CASE 1: LIVE CALL EVENT (ringing, answered)
       if (payload.live_event) {
-        await handleLiveEvent(payload);
+        await KommunoService.handleLiveEvent(payload);
       }
 
       // CASE 2: COMPLETED CALL EVENT
       else if (payload.call_details?.live_event === "evt_completed_with_recording") {
-        await handleCompletedCall(payload);
+        await KommunoService.handleCompletedCall(payload);
       }
 
       // Always respond OK

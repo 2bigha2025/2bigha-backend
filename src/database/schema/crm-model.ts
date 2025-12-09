@@ -5,7 +5,9 @@ import {
   boolean,
   uuid,
   pgEnum,
-  bigint
+  bigint,
+  json,
+  jsonb
 } from "drizzle-orm/pg-core";
 import { adminUsers } from "./admin-user";
 import { properties } from "./property";
@@ -134,9 +136,17 @@ export const callHistoryNotes = pgTable("call_history_notes", {
 export const template = pgTable("template", {
   Id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
-  category: text("category"),
-  status: text("status"),
   language: text("language"),
+  category: text("category"),
+  headerFormat: text("header_format"),
+  header:text('header'),
+  body:text('body'),
+  footer:text('footer'),
+  buttonType:text('button_type'),
+  buttons:jsonb('buttons'),
+  status: text("status"),
+  waTemplateId:text('wa_template_id'),
+  variablePresent:text('variable_present'),
   createdBy: uuid("created_by").references(() => adminUsers.id, {
     onDelete: "set null",
   }),
@@ -144,11 +154,25 @@ export const template = pgTable("template", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const broadcast = pgTable("broadcast", {
+export const campaign = pgTable("campaign", {
   Id: uuid("id").defaultRandom().primaryKey(),
   campaignName: text("campaign_name").notNull(),
-  connectionNumber: text("phone").notNull(),
+  templateId: uuid("template_id").references(() => template.Id, {
+    onDelete: "set null",
+  }),
   TemplateName: text("template_name").notNull(),
+  createdBy: uuid("created_by").references(() => adminUsers.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const broadcast = pgTable("broadcast", {
+  Id: uuid("id").defaultRandom().primaryKey(),
+  campaignId: uuid("campaign_id").references(() => campaign.Id, {
+    onDelete: "set null",
+  }),
+  phoneNumbers: jsonb("phone_numbers"),
   groupId: uuid("group_id").references(() => propertyGroups.Id, {
     onDelete: "set null",
   }),
@@ -157,5 +181,4 @@ export const broadcast = pgTable("broadcast", {
   sentBy: uuid("sent_by").references(() => adminUsers.id, {
     onDelete: "set null",
   }),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
 });

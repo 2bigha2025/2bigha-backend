@@ -1,0 +1,199 @@
+export const crmWhatsAppTypeDefs = `#graphql
+# Afrikaans
+# Albanian
+# Arabic
+# Azerbaijani
+# Bengali
+# Bulgarian
+# Catalan
+# Chinese (CHN)
+# Chinese (HKG)
+# Chinese (TAI)
+# Croatian
+# Czech
+# Danish
+# Dutch
+# English
+# English (UK)
+# English (US)
+# Estonian
+# Filipino
+# Finnish
+# French
+# German
+# Greek
+# Gujarati
+# Hausa
+# Hebrew
+# Hindi
+# Hungarian
+# Indonesian
+# Irish
+# Italian
+# Japanese
+# Kannada
+# Kazakh
+# Korean
+# Lao
+# Latvian
+# Lithuanian
+# Macedonian
+# Malay
+# Malayalam
+# Marathi
+# Norwegian
+# Persian
+# Polish
+# Portuguese (BR)
+# Portuguese (POR)
+# Punjabi
+# Romanian
+# Russian
+# Serbian
+# Slovak
+# Slovenian
+# Spanish
+# Spanish (ARG)
+# Spanish (SPA)
+# Spanish (MEX)
+# Swahili
+# Swedish
+# Tamil
+# Telugu
+# Thai
+# Turkish
+# Ukrainian
+# Urdu
+# Uzbek
+# Vietnamese
+# Zulu
+
+# Template
+type Template{
+    Id:ID
+    name: String
+    language: String
+    category: String
+    headerFormat: String
+    header: String
+    body: String
+    footer: String
+    buttonType: String
+    buttons: JSON
+    status: String
+    waTemplateId: String
+    variablePresent: String
+    createdBy: ID
+    createdByName: String
+    createdAt: Date
+    updatedAt: Date
+}
+
+type TemplateResponse{
+    result: [Template]
+    deleted: Int
+    message:String
+    STATUS_CODES:Int
+}
+
+input CreateTemplateInput{
+    name:String
+    language:String
+    category:String
+    headerFormat:String
+    header:String
+    body:String
+    footer:String
+    buttonType:String
+    buttons:JSON
+}
+
+type CreateTemplateResponse{
+    result: Template
+    message:String
+    STATUS_CODES:Int
+}
+
+
+# Broadcast
+type Campaign{
+    Id:ID
+    campaignName:String
+    templateId:ID
+    TemplateName:String
+    createdBy:ID
+    createdByName:String
+    createdAt:Date
+}
+
+type Broadcast{
+    Id:ID
+    campaignId:ID
+    campaignName:String
+    phoneNumbers:JSON
+    templateId:ID
+    TemplateName:String
+    groupId: ID
+    callStatus:String
+    sentAt:Date
+    createdAt:Date
+    sentBy:ID
+    senderName:String
+    createdByName:String
+    groupName:String
+}
+
+
+input CreateBroadcastInput{
+    templateId:ID
+    TemplateName:String!
+    campaignId:ID!
+    phoneNumbers:JSON
+    groupId: ID
+    callStatus:String
+}
+
+input CreateCampaignInput{
+    templateId:ID
+    campaignName:String!
+    TemplateName:String!
+}
+
+type CreateBroadcastResponse{
+    result: Broadcast
+    message: String
+    STATUS_CODES: Int
+}
+type BroadcastResponse{
+    result: [Broadcast]
+    campaigns: [Campaign]
+    message: String
+    STATUS_CODES: Int
+}
+type CampaignResponse{
+    result: [Campaign]
+    message: String
+    STATUS_CODES: Int
+}
+
+type ResponseMessage {
+    message: String
+    STATUS_CODES: Int
+}
+
+extend type Query {
+    getAllTemplate: TemplateResponse
+
+    getAllBroadcasts: BroadcastResponse
+    getAllCampaign: CampaignResponse
+    getBroadcastById(id:ID!):CreateBroadcastResponse
+}
+
+extend type Mutation{
+    createTemplate(input: CreateTemplateInput): CreateTemplateResponse
+    syncTemplate: TemplateResponse
+
+    createCampaign(input: CreateCampaignInput):CreateBroadcastResponse
+    sendBroadcast(input: CreateBroadcastInput!): CreateBroadcastResponse
+}
+`;
