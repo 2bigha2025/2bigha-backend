@@ -42,6 +42,7 @@ enum ListingAs {
 enum landStatus {
     AVAILABLE
     SOLD
+    MANAGED
 }
 
 type Seo {

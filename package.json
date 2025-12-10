@@ -10,6 +10,7 @@
     "type-check": "tsc --noEmit",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
+  
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -18,6 +19,8 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx scripts/seed-database.ts",
     "db:seed:rbac": "tsx scripts/seed-rbac-database.ts",
+    "db:seed:plan": "tsx scripts/seed-plans.ts",
+    "db:seed:planvariants": "tsx scripts/seed-planvariants.ts",
     "migration:generate": "tsx scripts/generate-migration.ts",
     "logs:clear": "rm -rf logs/*.log",
     "docker:build": "docker build -t real-estate-api .",

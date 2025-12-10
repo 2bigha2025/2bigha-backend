@@ -26,6 +26,8 @@ import {
 import { azureStorage, FileUpload } from "../../../src/utils/azure-storage";
 import { SeoGenerator } from "./seo-generator.service";
 import { alias } from "drizzle-orm/pg-core";
+import { userProperty } from "../../database/schema/manage-recrod";
+import { Plan, planvariants, propertyVisits, propertyVisitMedia } from "../../database/schema/manage-recrod";
 
 interface PropertyImageData {
   imageUrl: string;
@@ -262,7 +264,7 @@ export class PropertyService {
           .orderBy(desc(properties.createdAt))
           .limit(limit);
 
-            console.log("success results :" , results.length)
+        console.log("success results :", results.length)
         return results;
       } else {
         // Return random properties if no coordinates provided
@@ -308,8 +310,8 @@ export class PropertyService {
           )
           .orderBy(sql`RANDOM()`) // Random order
           .limit(limit);
-          
-          console.log("results :" , results)
+
+        console.log("results :", results)
 
         return results;
       }
@@ -640,6 +642,138 @@ export class PropertyService {
       },
     };
   }
+
+
+  static async getUserProperties(
+    userId: string,
+    page: number = 1,
+    limit: number = 10
+  ) {
+    page = Math.max(1, page);
+    const offset = (page - 1) * limit;
+
+    // 1️⃣ Count total rows for pagination
+    const totalRow = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(userProperty)
+      .where(eq(userProperty.userId, userId));
+
+    const total = totalRow[0].count;
+    const totalPages = Math.ceil(total / limit);
+
+    const rows = await db
+      .select({
+        userPropertyId: userProperty.id,
+        visitsRemaining: userProperty.visitsRemaining,
+        visitsUsed: userProperty.visitsUsed,
+        property: properties,
+        images: sql`
+          COALESCE(
+            json_agg(DISTINCT ${propertyImages}.*) 
+            FILTER (WHERE ${propertyImages}.id IS NOT NULL),
+            '[]'
+          )
+        `.as("images"),
+        planDetails: sql`
+          json_build_object(
+            'id', ${Plan.planId},
+            'planName', ${Plan.planName},
+            'description', ${Plan.description},
+            'billingCycle', ${planvariants.billingCycle},
+            'durationInDays', ${planvariants.durationInDays},
+            'visitsAllowed', ${planvariants.visitsAllowed}
+          )
+        `.as("planDetails"),
+      })
+      .from(userProperty)
+      .leftJoin(properties, eq(userProperty.propertyId, properties.id))
+      .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
+      .leftJoin(planvariants, eq(userProperty.planVariantId, planvariants.id))
+      .leftJoin(Plan, eq(planvariants.planId, Plan.planId))
+      .where(eq(userProperty.userId, userId))
+      .groupBy(
+        userProperty.id,
+        properties.id,
+        planvariants.id,
+        Plan.planId
+      )
+      .limit(limit)
+      .offset(offset);
+        console.log(rows);
+        console.log(page,limit,total,totalPages);
+    return {
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+      rows,
+    };
+  }
+
+  static async getUserPropertiesById(userId: string, propertyId: string) {
+    // 2️⃣ Fetch rows with aggregated images and nested planDetails
+    const rows = await db
+      .select({
+        userPropertyId: userProperty.id,
+        visitsRemaining: userProperty.visitsRemaining,
+        visitsUsed: userProperty.visitsUsed,
+        property: properties,
+        images: sql`
+          COALESCE(
+            json_agg(DISTINCT ${propertyImages}.*)
+            FILTER (WHERE ${propertyImages}.id IS NOT NULL),
+            '[]'
+          )
+        `.as("images"),
+        planDetails: sql`
+          json_build_object(
+            'id', ${Plan.planId},
+            'planName', ${Plan.planName},
+            'description', ${Plan.description},
+            'billingCycle', ${planvariants.billingCycle},
+            'durationInDays', ${planvariants.durationInDays},
+            'visitsAllowed', ${planvariants.visitsAllowed}
+          )
+        `.as("planDetails"),
+        visits: sql`
+          COALESCE(
+            json_agg(DISTINCT ${propertyVisits}.*)
+            FILTER (WHERE ${propertyVisits}.id IS NOT NULL),
+            '[]'
+          )
+        `.as("visits"),
+        visitMedia: sql`
+          COALESCE(
+            json_agg(DISTINCT ${propertyVisitMedia}.*)
+            FILTER (WHERE ${propertyVisitMedia}.id IS NOT NULL),
+            '[]'
+          )
+        `.as("visitMedia"),
+      })
+      .from(userProperty)
+      .leftJoin(properties, eq(userProperty.propertyId, properties.id))
+      .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
+      .leftJoin(planvariants, eq(userProperty.planVariantId, planvariants.id))
+      .leftJoin(Plan, eq(planvariants.planId, Plan.planId))
+      .leftJoin(propertyVisits, eq(propertyVisits.propertyId, propertyId))
+      .leftJoin(propertyVisitMedia, eq(propertyVisitMedia.visitId, propertyVisits.id))
+      .where(eq(userProperty.propertyId, propertyId))
+      .groupBy(
+        userProperty.id,
+        properties.id,
+        planvariants.id,
+        Plan.planId
+      );
+
+
+  console.log(rows,"its is from service");
+    return {
+       ...rows[0]
+    };
+  }
+
 
   static buildSearchCondition(
     searchTerm?: string,
@@ -1092,11 +1226,12 @@ export class PropertyService {
 
   static async createPropertyByUser(propertyData: any, userID: string) {
     const propertyId = uuidv4();
-
+    console.log(propertyData);
     const images = propertyData.images;
-
-    const parse = await parsePropertyPolygon(propertyData?.map);
-
+    const isManaged = propertyData.flag === "MANAGED";
+    const planId = propertyData.planId ?? null;
+    let parse: any;
+    if (!isManaged) { parse = await parsePropertyPolygon(propertyData?.map); }
     let processedImages: PropertyImageData[] = [];
     if (images && images.length > 0) {
       if (images && images.length > 0) {
@@ -1119,68 +1254,44 @@ export class PropertyService {
         .insert(properties)
         .values({
           id: propertyId,
-          propertyType:
-            propertyData.propertyDetailsSchema.propertyType.toUpperCase(),
+          propertyType: propertyData.propertyDetailsSchema?.propertyType ? propertyData.propertyDetailsSchema.propertyType.toUpperCase() : propertyData.PropertyType,
           status: "PUBLISHED",
-          price: parseFloat(propertyData.propertyDetailsSchema.totalPrice),
-          area: parseFloat(propertyData.propertyDetailsSchema.area),
-          pricePerUnit: parseFloat(
-            propertyData.propertyDetailsSchema.pricePerUnit
-          ),
-          areaUnit: propertyData.propertyDetailsSchema.areaUnit.toUpperCase(),
-          khasraNumber: propertyData.propertyDetailsSchema.khasraNumber,
-          murabbaNumber: propertyData.propertyDetailsSchema.murabbaNumber,
-          khewatNumber: propertyData.propertyDetailsSchema.khewatNumber,
-          address: propertyData.location.address,
-          city: propertyData.location.city,
-          district: propertyData.location.district,
-          state: propertyData.location.state,
-          pinCode: propertyData.location.pincode,
-          ...parse,
+          price: parseFloat(propertyData?.propertyDetailsSchema?.totalPrice) || parseFloat("0"),
+          area: parseFloat(propertyData?.propertyDetailsSchema?.area) || parseFloat(propertyData.Area),
+          title: propertyData.title ?? "",
+          description: propertyData.description ?? "",
+          pricePerUnit: parseFloat(propertyData?.propertyDetailsSchema?.pricePerUnit) || parseFloat("0"),
+          areaUnit: propertyData?.propertyDetailsSchema
+            ?.areaUnit.toUpperCase() || propertyData.AreaUnit,
+          khasraNumber: propertyData?.propertyDetailsSchema?.khasraNumber ?? null,
+          murabbaNumber: propertyData?.propertyDetailsSchema?.murabbaNumber ?? null,
+          khewatNumber: propertyData?.propertyDetailsSchema?.khewatNumber ?? null,
+          address: propertyData?.location?.address ?? "Property Management",
+          city: propertyData?.location?.city ?? propertyData?.city ?? null,
+          district: propertyData?.location?.district ?? propertyData?.district ?? null,
+          state: propertyData?.location?.state ?? propertyData?.state ?? null,
+          pinCode: propertyData?.location?.pincode ?? propertyData?.pincode,
+          ...parse,  // leaving as-is, this is your spread object
           isActive: true,
           publishedAt: new Date(),
           createdByType: "USER",
           createdByUserId: userID,
-          waterLevel: propertyData.propertyDetailsSchema.waterLevel,
-          landMark: propertyData.propertyDetailsSchema.landMark,
-          category: propertyData.propertyDetailsSchema.category,
-          highwayConn: propertyData.propertyDetailsSchema.highwayConn,
-          landZoning: propertyData.propertyDetailsSchema.landZoning,
-          ownersCount: propertyData.propertyDetailsSchema.ownersCount,
-          ownershipYes: propertyData.propertyDetailsSchema.ownershipYes,
-          soilType: propertyData.propertyDetailsSchema.soilType,
-          roadAccess: propertyData.propertyDetailsSchema.roadAccess,
-          roadAccessDistance:
-            propertyData.propertyDetailsSchema.roadAccessDistance,
-          landMarkName: propertyData.propertyDetailsSchema.landMarkName,
-          roadAccessWidth: propertyData.propertyDetailsSchema.roadAccessWidth,
-          roadAccessDistanceUnit:
-            propertyData.propertyDetailsSchema.roadAccessDistanceUnit,
+          waterLevel: propertyData?.propertyDetailsSchema?.waterLevel ?? null,
+          landMark: propertyData?.propertyDetailsSchema?.landMark ?? null,
+          category: propertyData?.propertyDetailsSchema?.category ?? null,
+          highwayConn: propertyData?.propertyDetailsSchema?.highwayConn ?? null,
+          landZoning: propertyData?.propertyDetailsSchema?.landZoning ?? null,
+          ownersCount: propertyData?.propertyDetailsSchema?.ownersCount ?? null,
+          ownershipYes: propertyData?.propertyDetailsSchema?.ownershipYes ?? null,
+          soilType: propertyData?.propertyDetailsSchema?.soilType ?? null,
+          roadAccess: propertyData?.propertyDetailsSchema?.roadAccess ?? null,
+          roadAccessDistance: propertyData?.propertyDetailsSchema?.roadAccessDistance ?? null,
+          landMarkName: propertyData?.propertyDetailsSchema?.landMarkName ?? null,
+          roadAccessWidth: propertyData?.propertyDetailsSchema?.roadAccessWidth ?? null,
+          roadAccessDistanceUnit: propertyData?.propertyDetailsSchema?.roadAccessDistanceUnit ?? null,
+          availablilityStatus: isManaged ? "MANAGED" : "AVAILABLE",
         })
         .returning({ listing_id: properties.listingId });
-
-      const generateSeo = await SeoGenerator.generateSEOFields(
-        createdProperty[0].listing_id,
-        propertyData.propertyDetailsSchema.propertyType,
-        propertyData.location.city,
-        propertyData.location.district
-      );
-
-      await tx
-        .update(properties)
-        .set({
-          title: generateSeo.title,
-          description: generateSeo.seoDescription,
-        })
-        .where(eq(properties.listingId, createdProperty[0].listing_id));
-
-      await tx.insert(propertySeo).values({
-        propertyId,
-        seoTitle: generateSeo.seoTitle,
-        seoDescription: generateSeo.seoDescription,
-        slug: generateSeo.slug,
-        seoKeywords: generateSeo.seoKeywords,
-      });
       if (processedImages.length > 0) {
         const imageInserts = processedImages.map((img, index) => ({
           propertyId,
@@ -1196,36 +1307,89 @@ export class PropertyService {
         await tx.insert(propertyImages).values(imageInserts);
       }
 
-      await tx.insert(propertyVerification).values({
-        propertyId,
-        isVerified: false,
-        verificationMessage: "Verification Pending",
-      });
+      if (!isManaged && !planId) {
+        const generateSeo = await SeoGenerator.generateSEOFields(
+          createdProperty[0].listing_id,
+          propertyData.propertyDetailsSchema.propertyType,
+          propertyData.location.city,
+          propertyData.location.district
+        );
+        await tx
+          .update(properties)
+          .set({
+            title: generateSeo.title,
+            description: generateSeo.seoDescription,
+          })
+          .where(eq(properties.listingId, createdProperty[0].listing_id));
+
+        await tx.insert(propertySeo).values({
+          propertyId,
+          seoTitle: generateSeo.seoTitle,
+          seoDescription: generateSeo.seoDescription,
+          slug: generateSeo.slug,
+          seoKeywords: generateSeo.seoKeywords,
+        });
+
+        await tx.insert(propertyVerification).values({
+          propertyId,
+          isVerified: false,
+          verificationMessage: "Verification Pending",
+        });
+      }
+
+      if (isManaged) {
+        await tx.insert(userProperty).values({
+          userId: userID,
+          propertyId,
+          planVariantId:planId,
+          agentId: propertyData.agentId ?? null,
+          assignedBy: propertyData.assignedBy ?? null,
+          assignedAt: propertyData.agentId ? new Date() : null,
+          startDate: propertyData.startDate ?? null,
+          endDate: propertyData.endDate ?? null,
+          visitsRemaining: propertyData.visitsRemaining ?? null,
+          status: "ACTIVE",
+          active: true,
+        });
+      }
     });
 
+    // 5️⃣ FETCH PROPERTY
     const [property] = await db
       .select()
       .from(properties)
       .where(eq(properties.id, propertyId));
-    const [seo] = await db
-      .select()
-      .from(propertySeo)
-      .where(eq(propertySeo.propertyId, propertyId));
-    const [verification] = await db
-      .select()
-      .from(propertyVerification)
-      .where(eq(propertyVerification.propertyId, propertyId));
+
     const imagesResult = await db
       .select()
       .from(propertyImages)
       .where(eq(propertyImages.propertyId, propertyId));
-    const result = {
+
+    // 6️⃣ CONDITIONAL RETURN BASED ON MANAGED FLAG
+    if (isManaged) {
+      return {
+        property: property,
+        images: imagesResult,
+      };
+    }
+
+    // Fetch required data when NOT managed
+    const [seo] = await db
+      .select()
+      .from(propertySeo)
+      .where(eq(propertySeo.propertyId, propertyId));
+
+    const [verification] = await db
+      .select()
+      .from(propertyVerification)
+      .where(eq(propertyVerification.propertyId, propertyId));
+
+    return {
       ...property,
       seo,
       verification,
       images: imagesResult,
     };
-
-    return result;
   }
 }
+

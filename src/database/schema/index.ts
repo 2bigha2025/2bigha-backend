@@ -6,7 +6,7 @@ export * from './notification'
 export * from './platform-user'
 export * from './property'
 export * from './property-approval'
-
+export * from './manage-recrod'
 export * from './static-page-seo'
 export * from './saved-properties'
 export * from "./seo"
