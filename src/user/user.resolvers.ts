@@ -6,7 +6,7 @@ import { PropertyService } from "../graphql/services/property.services";
 import { seoService } from "../graphql/services/seo.service";
 import { GeoJsonService } from "../graphql/services/geo-json.service";
 
-interface PlatformUserContext {
+export interface PlatformUserContext {
     user?: {
         userId: string;
         email: string;

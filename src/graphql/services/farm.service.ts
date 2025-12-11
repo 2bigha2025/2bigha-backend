@@ -27,7 +27,7 @@ import { azureStorage, FileUpload } from "../../../src/utils/azure-storage";
 import { SeoGenerator } from "./seo-generator.service";
 import { alias } from "drizzle-orm/pg-core";
 
-interface PropertyImageData {
+interface FarmImageData {
   imageUrl: string;
   imageType?: string;
   caption?: string;
@@ -55,7 +55,7 @@ type RawPolygonInput = {
     };
   };
 };
-export function parsePropertyPolygon(data: RawPolygonInput) {
+export function parseFarmPolygon(data: RawPolygonInput) {
   const { location, boundaries } = data;
   const boundaryData = boundaries[0];
 
@@ -77,8 +77,8 @@ function toWktPolygon(coords: PolygonCoordinate[]): string {
   return `POLYGON((${lngLatPairs.join(", ")}))`;
 }
 
-export class PropertyService {
-  static async updateSeoProperty(input: {
+export class FarmService {
+  static async updateSeoFarm(input: {
     propertyId: string;
     slug: string;
     seoTitle: string;
@@ -125,24 +125,21 @@ export class PropertyService {
     return result[0];
   }
 
-  static async processPropertyImages(
+  static async processFarmImages(
     images: FileUpload[],
     metadata: any[] = []
-  ): Promise<PropertyImageData[]> {
+  ): Promise<FarmImageData[]> {
     if (!images || images.length === 0) {
       return [];
     }
 
-    console.log(`🖼️ Processing ${images.length} property images...`);
+    console.log(`🖼️ Processing ${images.length} farm images...`);
 
     try {
       // Upload images to Azure Storage
-      const bulkResult = await azureStorage.uploadBulkFiles(
-        images,
-        "properties"
-      );
+      const bulkResult = await azureStorage.uploadBulkFiles(images, "farms");
 
-      const imageDataArray: PropertyImageData[] = [];
+      const imageDataArray: FarmImageData[] = [];
       const processedFiles = new Set<string>();
 
       if (!bulkResult.success && bulkResult.results.length === 0) {
@@ -169,11 +166,11 @@ export class PropertyService {
 
         const variants = azureStorage.getAllVariantUrls(
           result.filename,
-          "properties"
+          "farms"
         );
         const mainImageUrl = variants.large || variants.original;
 
-        const imageData: PropertyImageData = {
+        const imageData: FarmImageData = {
           imageUrl: mainImageUrl,
           imageType: imageMetadata.imageType || "general",
           caption: imageMetadata.caption || "",
@@ -200,7 +197,7 @@ export class PropertyService {
     }
   }
 
-  static async getPropertiesByLocation(
+  static async getFarmsByLocation(
     lat?: number,
     lng?: number,
     radius?: number,
@@ -243,6 +240,7 @@ export class PropertyService {
           .where(
             and(
               eq(properties.approvalStatus, "APPROVED"),
+              eq(properties.source, "FARMS"),
               eq(properties.isActive, true),
               isNotNull(properties.centerPoint),
               // Use PostGIS to find properties within radius (in meters)
@@ -262,7 +260,7 @@ export class PropertyService {
           .orderBy(desc(properties.createdAt))
           .limit(limit);
 
-            console.log("success results :" , results.length)
+        console.log("success results :", results.length);
         return results;
       } else {
         // Return random properties if no coordinates provided
@@ -297,6 +295,7 @@ export class PropertyService {
           .where(
             and(
               eq(properties.approvalStatus, "APPROVED"),
+              eq(properties.source, "FARMS"),
               eq(properties.isActive, true)
             )
           )
@@ -308,8 +307,8 @@ export class PropertyService {
           )
           .orderBy(sql`RANDOM()`) // Random order
           .limit(limit);
-          
-          console.log("results :" , results)
+
+        console.log("results :", results);
 
         return results;
       }
@@ -322,74 +321,77 @@ export class PropertyService {
   /**
    * Service to fetch properties ordered by viewCount
    */
-  static async getPropertiesByViewCount(
-    limit: number = 10,
-    minViewCount?: number
-  ) {
-    try {
-      const createdByUser = alias(platformUsers, "createdByUser");
+  //   static async getFarmsByViewCount(
+  //     limit: number = 10,
+  //     minViewCount?: number
+  //   ) {
+  //     try {
+  //       const createdByUser = alias(platformUsers, "createdByUser");
 
-      const whereConditions = [
-        eq(properties.approvalStatus, "APPROVED"),
-        eq(properties.isActive, true),
-      ];
+  //       const whereConditions = [
+  //         eq(properties.approvalStatus, "APPROVED"),
+  //         eq(properties.isActive, true),
+  //       ];
 
-      // Add minimum view count filter if provided
-      if (minViewCount !== undefined) {
-        whereConditions.push(sql`${properties.viewCount} >= ${minViewCount}`);
-      }
+  //       // Add minimum view count filter if provided
+  //       if (minViewCount !== undefined) {
+  //         whereConditions.push(sql`${properties.viewCount} >= ${minViewCount}`);
+  //       }
 
-      const results = await db
-        .select({
-          property: properties,
-          seo: propertySeo,
-          verification: propertyVerification,
-          user: {
-            firstName: createdByUser.firstName,
-            lastName: createdByUser.lastName,
-          },
-          images: sql`
-                    COALESCE(json_agg(${propertyImages}.*) 
-                    FILTER (WHERE ${propertyImages}.id IS NOT NULL), '[]')
-                `.as("images"),
-        })
-        .from(properties)
-        .innerJoin(
-          propertyVerification,
-          eq(properties.id, propertyVerification.propertyId)
-        )
-        .innerJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
-        .leftJoin(
-          createdByUser,
-          eq(properties.createdByUserId, createdByUser.id)
-        )
-        .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
-        .where(and(...whereConditions))
-        .groupBy(
-          properties.id,
-          propertySeo.id,
-          propertyVerification.id,
-          createdByUser.id
-        )
-        .orderBy(desc(properties.viewCount)) // Order by view count descending
-        .limit(limit);
+  //       const results = await db
+  //         .select({
+  //           property: properties,
+  //           seo: propertySeo,
+  //           verification: propertyVerification,
+  //           user: {
+  //             firstName: createdByUser.firstName,
+  //             lastName: createdByUser.lastName,
+  //           },
+  //           images: sql`
+  //                     COALESCE(json_agg(${propertyImages}.*)
+  //                     FILTER (WHERE ${propertyImages}.id IS NOT NULL), '[]')
+  //                 `.as("images"),
+  //         })
+  //         .from(properties)
+  //         .innerJoin(
+  //           propertyVerification,
+  //           eq(properties.id, propertyVerification.propertyId)
+  //         )
+  //         .innerJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
+  //         .leftJoin(
+  //           createdByUser,
+  //           eq(properties.createdByUserId, createdByUser.id)
+  //         )
+  //         .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
+  //         .where(and(...whereConditions))
+  //         .groupBy(
+  //           properties.id,
+  //           propertySeo.id,
+  //           propertyVerification.id,
+  //           createdByUser.id
+  //         )
+  //         .orderBy(desc(properties.viewCount)) // Order by view count descending
+  //         .limit(limit);
 
-      return results;
-    } catch (error) {
-      console.error("Error fetching properties by view count:", error);
-      throw new Error("Failed to fetch properties by view count");
-    }
-  }
+  //       return results;
+  //     } catch (error) {
+  //       console.error("Error fetching properties by view count:", error);
+  //       throw new Error("Failed to fetch properties by view count");
+  //     }
+  //   }
 
-  static async getProperties(page: number, limit: number, searchTerm?: string) {
+  static async getFarms(page: number, limit: number, searchTerm?: string) {
     const offset = (page - 1) * limit;
-    const baseCondition = eq(properties.approvalStatus, "APPROVED");
-    const createdByUser = alias(platformUsers, "createdByUser");
-    const createdByAdmin = alias(adminUsers, "createdByAdmin");
-    const userAlias = properties.createdByUserId
-      ? createdByUser
-      : createdByAdmin;
-    const searchCondition = this.buildSearchCondition(searchTerm, userAlias);
+
+    const baseCondition = and(
+      eq(properties.approvalStatus, "APPROVED"),
+      eq(properties.source, "FARMS")
+    );
+
+    const owner = alias(platformUsers, "owner");
+    const ownerProfile = alias(platformUserProfiles, "ownerProfile");
+
+    const searchCondition = this.buildSearchCondition(searchTerm, owner);
     const whereCondition = searchCondition
       ? and(baseCondition, searchCondition)
       : baseCondition;
@@ -401,16 +403,27 @@ export class PropertyService {
         verification: propertyVerification,
         user: {
           firstName: sql`
-                      COALESCE(${createdByUser.firstName}, ${createdByAdmin.firstName})
-                    `.as("firstName"),
+          ${owner.firstName}
+        `.as("firstName"),
           lastName: sql`
-                      COALESCE(${createdByUser.lastName}, ${createdByAdmin.lastName})
-                    `.as("lastName"),
+          ${owner.lastName}
+        `.as("lastName"),
+          phone: sql`
+          ${ownerProfile.phone}
+        `.as("phone"),
+          role: sql`
+          COALESCE(
+            ${owner.role}
+          )
+        `.as("role"),
         },
         images: sql`
-                    COALESCE(json_agg(${propertyImages}.*) 
-                    FILTER (WHERE ${propertyImages}.id IS NOT NULL), '[]')
-                `.as("images"),
+        COALESCE(
+          json_agg(${propertyImages}.*) 
+          FILTER (WHERE ${propertyImages}.id IS NOT NULL), 
+          '[]'
+        )
+      `.as("images"),
       })
       .from(properties)
       .innerJoin(
@@ -418,19 +431,20 @@ export class PropertyService {
         eq(properties.id, propertyVerification.propertyId)
       )
       .innerJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
-      .leftJoin(createdByUser, eq(properties.createdByUserId, createdByUser.id))
-      .leftJoin(
-        createdByAdmin,
-        eq(properties.createdByAdminId, createdByAdmin.id)
-      )
+
+      .leftJoin(owner, eq(properties.ownerId, owner.id))
+
+      .leftJoin(ownerProfile, eq(owner.id, ownerProfile.userId))
+
       .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
+
       .where(whereCondition)
       .groupBy(
         properties.id,
         propertySeo.id,
         propertyVerification.id,
-        createdByUser.id,
-        createdByAdmin.id
+        owner.id,
+        ownerProfile.id
       )
       .orderBy(desc(properties.createdAt))
       .limit(limit)
@@ -439,11 +453,17 @@ export class PropertyService {
     const [{ count }] = await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(properties)
-      .leftJoin(userAlias, eq(properties.createdByUserId, userAlias.id))
+      .leftJoin(owner, eq(properties.ownerId, owner.id))
       .where(whereCondition);
 
     return {
-      data: results,
+      data: results.map((result) => ({
+        property: result.property,
+        verification: result.verification,
+        user: result.user,
+        images: result.images,
+        seo: result.seo,
+      })),
       meta: {
         total: count,
         page,
@@ -453,8 +473,13 @@ export class PropertyService {
     };
   }
 
-  static async getPropertyTotals(state?: string, district?: string) {
-    const whereBase = eq(properties.approvalStatus, "APPROVED");
+  static async getFarmsTotals(state?: string, district?: string) {
+    // const whereBase = eq(properties.approvalStatus, "APPROVED");
+    const whereBase = and(
+      eq(properties.approvalStatus, "APPROVED"),
+      eq(properties.source, "FARMS")
+    );
+
     const withState = state
       ? and(whereBase, eq(properties.state, state))
       : whereBase;
@@ -473,7 +498,7 @@ export class PropertyService {
     return { totalProperties, totalValue };
   }
 
-  static async getPropertiesPostedByAdmin(
+  static async getFarmsPostedByAdmin(
     id: string,
     page: number,
     limit: number,
@@ -481,7 +506,11 @@ export class PropertyService {
     searchTerm?: string
   ) {
     const offset = (page - 1) * limit;
-    const conditions = [eq(properties.createdByAdminId, id)];
+    const conditions = [
+      eq(properties.createdByAdminId, id),
+      eq(properties.source, "FARMS"),
+    ];
+
     if (approvalstatus) {
       conditions.push(eq(properties.approvalStatus, approvalstatus));
     }
@@ -538,70 +567,204 @@ export class PropertyService {
     };
   }
 
-  static async getTopProperties(userId?: string, limit = 5) {
+static async getTopFarms(userId?: string, page?: number, limit = 5) {
+
     try {
-      // Base select
+      const owner = alias(platformUsers, "owner");
+      const ownerProfile = alias(platformUserProfiles, "ownerProfile");
+
+      // Create base select object
       const baseSelect: any = {
         property: properties,
         seo: propertySeo,
+        verification: propertyVerification,
         images: sql`
-              COALESCE(json_agg(${propertyImages}.*)
-              FILTER (WHERE ${propertyImages}.id IS NOT NULL), '[]')
-            `.as("images"),
-        user: platformUsers,
-      };
+        COALESCE(
+          json_agg(${propertyImages}.*)
+          FILTER (WHERE ${propertyImages}.id IS NOT NULL),
+          '[]'
+        )
+      `.as("images"),
 
-      // Only add "saved" if userId exists
-      if (userId) {
-        baseSelect.saved = sql<boolean>`
-              BOOL_OR(
-                CASE 
-                  WHEN ${savedProperties}.id IS NOT NULL 
-                  THEN TRUE 
-                  ELSE FALSE 
-                END
-              )
-            `.as("saved");
-      }
+        user: {
+          firstName: sql`${owner.firstName}`.as("firstName"),
+          lastName: sql`${owner.lastName}`.as("lastName"),
+          phone: sql`${ownerProfile.phone}`.as("phone"),
+          role: sql`COALESCE(${owner.role})`.as("role"),
+        },
+      };
 
       let query = db
         .select(baseSelect)
         .from(properties)
         .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
-        .leftJoin(
-          platformUsers,
-          eq(properties.createdByUserId, platformUsers.id)
-        )
         .innerJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
-        .where(eq(properties.approvalStatus, "APPROVED"))
-        .groupBy(properties.id, platformUsers.id, propertySeo.id)
-        .orderBy(desc(properties.createdAt))
+        .innerJoin(
+          propertyVerification,
+          eq(properties.id, propertyVerification.propertyId)
+        )
+        .leftJoin(owner, eq(properties.ownerId, owner.id))
+        .leftJoin(ownerProfile, eq(owner.id, ownerProfile.userId))
+        .where(
+          and(
+            eq(properties.approvalStatus, "APPROVED"),
+            eq(properties.source, "FARMS")
+          )
+        )
+        .groupBy(
+          properties.id,
+          propertySeo.id,
+          propertyVerification.id,
+          owner.id,
+          ownerProfile.id
+        )
+        .orderBy(asc(properties.createdAt))
         .limit(limit);
 
-      // Conditionally join savedProperties
       if (userId) {
+        baseSelect.saved = sql<boolean>`
+          BOOL_OR(${savedProperties}.id IS NOT NULL)
+        `.as("saved");
+
         query = query.leftJoin(
           savedProperties,
           and(
-            eq(properties.id, savedProperties.propertyId),
+            eq(savedProperties.propertyId, properties.id),
             eq(savedProperties.userId, userId)
           )
         );
+        
+        query = query.groupBy(savedProperties.id);
       }
 
+      const [{ count }] = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(properties)
+        .leftJoin(owner, eq(properties.ownerId, owner.id))
+        .where(
+          and(
+            eq(properties.approvalStatus, "PENDING"),
+            eq(properties.source, "FARMS")
+          )
+        );
+
       const results = await query;
-      return results;
+
+      return {
+        data: results.map((result) => ({
+          property: result.property,
+          verification: result.verification,
+          user: result.user,
+          images: result.images,
+          seo: result.seo,
+          ...(userId && { saved: result.saved })
+        })),
+        meta: {
+          total: count,
+          page,
+          limit,
+          totalPages: Math.ceil(count / limit),
+        },
+      };
     } catch (err) {
-      console.error("Error fetching top properties:", err);
+      console.error("Error fetching top farms:", err);
       throw err;
     }
   }
 
-  static async getPropertiesByUser(
-    userId: string,
-    page: number,
-    limit: number
-  ) {
+  static async getNewFarms(page?: number, limit = 5, searchTerm?: string) {
+    try {
+      const owner = alias(platformUsers, "owner");
+      const ownerProfile = alias(platformUserProfiles, "ownerProfile");
+
+      const twoDaysAgo = new Date();
+      twoDaysAgo.setDate(twoDaysAgo.getDate() - Number(searchTerm));
+
+      const baseSelect: any = {
+        property: properties,
+        seo: propertySeo,
+        verification: propertyVerification,
+        images: sql`
+        COALESCE(
+          json_agg(${propertyImages}.*)
+          FILTER (WHERE ${propertyImages}.id IS NOT NULL),
+          '[]'
+        )
+      `.as("images"),
+        user: {
+          firstName: sql`${owner.firstName}`.as("firstName"),
+          lastName: sql`${owner.lastName}`.as("lastName"),
+          phone: sql`${ownerProfile.phone}`.as("phone"),
+          role: sql`COALESCE(${owner.role})`.as("role"),
+        },
+      };
+
+      let query = db
+        .select(baseSelect)
+        .from(properties)
+        .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
+        .innerJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
+        .innerJoin(
+          propertyVerification,
+          eq(properties.id, propertyVerification.propertyId)
+        )
+        .leftJoin(owner, eq(properties.ownerId, owner.id))
+        .leftJoin(ownerProfile, eq(owner.id, ownerProfile.userId))
+        .where(
+          and(
+            eq(properties.approvalStatus, "APPROVED"),
+            eq(properties.source, "FARMS"),
+            // Add filter for properties created in the last 2 days
+            gte(properties.createdAt, twoDaysAgo)
+          )
+        )
+        .groupBy(
+          properties.id,
+          propertySeo.id,
+          propertyVerification.id,
+          owner.id,
+          ownerProfile.id
+        )
+        .orderBy(desc(properties.createdAt))
+        .limit(limit);
+
+      // Update count query to also filter by date
+      const [{ count }] = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(properties)
+        .leftJoin(owner, eq(properties.ownerId, owner.id))
+        .where(
+          and(
+            eq(properties.approvalStatus, "PENDING"),
+            eq(properties.source, "FARMS"),
+            gte(properties.createdAt, twoDaysAgo)
+          )
+        );
+
+      const results = await query;
+
+      return {
+        data: results.map((result) => ({
+          property: result.property,
+          verification: result.verification,
+          user: result.user,
+          images: result.images,
+          seo: result.seo,
+        })),
+        meta: {
+          total: count,
+          page,
+          limit,
+          totalPages: Math.ceil(count / limit),
+        },
+      };
+    } catch (err) {
+      console.error("Error fetching new farms:", err);
+      throw err;
+    }
+  }
+
+  static async getFarmsByUser(userId: string, page: number, limit: number) {
     const offset = (page - 1) * limit;
 
     const results = await db
@@ -619,7 +782,12 @@ export class PropertyService {
       .from(properties)
       .leftJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
       .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
-      .where(eq(properties.createdByUserId, userId))
+      .where(
+        and(
+          eq(properties.createdByUserId, userId),
+          eq(properties.source, "FARMS")
+        )
+      )
       .groupBy(properties.id, propertySeo.id)
       .orderBy(desc(properties.createdAt))
       .limit(limit)
@@ -628,7 +796,12 @@ export class PropertyService {
     const [{ count }] = await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(properties)
-      .where(eq(properties.createdByUserId, userId));
+      .where(
+        and(
+          eq(properties.createdByUserId, userId),
+          eq(properties.source, "FARMS")
+        )
+      );
 
     return {
       data: results,
@@ -657,16 +830,13 @@ export class PropertyService {
       ilike(properties.address, likePattern),
       ilike(properties.ownerName, likePattern),
       ilike(properties.ownerPhone, likePattern),
-      ilike(properties.khasraNumber, likePattern),
-      ilike(properties.murabbaNumber, likePattern),
-      ilike(properties.khewatNumber, likePattern),
       ilike(userAlias.firstName, likePattern),
       ilike(userAlias.lastName, likePattern),
       ilike(userAlias.email, likePattern)
-    ) && eq(properties.source,'2BIGHA');
+    );
   }
 
-  static async fetchPropertiesByApprovalStatus(
+  static async fetchFarmsByApprovalStatus(
     status: "PENDING" | "REJECTED" | "APPROVED",
     page: number,
     limit: number,
@@ -674,7 +844,11 @@ export class PropertyService {
   ) {
     const offset = (page - 1) * limit;
 
-    const baseCondition = eq(properties.approvalStatus, status);
+    const baseCondition = and(
+      eq(properties.approvalStatus, status),
+      eq(properties.source, "FARMS")
+    );
+
     const createdByUser = alias(platformUsers, "createdByUser");
     const ownerUser = alias(platformUsers, "ownerUser");
     const platformUserProfile = alias(
@@ -786,46 +960,31 @@ export class PropertyService {
     }
   }
 
-  static async getPendingApprovalProperties(
+  static async getPendingApprovalFarms(
     page: number,
     limit: number,
     searchTerm?: string
   ) {
-    return this.fetchPropertiesByApprovalStatus(
-      "PENDING",
-      page,
-      limit,
-      searchTerm
-    );
+    return this.fetchFarmsByApprovalStatus("PENDING", page, limit, searchTerm);
   }
 
-  static async getRejectedProperties(
+  static async getRejectedFarms(
     page: number,
     limit: number,
     searchTerm?: string
   ) {
-    return this.fetchPropertiesByApprovalStatus(
-      "REJECTED",
-      page,
-      limit,
-      searchTerm
-    );
+    return this.fetchFarmsByApprovalStatus("REJECTED", page, limit, searchTerm);
   }
 
-  static async getApprovedProperties(
+  static async getApprovedFarms(
     page: number,
     limit: number,
     searchTerm?: string
   ) {
-    return this.fetchPropertiesByApprovalStatus(
-      "APPROVED",
-      page,
-      limit,
-      searchTerm
-    );
+    return this.fetchFarmsByApprovalStatus("APPROVED", page, limit, searchTerm);
   }
 
-  static async getPropertyBySlug(slug: string) {
+  static async getFarmsBySlug(slug: string) {
     try {
       const [seo] = await db
         .select()
@@ -836,7 +995,7 @@ export class PropertyService {
         throw new Error(`No property found with slug: ${slug}`);
       }
 
-      const property = await this.getPropertyById(seo.propertyId);
+      const property = await this.getFarmById(seo.propertyId);
 
       return property;
     } catch (error) {
@@ -845,10 +1004,9 @@ export class PropertyService {
     }
   }
 
-
-    static async getPropertyById(id: string) {
-        try {
-            const [property] = await db.execute(sql`
+  static async getFarmById(id: string) {
+    try {
+      const [property] = await db.execute(sql`
                 SELECT
                   p.id,
                   p.listing_id as "listingId",
@@ -913,6 +1071,7 @@ export class PropertyService {
                 LEFT JOIN platform_user_profiles op
                   ON o.id = op.user_id
                 WHERE p.id = ${id}
+                AND p.source = 'FARMS'
               `);
 
       const owner = {
@@ -950,16 +1109,16 @@ export class PropertyService {
     }
   }
 
-  static async createProperty(
+  static async createFarmByAdmin(
     propertyData: any,
     userID: string,
     status: "draft" | "published"
   ) {
     const propertyId = uuidv4();
     const images = propertyData.images;
-    const parse = await parsePropertyPolygon(propertyData?.map);
+    const parse = await parseFarmPolygon(propertyData?.map);
 
-    let processedImages: PropertyImageData[] = [];
+    let processedImages: FarmImageData[] = [];
     if (images && images.length > 0) {
       if (images && images.length > 0) {
         const resolvedUploads = await Promise.all(
@@ -968,7 +1127,7 @@ export class PropertyService {
           })
         );
 
-        processedImages = await this.processPropertyImages(resolvedUploads);
+        processedImages = await this.processFarmImages(resolvedUploads);
 
         console.log("🖼️ Processed images:", processedImages);
       }
@@ -979,25 +1138,22 @@ export class PropertyService {
         .insert(properties)
         .values({
           id: propertyId,
+          source: "FARMS",
           propertyType:
             propertyData.propertyDetailsSchema.propertyType.toUpperCase(),
           status: "PUBLISHED",
           price: parseFloat(propertyData.propertyDetailsSchema.totalPrice),
           area: parseFloat(propertyData.propertyDetailsSchema.area),
-          pricePerUnit: parseFloat(propertyData.propertyDetailsSchema.pricePerUnit),
+          pricePerUnit: parseFloat(
+            propertyData.propertyDetailsSchema.pricePerUnit
+          ),
           areaUnit: propertyData.propertyDetailsSchema.areaUnit.toUpperCase(),
-          khasraNumber: propertyData.propertyDetailsSchema.khasraNumber,
-          murabbaNumber: propertyData.propertyDetailsSchema.murabbaNumber,
-          khewatNumber: propertyData.propertyDetailsSchema.khewatNumber,
+
           address: propertyData.location.address,
           city: propertyData.location.city,
           district: propertyData.location.district,
           state: propertyData.location.state,
-          pinCode: propertyData.location.pincode,
           ...parse,
-          ownerName: propertyData.contactDetails.ownerName,
-          ownerPhone: propertyData.contactDetails.phoneNumber,
-          ownerWhatsapp: propertyData.contactDetails.whatsappNumber || null,
           isActive: true,
           publishedAt: new Date(),
           createdByType: "ADMIN",
@@ -1092,14 +1248,71 @@ export class PropertyService {
     return result;
   }
 
-  static async createPropertyByUser(propertyData: any, userID: string) {
+  static async createFarmByUser(propertyData: any, userID: string) {
     const propertyId = uuidv4();
+
+    const phone = propertyData?.contactDetails?.phoneNumber;
+    if (!phone) {
+      throw new Error("Phone number is required in contactDetails");
+    }
+
+    let ownerUser = await db
+      .select({
+        userId: platformUsers.id,
+        userPhone: platformUserProfiles.phone, // or whatever the column is named
+        firstName: platformUsers.firstName,
+        role: platformUsers.role,
+      })
+      .from(platformUsers)
+      .innerJoin(
+        platformUserProfiles,
+        eq(platformUsers.id, platformUserProfiles.userId)
+      )
+      .where(eq(platformUserProfiles.phone, phone)) // Query from profile table
+      .limit(1);
+
+    let ownerId: string;
+
+    if (ownerUser.length > 0) {
+      // User exists - get from joined result
+      ownerId = ownerUser[0].userId;
+      console.log("📌 Existing user found by phone, using ownerId:", ownerId);
+    } else {
+      // Create new user
+      const newUserId = uuidv4();
+
+      await db.transaction(async (tx) => {
+        // Insert into platformUsers
+        await tx.insert(platformUsers).values({
+          id: newUserId,
+          firstName: propertyData?.contactDetails?.ownerName || null,
+          role: propertyData?.contactDetails?.listingAs || null,
+          isActive: true,
+          createdAt: new Date(),
+        });
+
+        // Insert into platform_user_profile with phone
+        await tx.insert(platformUserProfiles).values({
+          id: uuidv4(), // if needed
+          userId: newUserId,
+          phone: phone,
+          alternativePhone: propertyData?.contactDetails?.alternativePhone,
+          // other profile fields if available
+          // createdAt: new Date(),
+        });
+      });
+
+      ownerId = newUserId;
+      console.log("✨ New platform user created with profile:", newUserId);
+    }
+
+    // Use ownerId also as createdByUserId
 
     const images = propertyData.images;
 
-    const parse = await parsePropertyPolygon(propertyData?.map);
+    const parse = await parseFarmPolygon(propertyData?.map);
 
-    let processedImages: PropertyImageData[] = [];
+    let processedImages: FarmImageData[] = [];
     if (images && images.length > 0) {
       if (images && images.length > 0) {
         const resolvedUploads = await Promise.all(
@@ -1108,62 +1321,64 @@ export class PropertyService {
           })
         );
 
-        processedImages = await this.processPropertyImages(resolvedUploads);
+        processedImages = await this.processFarmImages(resolvedUploads);
 
         console.log("🖼️ Processed images:", processedImages);
       }
     }
 
-    console.log(processedImages);
 
     await db.transaction(async (tx) => {
       const createdProperty = await tx
         .insert(properties)
         .values({
           id: propertyId,
+          source: "FARMS",
+          propertyName: propertyData.farmDetailsSchema.propertyName,
           propertyType:
-            propertyData.propertyDetailsSchema.propertyType.toUpperCase(),
+            propertyData.farmDetailsSchema.propertyType.toUpperCase(),
           status: "PUBLISHED",
-          price: parseFloat(propertyData.propertyDetailsSchema.totalPrice),
-          area: parseFloat(propertyData.propertyDetailsSchema.area),
-          pricePerUnit: parseFloat(
-            propertyData.propertyDetailsSchema.pricePerUnit
-          ),
-          areaUnit: propertyData.propertyDetailsSchema.areaUnit.toUpperCase(),
-          khasraNumber: propertyData.propertyDetailsSchema.khasraNumber,
-          murabbaNumber: propertyData.propertyDetailsSchema.murabbaNumber,
-          khewatNumber: propertyData.propertyDetailsSchema.khewatNumber,
+          price: parseFloat(propertyData.farmDetailsSchema.price),
+          area: parseFloat(propertyData.farmDetailsSchema.area),
+          pricePerUnit: parseFloat(propertyData.farmDetailsSchema.pricePerUnit),
+          areaUnit: propertyData.farmDetailsSchema.areaUnit.toUpperCase(),
           address: propertyData.location.address,
           city: propertyData.location.city,
           district: propertyData.location.district,
           state: propertyData.location.state,
-          pinCode: propertyData.location.pincode,
           ...parse,
           isActive: true,
           publishedAt: new Date(),
           createdByType: "USER",
           createdByUserId: userID,
-          waterLevel: propertyData.propertyDetailsSchema.waterLevel,
-          landMark: propertyData.propertyDetailsSchema.landMark,
-          category: propertyData.propertyDetailsSchema.category,
-          highwayConn: propertyData.propertyDetailsSchema.highwayConn,
-          landZoning: propertyData.propertyDetailsSchema.landZoning,
-          ownersCount: propertyData.propertyDetailsSchema.ownersCount,
-          ownershipYes: propertyData.propertyDetailsSchema.ownershipYes,
-          soilType: propertyData.propertyDetailsSchema.soilType,
-          roadAccess: propertyData.propertyDetailsSchema.roadAccess,
-          roadAccessDistance:
-            propertyData.propertyDetailsSchema.roadAccessDistance,
-          landMarkName: propertyData.propertyDetailsSchema.landMarkName,
-          roadAccessWidth: propertyData.propertyDetailsSchema.roadAccessWidth,
+          ownerId: ownerId,
+          approvalStatus: "PENDING",
+          waterLevel: propertyData.farmDetailsSchema.waterLevel,
+          highwayConn: propertyData.farmDetailsSchema.highwayConn,
+          roadAccess: propertyData.farmDetailsSchema.roadAccess,
+          roadAccessDistance: propertyData.farmDetailsSchema.roadAccessDistance,
+          roadAccessWidth: propertyData.farmDetailsSchema.roadAccessWidth,
           roadAccessDistanceUnit:
-            propertyData.propertyDetailsSchema.roadAccessDistanceUnit,
+            propertyData.farmDetailsSchema.roadAccessDistanceUnit,
+
+          //  added column
+          listingType: propertyData.farmDetailsSchema.listingType,
+          listingAs: propertyData.contactDetails.listingAs,
+          isPriceNegotiable: propertyData.farmDetailsSchema.isPriceNegotiable,
+          hasGatedCommunity: propertyData.farmDetailsSchema.hasGatedCommunity,
+          multipleSizeOptions:
+            propertyData.farmDetailsSchema.multipleSizeOptions,
+          nearestMajorCity: propertyData.farmDetailsSchema.nearestMajorCity,
+          nearbyActivities: propertyData.farmDetailsSchema.nearbyActivities,
+          scenicFeatures: propertyData.farmDetailsSchema.scenicFeatures,
+          amenities: propertyData.farmDetailsSchema.amenities,
         })
         .returning({ listing_id: properties.listingId });
 
-      const generateSeo = await SeoGenerator.generateSEOFields(
+      const generateSeo = await SeoGenerator.generateFarmsSEOFields(
         createdProperty[0].listing_id,
-        propertyData.propertyDetailsSchema.propertyType,
+        // propertyData.propertyDetailsSchema.farmName
+        propertyData.farmDetailsSchema.propertyName,
         propertyData.location.city,
         propertyData.location.district
       );
@@ -1183,6 +1398,7 @@ export class PropertyService {
         slug: generateSeo.slug,
         seoKeywords: generateSeo.seoKeywords,
       });
+
       if (processedImages.length > 0) {
         const imageInserts = processedImages.map((img, index) => ({
           propertyId,
@@ -1209,6 +1425,7 @@ export class PropertyService {
       .select()
       .from(properties)
       .where(eq(properties.id, propertyId));
+
     const [seo] = await db
       .select()
       .from(propertySeo)
@@ -1221,11 +1438,26 @@ export class PropertyService {
       .select()
       .from(propertyImages)
       .where(eq(propertyImages.propertyId, propertyId));
+    let [user] = await db
+      .select({
+        phone: platformUserProfiles.phone, // or whatever the column is named
+        firstName: platformUsers.firstName,
+        role: platformUsers.role,
+      })
+      .from(platformUsers)
+      .innerJoin(
+        platformUserProfiles,
+        eq(platformUsers.id, platformUserProfiles.userId)
+      )
+      .where(eq(platformUserProfiles.userId, ownerId)) // Query from profile table
+      .limit(1);
+
     const result = {
-      ...property,
+      property: property,
       seo,
       verification,
       images: imagesResult,
+      user: user,
     };
 
     return result;
