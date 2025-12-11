@@ -692,8 +692,8 @@ static async searchPropertyByStateOrCity(
       );
     }
 
-    if (minPrice) filterConditions.push(gte(properties.price, minPrice));
-    if (maxPrice) filterConditions.push(lte(properties.price, maxPrice));
+    if (minPrice) filterConditions.push(gte(properties.pricePerUnit, minPrice));
+    if (maxPrice) filterConditions.push(lte(properties.pricePerUnit, maxPrice));
 
     if (landType) {
       filterConditions.push(

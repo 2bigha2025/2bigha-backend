@@ -845,9 +845,10 @@ export class PropertyService {
     }
   }
 
-  static async getPropertyById(id: string) {
-    try {
-      const [property] = await db.execute(sql`
+
+    static async getPropertyById(id: string) {
+        try {
+            const [property] = await db.execute(sql`
                 SELECT
                   p.id,
                   p.listing_id as "listingId",
@@ -855,7 +856,7 @@ export class PropertyService {
                   p.description,
                   p.property_type as "propertyType",
                   p.price,
-                  p.price_per_unit as "PricePerUnit",
+                  p.price_per_unit as "pricePerUnit",
                   p.area,
                   p.road_access_width as "roadAccessWidth",
                   p.road_access_distance_unit as "roadAccessDistanceUnit",
@@ -983,6 +984,7 @@ export class PropertyService {
           status: "PUBLISHED",
           price: parseFloat(propertyData.propertyDetailsSchema.totalPrice),
           area: parseFloat(propertyData.propertyDetailsSchema.area),
+          pricePerUnit: parseFloat(propertyData.propertyDetailsSchema.pricePerUnit),
           areaUnit: propertyData.propertyDetailsSchema.areaUnit.toUpperCase(),
           khasraNumber: propertyData.propertyDetailsSchema.khasraNumber,
           murabbaNumber: propertyData.propertyDetailsSchema.murabbaNumber,
@@ -1001,7 +1003,7 @@ export class PropertyService {
           createdByType: "ADMIN",
           createdByAdminId: userID,
           approvalStatus: "PENDING",
-          ownerId: propertyData.propertyDetailsSchema.ownerId,
+          ownerId: propertyData.contactDetails.ownerId,
           waterLevel: propertyData.propertyDetailsSchema.waterLevel,
           landMark: propertyData.propertyDetailsSchema.landMark,
           category: propertyData.propertyDetailsSchema.category,

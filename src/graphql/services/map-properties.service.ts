@@ -54,8 +54,8 @@ interface MapProperty {
 export class MapPropertiesService {
     // Get all properties optimized for map rendering
     static async getMapProperties(userId:string) {
-        const limit = 1000 // Default limit for map properties
-        console.log(`🗺️ Fetching map properties with limit: ${limit}`)
+        // const limit = 1000 // Default limit for map properties
+        // console.log(`🗺️ Fetching map properties with limit: ${limit}`)
 
         try {
             // Build the base query with optimized selection
@@ -114,7 +114,7 @@ export class MapPropertiesService {
             .groupBy(properties.id, platformUsers.id, schema.propertySeo.id)
 
             .orderBy(desc(properties.createdAt)) // or `desc(properties.views)` if you have views
-            .limit(limit);
+            // .limit(limit);
 
             if(userId) {
                 query = query.leftJoin(

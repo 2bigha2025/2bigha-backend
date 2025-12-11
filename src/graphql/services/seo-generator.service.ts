@@ -39,7 +39,7 @@ export class SeoGenerator {
         return {
             title,
             slug,
-            seoTitle: `Buy ${title} | 2bigha`,
+            seoTitle: `Buy ${title} | 2Bigha`,
             seoDescription : `Explore ${title} for sale. Great for cultivation, investment & future growth. Contact 2Bigha today.`,
             seoKeywords: [
                 propertyType?.toLowerCase(),

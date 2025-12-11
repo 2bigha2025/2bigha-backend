@@ -149,7 +149,7 @@ type Property {
   roadAccess: Boolean
   roadAccessDistance: Int
   landMark: String
-  landMarkName: String
+  landMarkName: JSON
   landType : String
   roadAccessWidth : Int
   roadAccessDistanceUnit : String
