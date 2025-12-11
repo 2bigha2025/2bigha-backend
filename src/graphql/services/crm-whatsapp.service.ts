@@ -482,12 +482,6 @@ export class CrmWhatsAppService {
             createdBy: adminId,
         })
 
-        // Emit real-time event
-        // io.to(`thread:${result.Id}`).emit("message:new", {
-        //     ...savedMessage,
-        //     direction: "outgoing",
-        // });
-
         return {
             message: "Template Message sent successfully",
             STATUS_CODES: 200
@@ -529,11 +523,7 @@ export class CrmWhatsAppService {
             }).returning()
 
 
-            // Emit real-time event
-            // io.to(`thread:${threadId}`).emit("message:new", {
-            //     ...savedMessage,
-            //     direction: "outgoing",
-            // });
+       
         } else {
             return sendResp;
         }
@@ -611,48 +601,3 @@ export class CrmWhatsAppService {
 
 }
 
-// {
-//     "userPhoneNumber": "+9193218*****",
-//         "botId": "6544c5b408febf98e5fc5ec4",
-//             "entityType": "USER_MESSAGE",
-//                 "entity": {
-//         "messageId": "MxTcYxYyXrTKS=o46jMjDJPQ",
-//             "sendTime": "2023-11-10T14:40:50.263298Z",
-//                 "text": "",
-//                     "userFile": null,
-//                         "location": null,
-//                             "suggestionResponse": {
-//             "postBack": {
-//                 "data": "SR1L1C1"
-//             },
-//             "plainText": "",
-//                 "type": "REPLY"
-//         }
-//     }
-// }
-
-// {
-//     "userPhoneNumber": "+9172004*****",
-//         "botId": "663a128464ee1034bb02ed7b",
-//             "entityType": "SERVER_EVENT",
-//                 "entity": {
-//         "eventType": "TTL_EXPIRATION_REVOKED",
-//             "messageId": "77573603-2d32-481b-9442-c1ae5eace4a9",
-//                 "sendTime": "2024-07-26T06:03:13.654Z",
-//                     "phoneNumber": "+9172004*****",
-//                         "eventId": "MxJ079=XIMR725MdGiofzEvA"
-//     }
-// }
-
-// {
-//     "userPhoneNumber": "+9198898*****",
-//         "botId": "651e8ec13800f6c7dee587c4",
-//             "entityType": "USER_EVENT",
-//                 "entity": {
-//         "eventType": "MESSAGE_READ",
-//             "messageId": "ec ca1e-3293-49f9-896e-bbfaa3b13782",
-//                 "sendTime": "2023-10-09T10:20:20.849997Z",
-//                     "senderPhoneNumber": "+9198898*****",
-//                         "eventId": "MxGP3uTVItTTmmTug5n9CBsw"
-//     }
-// }
