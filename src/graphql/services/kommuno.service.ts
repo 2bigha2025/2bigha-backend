@@ -21,7 +21,7 @@ export class KommunoService {
         // create call logs with client and agent ids
         const body = {
             smeId: kommunoConfig.smeId,
-            sessionId: String(sessionId[0].sessionId),
+            sessionId: sessionId[0].sessionId,
             customerNumber,
             agentNumber,
             recordingFlag: 1,
