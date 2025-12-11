@@ -21,7 +21,7 @@ export class KommunoService {
         // create call logs with client and agent ids
         const body = {
             smeId: kommunoConfig.smeId,
-            sessionId: String(sessionId[0].sessionId),
+            sessionId: sessionId[0].sessionId,
             customerNumber,
             agentNumber,
             recordingFlag: 1,
@@ -53,8 +53,7 @@ export class KommunoService {
             clientId = await db.select({ Id: schema.platformUserProfiles.userId }).from(schema.platformUserProfiles).where(eq(schema.platformUserProfiles.phone, clientNumber));
         }
 
-        // Convert session_id  → bigint
-        const callId = Number(session_id);
+        const callId = session_id;
 
         // Check if log already exists
         const existing = await db
@@ -93,8 +92,7 @@ export class KommunoService {
     static async handleCompletedCall(payload: any) {
         const { call_details, recording_details, customer_details, agent_details } = payload;
 
-        const callId = Number(call_details.session_id);
-
+        const callId = call_details.session_id;
 
         await db
             .update(callLogs)
