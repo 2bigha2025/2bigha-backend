@@ -133,20 +133,22 @@ export const callHistoryNotes = pgTable("call_history_notes", {
   updateAt: timestamp("update_at").defaultNow(),
 });
 
+
+// whatsapp template and broadcast tables
 export const template = pgTable("template", {
   Id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
   language: text("language"),
   category: text("category"),
   headerFormat: text("header_format"),
-  header:text('header'),
-  body:text('body'),
-  footer:text('footer'),
-  buttonType:text('button_type'),
-  buttons:jsonb('buttons'),
+  header: text('header'),
+  body: text('body'),
+  footer: text('footer'),
+  buttonType: text('button_type'),
+  buttons: jsonb('buttons'),
   status: text("status"),
-  waTemplateId:text('wa_template_id'),
-  variablePresent:text('variable_present'),
+  waTemplateId: text('wa_template_id'),
+  variablePresent: text('variable_present'),
   createdBy: uuid("created_by").references(() => adminUsers.id, {
     onDelete: "set null",
   }),
@@ -181,4 +183,29 @@ export const broadcast = pgTable("broadcast", {
   sentBy: uuid("sent_by").references(() => adminUsers.id, {
     onDelete: "set null",
   }),
+});
+
+
+// whatsapp chat tables
+export const chatThread = pgTable("chat_thread", {
+  Id: uuid("id").defaultRandom().primaryKey(),
+  leadId: uuid("lead_id").references(() => lead.Id, { onDelete: "cascade" }).notNull(),
+  lastMessage: text("last_message"),
+  lastMessageAt: timestamp("last_message_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdBy: uuid("created_by").references(() => adminUsers.id, { onDelete: "set null"
+  }),
+});
+
+export const chatMessage = pgTable("chat_message", {
+  Id: uuid("id").defaultRandom().primaryKey(),
+  threadId: uuid("thread_id").references(() => chatThread.Id, { onDelete: "cascade" }).notNull(),
+  leadId: uuid("lead_id").references(() => lead.Id, { onDelete: "cascade" }).notNull(),
+  direction: text("direction").notNull(), // "incoming" | "outgoing"
+  msgType: text("msg_type").notNull(), // "template" | "text" | "media" | "reply"
+  message: text("message"),
+  meta: jsonb("meta"), // store template metadata, buttons, or other JSON
+  interaktMessageId: text("interakt_message_id"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdBy: uuid("created_by").references(() => adminUsers.id, { onDelete: "set null"  }),
 });

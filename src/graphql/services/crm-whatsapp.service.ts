@@ -1,12 +1,11 @@
-import { GraphQLError } from "graphql"
-import { eq, sql, desc, getTableColumns, or, inArray, and } from "drizzle-orm"
+import { eq, sql, desc, getTableColumns, or, inArray, and, asc } from "drizzle-orm"
 import { db } from "../../database/connection"
 import * as schema from "../../database/schema/index";
-import { template, broadcast, propertyGroups, lead, callLogs, campaign } from "../../database/schema/crm-model";
+import { template, broadcast, propertyGroups, lead, callLogs, campaign, chatThread, chatMessage } from "../../database/schema/crm-model";
 import { adminUsers } from "../../database/schema/admin-user";
 import whatsAppInstance from '../../axios-instances/whatsApp'
 import { alias } from "drizzle-orm/pg-core";
-
+// import { io } from "socket.io"
 export class CrmWhatsAppService {
 
     // Template
@@ -171,7 +170,7 @@ export class CrmWhatsAppService {
     static async getAllBroadcasts() {
         const sender = alias(adminUsers, "sender");
         const creator = alias(adminUsers, "creator");
-        console.log("campaign");
+
         const result = await db.select({
             ...getTableColumns(broadcast),
 
@@ -193,7 +192,7 @@ export class CrmWhatsAppService {
 
         const campaignsData = this.getAllCampaign();
         const campaigns = (await campaignsData).result;
-        console.log("result", result,campaigns);
+
         return {
             result,
             campaigns,
@@ -203,14 +202,12 @@ export class CrmWhatsAppService {
     }
 
     static async getAllCampaign() {
-        console.log("campaign");
         const result = await db.select({
             ...getTableColumns(campaign),
             createdByName: sql`${adminUsers.firstName} || ' ' || ${adminUsers.lastName}`.as("createdByName"),
         }).from(campaign).leftJoin(adminUsers, eq(campaign.createdBy, adminUsers.id))
-        .orderBy(desc(campaign.createdAt));
+            .orderBy(desc(campaign.createdAt));
 
-        console.log("result", result);
         return {
             result,
             message: "Broadcast fetched successfully",
@@ -275,7 +272,6 @@ export class CrmWhatsAppService {
 
     static async sendBroadcastMessage(input: any, adminId: string) {
         const { TemplateName, campaignId, phoneNumbers, groupId, callStatus } = input;
-        console.log("input", input);
         // 2. Prepare chunking
         const CHUNK_SIZE = 50; // 50 at a time (YOU CAN CHANGE THIS)
         const DELAY_BETWEEN_CHUNKS = 500; // 0.5 sec delay to avoid rate limit
@@ -288,7 +284,7 @@ export class CrmWhatsAppService {
         for (const chunk of chunks) {
             await Promise.allSettled(
                 chunk.map((phoneNumber: any) =>
-                    CrmWhatsAppService.sendTemplate({
+                    CrmWhatsAppService.sendTemplateApi({
                         phoneNumber: CrmWhatsAppService.normalizePhone(phoneNumber),
                         TemplateName,
                         campaignId
@@ -377,7 +373,7 @@ export class CrmWhatsAppService {
         return `+91${phone}`;
     };
 
-    static async sendTemplate(input: any) {
+    static async sendTemplateApi(input: any) {
         const { phoneNumber, TemplateName, campaignId = null } = input;
 
         const templatePayload: any = {
@@ -394,7 +390,6 @@ export class CrmWhatsAppService {
         }
         try {
             const templateData = await whatsAppInstance.post("/message/", templatePayload) as { result?: any, message?: string, id?: string };
-            console.log("sendTemplate response:", templateData);
             return templateData;
         } catch (err: any) {
             console.error("sendTemplate error:", err.response?.data || err.message);
@@ -402,14 +397,262 @@ export class CrmWhatsAppService {
         }
     }
 
-     static async sendTemplateMessage(input: any) {
-        const { phoneNumber, TemplateName } = input;
-        const templateResponse = await this.sendTemplate({ phoneNumber, TemplateName });
-        return templateData;
+    // whatsApp chat service
+
+    static async getWhatsAppThreadChat(agentDetail: any) {
+        let result = null;
+
+        // return threads with last message and lead info
+        if (agentDetail.roles.includes("super_admin")) {
+            result = await db.select({
+                ...getTableColumns(chatThread),
+                clientName: sql`${schema.platformUsers.firstName} || ' ' || ${schema.platformUsers.lastName}`.as("clientName"),
+                clientPhone: schema.platformUserProfiles.whatsappNumber,
+            }).from(chatThread).leftJoin(lead, eq(chatThread.leadId, lead.Id))
+                .leftJoin(schema.platformUsers, eq(lead.clientId, schema.platformUsers.id))
+                .leftJoin(schema.platformUserProfiles, eq(schema.platformUsers.id, schema.platformUserProfiles.userId))
+                .orderBy(desc(chatThread.lastMessageAt));
+        } else {
+            result = await db.select({
+                ...getTableColumns(chatThread),
+                clientName: sql`${schema.platformUsers.firstName} || ' ' || ${schema.platformUsers.lastName}`.as("clientName"),
+                clientPhone: schema.platformUserProfiles.whatsappNumber,
+            }).from(chatThread).leftJoin(lead, eq(chatThread.leadId, lead.Id))
+                .leftJoin(schema.platformUsers, eq(lead.clientId, schema.platformUsers.id))
+                .leftJoin(schema.platformUserProfiles, eq(schema.platformUsers.id, schema.platformUserProfiles.userId)).where(
+                    eq(chatThread.createdBy, agentDetail.adminId)
+                )
+                .orderBy(desc(chatThread.lastMessageAt));
+        }
+
+        return {
+            result,
+            message: "WhatsApp Threads fetched successfully",
+            STATUS_CODES: 200
+        };
+    }
+
+    static async getWhatsAppMessages(threadId: string) {
+        const result = await db.select({
+            ...getTableColumns(chatMessage),
+            createdByName: sql`${adminUsers.firstName} || ' ' || ${adminUsers.lastName}`.as("createdByName")
+        }).from(chatMessage).leftJoin(adminUsers, eq(chatMessage.createdBy, adminUsers.id)).where(eq(chatMessage.threadId, threadId))
+            .orderBy(asc(chatMessage.createdAt));
+
+        return {
+            result,
+            message: "WhatsApp Messages fetched successfully",
+            STATUS_CODES: 200
+        };
     }
 
 
+    static async sendTemplateMessage(input: any, adminId: any) {
+        const { phoneNumber, templateName, leadId, templateBody, meta } = input;
+
+        const response = await CrmWhatsAppService.sendTemplateApi({ phoneNumber, TemplateName: templateName });
+
+        let [templateSendAlready] = await db.select().from(chatThread).where(eq(chatThread.leadId, leadId));
+        let result = null;
+        if (!templateSendAlready) {
+            result = await db.insert(chatThread).values({
+                leadId: leadId,
+                lastMessage: templateBody.slice(0, 30), // limit to 1000 chars
+                lastMessageAt: new Date(),
+                createdBy: adminId,
+            }).returning();
+        } {
+            // update last message
+            await db.update(chatThread).set({
+                lastMessage: templateBody.slice(0, 30),
+                lastMessageAt: new Date(),
+            }).where(eq(chatThread.Id, templateSendAlready.Id));
+        }
+
+        result = templateSendAlready || result;
+        // insert DB message
+        await db.insert(chatMessage).values({
+            threadId: result.Id,
+            leadId: leadId,
+            direction: "outgoing",
+            msgType: "text",
+            message: templateBody,
+            interaktMessageId: response.id,
+            meta: meta || null,
+            createdBy: adminId,
+        })
+
+        // Emit real-time event
+        // io.to(`thread:${result.Id}`).emit("message:new", {
+        //     ...savedMessage,
+        //     direction: "outgoing",
+        // });
+
+        return {
+            message: "Template Message sent successfully",
+            STATUS_CODES: 200
+        };
+    }
+
+    static async sendTextMessage(input: any, adminId: any) {
+        const { threadId, message, phoneNumber } = input;
+        let savedMessage = null;
+
+        // get thread to fetch leadId
+        const [thread] = await db.select().from(chatThread).where(eq(chatThread.Id, threadId));
+        if (!thread) return { result: thread, message: "Send the template first from the lead", STATUS_CODES: 400 };
+
+
+        // send via interakt
+        const sendResp = await CrmWhatsAppService.sendTextApi({
+            phoneNumber,
+            message,
+        });
+
+        if (sendResp?.messageId) {
+
+            // update thread last message
+            await db.update(chatThread).set({
+                lastMessage: message.slice(0, 30),
+                lastMessageAt: new Date(),
+            }).where(eq(chatThread.Id, threadId));
+
+            // insert DB message
+            [savedMessage] = await db.insert(chatMessage).values({
+                threadId,
+                leadId: thread.leadId,
+                direction: "outgoing",
+                msgType: "text",
+                message: message,
+                interaktMessageId: sendResp.messageId,
+                createdBy: adminId,
+            }).returning()
+
+
+            // Emit real-time event
+            // io.to(`thread:${threadId}`).emit("message:new", {
+            //     ...savedMessage,
+            //     direction: "outgoing",
+            // });
+        } else {
+            return sendResp;
+        }
+        const [createdByName] = await db.select({
+            firstName: adminUsers.firstName,
+            lastName: adminUsers.lastName,
+        }).from(adminUsers).where(eq(adminUsers.id, adminId));
+
+        return {
+            result: {
+                ...savedMessage,
+                createdByName: createdByName
+                    ? `${createdByName.firstName} ${createdByName.lastName}`
+                    : "",
+            },
+            message: "Message queued for sending via CRM",
+            STATUS_CODES: 200
+        };
+
+    }
+
+    static async sendTextApi(input: any) {
+        const { phoneNumber, message } = input;
+        try {
+            const textPayload: any = {
+                "userId": "",
+                "fullPhoneNumber": CrmWhatsAppService.normalizePhone(phoneNumber),
+                "callbackData": "",
+                "type": "Text",
+                "data": {
+                    "message": message
+                }
+            }
+            const textData = await whatsAppInstance.post("/message/", textPayload) as { result?: any, message?: string, id: string };
+            console.log("sendText response:", textData);
+            return {
+                result: textData.result,
+                message: textData.message,
+                messageId: textData.id
+            };
+        } catch (err: any) {
+            console.error("sendText error:", err.response?.data || err.message);
+            return { result: false, message: err.message, messageId: null };
+        }
+    }
+
+
+    // Callback service
+
+    static async handleMessageReceived(payload: any) {
+        const { type, entity, userPhoneNumber } = payload;
+
+        let threadDetail = null;
+        let leadId = null;
+
+        const leadResult = await db.select({ Id: schema.platformUserProfiles.userId }).from(schema.platformUserProfiles).where(eq(schema.platformUserProfiles.phone, userPhoneNumber));
+        leadId = leadResult[0]?.Id;
+        [threadDetail] = await db.select({ Id: chatThread.Id,createdBy:chatThread.createdBy }).from(chatThread).where(eq(chatThread.leadId, leadId));
+
+
+        // Save to DB (Prisma Example)
+        // await db.insert(chatMessage).values({
+        //     threadId: threadDetail.Id,
+        //     leadId: leadId,
+        //     direction: "incoming",
+        //     msgType: type.toLowerCase(),
+        //     message: entity.text,
+        //     interaktMessageId: entity.messageId,
+        //     createdAt: entity.sendTime,
+        //     createdBy: threadDetail.createdBy,
+        //     // userFile:entity.userFile,
+        //     // location:entity.location
+        // });
+    }
+
 }
 
+// {
+//     "userPhoneNumber": "+9193218*****",
+//         "botId": "6544c5b408febf98e5fc5ec4",
+//             "entityType": "USER_MESSAGE",
+//                 "entity": {
+//         "messageId": "MxTcYxYyXrTKS=o46jMjDJPQ",
+//             "sendTime": "2023-11-10T14:40:50.263298Z",
+//                 "text": "",
+//                     "userFile": null,
+//                         "location": null,
+//                             "suggestionResponse": {
+//             "postBack": {
+//                 "data": "SR1L1C1"
+//             },
+//             "plainText": "",
+//                 "type": "REPLY"
+//         }
+//     }
+// }
 
+// {
+//     "userPhoneNumber": "+9172004*****",
+//         "botId": "663a128464ee1034bb02ed7b",
+//             "entityType": "SERVER_EVENT",
+//                 "entity": {
+//         "eventType": "TTL_EXPIRATION_REVOKED",
+//             "messageId": "77573603-2d32-481b-9442-c1ae5eace4a9",
+//                 "sendTime": "2024-07-26T06:03:13.654Z",
+//                     "phoneNumber": "+9172004*****",
+//                         "eventId": "MxJ079=XIMR725MdGiofzEvA"
+//     }
+// }
 
+// {
+//     "userPhoneNumber": "+9198898*****",
+//         "botId": "651e8ec13800f6c7dee587c4",
+//             "entityType": "USER_EVENT",
+//                 "entity": {
+//         "eventType": "MESSAGE_READ",
+//             "messageId": "ec ca1e-3293-49f9-896e-bbfaa3b13782",
+//                 "sendTime": "2023-10-09T10:20:20.849997Z",
+//                     "senderPhoneNumber": "+9198898*****",
+//                         "eventId": "MxGP3uTVItTTmmTug5n9CBsw"
+//     }
+// }

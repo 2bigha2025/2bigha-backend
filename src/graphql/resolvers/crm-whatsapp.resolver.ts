@@ -51,6 +51,41 @@ export const crmWhatsAppResolver = {
                 })
             }
         },
+
+        // whatsapp chat
+        getWhatsAppThreadChat: async (_: any, __: any, context: AdminContext) => {
+            if (!context.admin?.adminId) {
+                throw new GraphQLError("Authentication required", {
+                    extensions: { code: "UNAUTHENTICATED" },
+                })
+            }
+            try {
+                const threads = await CrmWhatsAppService.getWhatsAppThreadChat(context.admin);
+                return threads;
+            } catch (error) {
+                throw new GraphQLError(`Failed to get chat threads: ${(error as Error).message}`, {
+                    extensions: { code: "INTERNAL_ERROR" },
+                })
+            }
+        }
+        ,
+
+        getWhatsAppMessages: async (_: any, { threadId }: any, context: AdminContext) => {
+            if (!context.admin?.adminId) {
+                throw new GraphQLError("Authentication required", {
+                    extensions: { code: "UNAUTHENTICATED" },
+                })
+            }
+            try {
+                const messages = await CrmWhatsAppService.getWhatsAppMessages(threadId);
+                return messages;
+            } catch (error) {
+                throw new GraphQLError(`Failed to get chat messages: ${(error as Error).message}`, {
+                    extensions: { code: "INTERNAL_ERROR" },
+                })
+            }
+        }
+
     }
     ,
     Mutation: {
@@ -72,6 +107,7 @@ export const crmWhatsAppResolver = {
             }
 
         },
+
         syncTemplate: async (_: any) => {
             try {
                 const template = await CrmWhatsAppService.syncTemplate();
@@ -83,18 +119,6 @@ export const crmWhatsAppResolver = {
                 })
             }
 
-        },
-        sendTemplateMessage: async (_: any, { input }: any) => {
-            try {
-                const template = await CrmWhatsAppService.sendTemplateMessage(input);
-                return template;
-            }
-            catch (error) {
-                console.log(error);
-                throw new GraphQLError(`Failed to Send Template Message: ${(error as Error).message}`, {
-                    extensions: { code: "INTERNAL_ERROR" },
-                })
-            }
         },
 
         // Broadcast
@@ -132,6 +156,37 @@ export const crmWhatsAppResolver = {
             }
         },
 
-
+        // Whatsapp chat
+        sendTemplateMessage: async (_: any, { input }: any, context: AdminContext) => {
+            if (!context.admin?.adminId) {
+                throw new GraphQLError("Authentication required", {
+                    extensions: { code: "UNAUTHENTICATED" },
+                })
+            }
+            try {
+                const response = await CrmWhatsAppService.sendTemplateMessage(input, context.admin.adminId);
+                return response;
+            } catch (error) {
+                throw new GraphQLError(`Failed to send template to lead: ${(error as Error).message}`, {
+                    extensions: { code: "INTERNAL_ERROR" },
+                })
+            }
+        }
+        ,
+        sendTextMessage: async (_: any, { input }: any, context: AdminContext) => {
+            if (!context.admin?.adminId) {
+                throw new GraphQLError("Authentication required", {
+                    extensions: { code: "UNAUTHENTICATED" },
+                })
+            }
+            try {
+                const response = await CrmWhatsAppService.sendTextMessage(input, context.admin.adminId);
+                return response;
+            } catch (error) {
+                throw new GraphQLError(`Failed to send text message to lead: ${(error as Error).message}`, {
+                    extensions: { code: "INTERNAL_ERROR" },
+                })
+            }
+        }
     },
 };

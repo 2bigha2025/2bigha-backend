@@ -181,12 +181,73 @@ type ResponseMessage {
     STATUS_CODES: Int
 }
 
+# WhatsApp Chat
+input SendTemplateInput{
+    phoneNumber:String
+    templateName:String
+    leadId:ID
+    templateBody:String
+    meta: JSON
+}
+
+type WhatsAppThread{
+    Id:ID
+    leadId:ID
+    lastMessage:String
+    lastMessageAt:Date
+    unread:Int
+    clientPhone:String
+    clientName:String
+    createdAt:Date
+}
+
+type WhatsAppThreadResponse{
+    result: [WhatsAppThread]
+    message:String
+    STATUS_CODES:Int
+}
+
+type WhatsAppMessage{
+    Id: String
+    threadId: String
+    leadId: String
+    direction: String
+    msgType: String
+    message: String
+    meta: JSON
+    createdBy: String
+    createdAt: Date
+    createdByName: String
+}
+
+type WhatsAppMessageResponse{
+    result:[WhatsAppMessage]
+    message:String
+    STATUS_CODES:Int
+}
+
+input SendTextInput{
+    threadId:ID
+    phoneNumber:String
+    message:String
+}
+
+
+type SendTextMessageResponse{
+    result:WhatsAppMessage
+    message:String
+    STATUS_CODES:Int
+}
+
 extend type Query {
     getAllTemplate: TemplateResponse
 
     getAllBroadcasts: BroadcastResponse
     getAllCampaign: CampaignResponse
     getBroadcastById(id:ID!):CreateBroadcastResponse
+
+    getWhatsAppThreadChat: WhatsAppThreadResponse
+    getWhatsAppMessages(threadId:ID!): WhatsAppMessageResponse
 }
 
 extend type Mutation{
@@ -194,6 +255,9 @@ extend type Mutation{
     syncTemplate: TemplateResponse
 
     createCampaign(input: CreateCampaignInput):CreateBroadcastResponse
-    sendBroadcast(input: CreateBroadcastInput!): CreateBroadcastResponse
+    sendBroadcast(input: CreateBroadcastInput): CreateBroadcastResponse
+
+    sendTemplateMessage(input: SendTemplateInput): ResponseMessage
+    sendTextMessage(input: SendTextInput): SendTextMessageResponse
 }
 `;
