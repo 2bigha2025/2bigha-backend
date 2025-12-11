@@ -74,14 +74,14 @@ export const propertyGroups = pgTable("property_group", {
 });
 
 export const callLogs = pgTable("call_logs", {
-  Id: bigint("id", { mode: "number" })
+  Id: text("id")
     .primaryKey()
     .$defaultFn(() => {
       const timestamp = Date.now().toString(); // 13 digits
       const random = Math.floor(Math.random() * 1000)
         .toString()
         .padStart(3, "0"); // +3 digits
-      return Number(timestamp + random); // 16 digits total
+      return String(timestamp + random); // 16 digits total
     }),
   leadId: uuid("lead_id").references(() => lead.Id, {
     onDelete: "set null",
