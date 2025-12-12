@@ -110,7 +110,7 @@ export class MapPropertiesService {
             .leftJoin(platformUsers, eq(properties.createdByUserId, platformUsers.id))
             // .leftJoin(schema.propertyVerification, eq(properties.id, schema.propertyVerification.propertyId))
             .innerJoin(schema.propertySeo, eq(properties.id, schema.propertySeo.propertyId))
-            .where(eq(properties.approvalStatus, "APPROVED"))
+            .where(and (eq(properties.approvalStatus, "APPROVED"), eq(properties.source, "2BIGHA")))
             .groupBy(properties.id, platformUsers.id, schema.propertySeo.id)
 
             .orderBy(desc(properties.createdAt)) // or `desc(properties.views)` if you have views

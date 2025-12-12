@@ -51,5 +51,33 @@ export class SeoGenerator {
                 .filter(Boolean)
                 .join(", "),
         };
+
+    }
+    
+    static async generateFarmsSEOFields(
+        listingId : number,
+        propertyName: string,
+        city?: string,
+        district?: string,
+    ) {
+        const title = `${propertyName.replace(/\s*farms?\s*/i, '').trim()} farmhouse in ${city}`;
+        const slug = await this.generateUniqueSlug(title,listingId);
+
+        return {
+            title,
+            slug,
+            seoTitle: `Buy ${title} | 2Bigha`,
+            seoDescription : `Explore ${title} by 2Bigha, Discover many more with us .`,
+            seoKeywords: [
+                propertyName?.toLowerCase(),
+                city?.toLowerCase(),
+                district?.toLowerCase(),
+                "FARMHOUSE",
+                "FARMLAND"
+,                "2bigha",
+            ]
+                .filter(Boolean)
+                .join(", "),
+        };
     }
 }
