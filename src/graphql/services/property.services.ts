@@ -244,6 +244,7 @@ export class PropertyService {
             and(
               eq(properties.approvalStatus, "APPROVED"),
               eq(properties.isActive, true),
+              eq(properties.source, "2BIGHA"),
               isNotNull(properties.centerPoint),
               // Use PostGIS to find properties within radius (in meters)
               sql`ST_DWithin(
@@ -297,6 +298,7 @@ export class PropertyService {
           .where(
             and(
               eq(properties.approvalStatus, "APPROVED"),
+              eq(properties.source, "2BIGHA"),
               eq(properties.isActive, true)
             )
           )
@@ -331,6 +333,7 @@ export class PropertyService {
 
       const whereConditions = [
         eq(properties.approvalStatus, "APPROVED"),
+        eq(properties.source, "2BIGHA"),
         eq(properties.isActive, true),
       ];
 
@@ -383,7 +386,7 @@ export class PropertyService {
 
   static async getProperties(page: number, limit: number, searchTerm?: string) {
     const offset = (page - 1) * limit;
-    const baseCondition = eq(properties.approvalStatus, "APPROVED");
+    const baseCondition = [eq(properties.approvalStatus, "APPROVED"),eq(properties.source, "2BIGHA")];
     const createdByUser = alias(platformUsers, "createdByUser");
     const createdByAdmin = alias(adminUsers, "createdByAdmin");
     const userAlias = properties.createdByUserId
@@ -391,8 +394,8 @@ export class PropertyService {
       : createdByAdmin;
     const searchCondition = this.buildSearchCondition(searchTerm, userAlias);
     const whereCondition = searchCondition
-      ? and(baseCondition, searchCondition)
-      : baseCondition;
+      ? and(...baseCondition, searchCondition)
+      : and(...baseCondition);
 
     const results = await db
       .select({
@@ -454,10 +457,10 @@ export class PropertyService {
   }
 
   static async getPropertyTotals(state?: string, district?: string) {
-    const whereBase = eq(properties.approvalStatus, "APPROVED");
+    const whereBase = [eq(properties.approvalStatus, "APPROVED"), eq(properties.source, "2BIGHA")];
     const withState = state
-      ? and(whereBase, eq(properties.state, state))
-      : whereBase;
+      ? and(...whereBase, eq(properties.state, state))
+      : and(...whereBase);
     const whereCondition = district
       ? and(withState, eq(properties.district, district))
       : withState;
@@ -481,7 +484,7 @@ export class PropertyService {
     searchTerm?: string
   ) {
     const offset = (page - 1) * limit;
-    const conditions = [eq(properties.createdByAdminId, id)];
+    const conditions = [eq(properties.createdByAdminId, id) ,eq(properties.source, "2BIGHA")];
     if (approvalstatus) {
       conditions.push(eq(properties.approvalStatus, approvalstatus));
     }
@@ -573,7 +576,7 @@ export class PropertyService {
           eq(properties.createdByUserId, platformUsers.id)
         )
         .innerJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
-        .where(eq(properties.approvalStatus, "APPROVED"))
+        .where(and(eq(properties.approvalStatus, "APPROVED"),  eq(properties.source, "2BIGHA")))
         .groupBy(properties.id, platformUsers.id, propertySeo.id)
         .orderBy(desc(properties.createdAt))
         .limit(limit);
@@ -674,7 +677,7 @@ export class PropertyService {
   ) {
     const offset = (page - 1) * limit;
 
-    const baseCondition = eq(properties.approvalStatus, status);
+    const baseCondition = [eq(properties.approvalStatus, status), eq(properties.source, "2BIGHA")];
     const createdByUser = alias(platformUsers, "createdByUser");
     const ownerUser = alias(platformUsers, "ownerUser");
     const platformUserProfile = alias(
@@ -690,8 +693,8 @@ export class PropertyService {
       createdByUser
     );
     const whereCondition = searchCondition
-      ? and(baseCondition, searchCondition)
-      : baseCondition;
+      ? and(...baseCondition, searchCondition)
+      : and(...baseCondition);
     try {
       const results = await db
         .select({
@@ -830,7 +833,7 @@ export class PropertyService {
       const [seo] = await db
         .select()
         .from(propertySeo)
-        .where(eq(propertySeo.slug, slug));
+        .where(and(eq(propertySeo.slug, slug), eq(properties.source, "2BIGHA")));
 
       if (!seo) {
         throw new Error(`No property found with slug: ${slug}`);
@@ -912,7 +915,7 @@ export class PropertyService {
                   ON p.owner_id = o.id
                 LEFT JOIN platform_user_profiles op
                   ON o.id = op.user_id
-                WHERE p.id = ${id}
+                WHERE p.id = ${id} AND p.source = '2BIGHA'
               `);
 
       const owner = {
