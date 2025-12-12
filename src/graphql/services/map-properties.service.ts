@@ -110,7 +110,7 @@ export class MapPropertiesService {
             .leftJoin(platformUsers, eq(properties.createdByUserId, platformUsers.id))
             // .leftJoin(schema.propertyVerification, eq(properties.id, schema.propertyVerification.propertyId))
             .innerJoin(schema.propertySeo, eq(properties.id, schema.propertySeo.propertyId))
-            .where(eq(properties.approvalStatus, "APPROVED"))
+            .where(and(eq(properties.approvalStatus, "APPROVED"), eq(properties.availablilityStatus, "AVAILABLE")))
             .groupBy(properties.id, platformUsers.id, schema.propertySeo.id)
 
             .orderBy(desc(properties.createdAt)) // or `desc(properties.views)` if you have views
@@ -121,7 +121,8 @@ export class MapPropertiesService {
                     schema.savedProperties,
                     and(
                       eq(properties.id, schema.savedProperties.propertyId),
-                      eq(schema.savedProperties.userId, userId)
+                      eq(schema.savedProperties.userId, userId),
+                      eq(properties.availablilityStatus, "AVAILABLE")
                     )
                   )
             }

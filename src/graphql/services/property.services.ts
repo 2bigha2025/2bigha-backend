@@ -26,8 +26,7 @@ import {
 import { azureStorage, FileUpload } from "../../../src/utils/azure-storage";
 import { SeoGenerator } from "./seo-generator.service";
 import { alias } from "drizzle-orm/pg-core";
-import { userProperty } from "../../database/schema/manage-recrod";
-import { Plan, planvariants, propertyVisits, propertyVisitMedia } from "../../database/schema/manage-recrod";
+import { Plan, planvariants, propertyVisits, propertyVisitMedia,userProperty } from "../../database/schema/manage-recrod";
 
 interface PropertyImageData {
   imageUrl: string;
@@ -245,6 +244,7 @@ export class PropertyService {
           .where(
             and(
               eq(properties.approvalStatus, "APPROVED"),
+              eq(properties.availablilityStatus, "AVAILABLE"),
               eq(properties.isActive, true),
               isNotNull(properties.centerPoint),
               // Use PostGIS to find properties within radius (in meters)
@@ -299,7 +299,8 @@ export class PropertyService {
           .where(
             and(
               eq(properties.approvalStatus, "APPROVED"),
-              eq(properties.isActive, true)
+              eq(properties.isActive, true),
+              eq(properties.availablilityStatus, "AVAILABLE")
             )
           )
           .groupBy(
@@ -333,6 +334,7 @@ export class PropertyService {
 
       const whereConditions = [
         eq(properties.approvalStatus, "APPROVED"),
+        eq(properties.availablilityStatus, "AVAILABLE"),
         eq(properties.isActive, true),
       ];
 
@@ -385,7 +387,7 @@ export class PropertyService {
 
   static async getProperties(page: number, limit: number, searchTerm?: string) {
     const offset = (page - 1) * limit;
-    const baseCondition = eq(properties.approvalStatus, "APPROVED");
+    const baseCondition =  and(eq(properties.approvalStatus, "APPROVED"), eq(properties.availablilityStatus, "AVAILABLE"));
     const createdByUser = alias(platformUsers, "createdByUser");
     const createdByAdmin = alias(adminUsers, "createdByAdmin");
     const userAlias = properties.createdByUserId
@@ -456,7 +458,7 @@ export class PropertyService {
   }
 
   static async getPropertyTotals(state?: string, district?: string) {
-    const whereBase = eq(properties.approvalStatus, "APPROVED");
+    const whereBase = and(eq(properties.approvalStatus, "APPROVED"), eq(properties.availablilityStatus, "AVAILABLE"));
     const withState = state
       ? and(whereBase, eq(properties.state, state))
       : whereBase;
@@ -575,7 +577,7 @@ export class PropertyService {
           eq(properties.createdByUserId, platformUsers.id)
         )
         .innerJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
-        .where(eq(properties.approvalStatus, "APPROVED"))
+        .where(and(eq(properties.approvalStatus, "APPROVED"), eq(properties.availablilityStatus, "AVAILABLE")))
         .groupBy(properties.id, platformUsers.id, propertySeo.id)
         .orderBy(desc(properties.createdAt))
         .limit(limit);
@@ -621,7 +623,7 @@ export class PropertyService {
       .from(properties)
       .leftJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
       .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
-      .where(eq(properties.createdByUserId, userId))
+      .where(and(eq(properties.createdByUserId, userId), eq(properties.availablilityStatus, "AVAILABLE")))
       .groupBy(properties.id, propertySeo.id)
       .orderBy(desc(properties.createdAt))
       .limit(limit)
@@ -630,7 +632,7 @@ export class PropertyService {
     const [{ count }] = await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(properties)
-      .where(eq(properties.createdByUserId, userId));
+      .where(and(eq(properties.createdByUserId, userId), eq(properties.availablilityStatus, "AVAILABLE")));
 
     return {
       data: results,
@@ -656,7 +658,7 @@ export class PropertyService {
     const totalRow = await db
       .select({ count: sql<number>`count(*)` })
       .from(userProperty)
-      .where(eq(userProperty.userId, userId));
+      .where(and(eq(userProperty.userId, userId), eq(properties.availablilityStatus, "MANAGED")));
 
     const total = totalRow[0].count;
     const totalPages = Math.ceil(total / limit);
@@ -686,7 +688,7 @@ export class PropertyService {
         `.as("planDetails"),
       })
       .from(userProperty)
-      .leftJoin(properties, eq(userProperty.propertyId, properties.id))
+      .leftJoin(properties, and(eq(userProperty.propertyId, properties.id), eq(properties.availablilityStatus, "MANAGED")))
       .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
       .leftJoin(planvariants, eq(userProperty.planVariantId, planvariants.id))
       .leftJoin(Plan, eq(planvariants.planId, Plan.planId))
@@ -759,7 +761,7 @@ export class PropertyService {
       .leftJoin(Plan, eq(planvariants.planId, Plan.planId))
       .leftJoin(propertyVisits, eq(propertyVisits.propertyId, propertyId))
       .leftJoin(propertyVisitMedia, eq(propertyVisitMedia.visitId, propertyVisits.id))
-      .where(eq(userProperty.propertyId, propertyId))
+      .where(and(eq(userProperty.propertyId, propertyId), eq(properties.availablilityStatus, "MANAGED")))
       .groupBy(
         userProperty.id,
         properties.id,

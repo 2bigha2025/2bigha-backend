@@ -174,15 +174,6 @@ export const platformUserResolvers = {
                 );
                 return properties;
 
-                // return {
-                //     id: user.id.toString(),
-                //     uuid: user.uuid,
-                //     firstName: user.firstName,
-                //     lastName: user.lastName,
-                //     role: user.role,
-                //     companyName: user.companyName,
-                //     profile: user.profile,
-                // }
             } catch (error) {
                 console.log(error)
                 throw new GraphQLError("Failed to get user profile", {
