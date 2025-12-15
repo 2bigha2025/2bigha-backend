@@ -657,7 +657,7 @@ export class PropertyService {
     // 1️⃣ Count total rows for pagination
     const totalRow = await db
       .select({ count: sql<number>`count(*)` })
-      .from(userProperty)
+      .from(userProperty).leftJoin(properties, eq(userProperty.propertyId, properties.id))
       .where(and(eq(userProperty.userId, userId), eq(properties.availablilityStatus, "MANAGED")));
 
     const total = totalRow[0].count;
@@ -688,11 +688,11 @@ export class PropertyService {
         `.as("planDetails"),
       })
       .from(userProperty)
-      .leftJoin(properties, and(eq(userProperty.propertyId, properties.id), eq(properties.availablilityStatus, "MANAGED")))
+      .leftJoin(properties,(eq(userProperty.propertyId, properties.id)))
       .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
       .leftJoin(planvariants, eq(userProperty.planVariantId, planvariants.id))
       .leftJoin(Plan, eq(planvariants.planId, Plan.planId))
-      .where(eq(userProperty.userId, userId))
+      .where(and(eq(userProperty.userId, userId), eq(properties.availablilityStatus, "MANAGED")))
       .groupBy(
         userProperty.id,
         properties.id,
