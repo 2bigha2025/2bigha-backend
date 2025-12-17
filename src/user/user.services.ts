@@ -291,10 +291,12 @@ export class PlatformUserService {
 
             if (!result) return null
 
-            return {
+            const data =  {
                 ...result.user,
                 profile: result.profile,
             }
+            return data
+
         } catch (error) {
             logError("Failed to find user by ID", error as Error, { userId })
             return null
@@ -470,7 +472,6 @@ export class PlatformUserService {
                 .where(
                     and(eq(otpTokens.platformUserId, user.id), eq(otpTokens.type, "PHONE_LOGIN"), eq(otpTokens.isUsed, false)),
                 )
-                console.log('>>>>>>user>>>>>',user)
             // Create new OTP
             await db.insert(otpTokens).values({
                 platformUserId: user.id,
@@ -507,7 +508,6 @@ export class PlatformUserService {
             if (!user) {
                 throw new Error("User not found with this phone number")
             }
-            console.log('>>>>>>verifyUser>>>>>',user)
 
             // Find valid OTP
             const [otpRecord] = await db

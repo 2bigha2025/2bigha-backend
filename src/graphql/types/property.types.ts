@@ -97,7 +97,14 @@ type PropertyImage {
 type location {
   name: String
   address: String
+  coordinates : coordinates
 }
+
+type coordinates{
+  lat: Float
+  lng: Float
+}
+  
 type Property {
   id: ID!
   uuid: String
@@ -129,6 +136,7 @@ type Property {
   listingAs: ListingAs!
   ownerName: String
   ownerPhone: String
+  ownerId : String
   ownerWhatsapp: String
   isFeatured: Boolean!
   isVerified: Boolean!
@@ -241,6 +249,8 @@ input LocationInput {
   city: String
   pincode: String
   address: String
+  name :String
+  placeId : String
 
 }
 
@@ -280,6 +290,9 @@ input ContactDetailsInput {
 input CoordinateInput {
   lat: Float
   lng: Float
+  index: Int
+  shapeId : Float
+  type : String
 }
 
 input MapCoordinateInput {
@@ -345,58 +358,49 @@ enum PropertyStatus {
     title: String
     description: String
     propertyType: PropertyType
- 
+    location : LocationInput
     price: Float
-    area: Float
-    areaUnit: AreaUnit
-    bedrooms: Int
-    bathrooms: Int
-    floors: Int
-    parking: Int
-    furnished: Boolean
-    
-    # Indian Property Fields
+    area: String
+    areaUnit: AreaUnit    
     khasraNumber: String
     murabbaNumber: String
-    khewatNumber: String
-    
-    # Location
+    khewatNumber: String    
     address: String
     city: String
     district: String
     state: String
     country: String
-    pinCode: String
-    coordinates: CoordinatesInput
+    pincode: String
     boundary: JSON
-    geoJson: JSON
-    
-    # Owner Information
+    geoJson: JSON    
     listingAs: ListingAs
     ownerName: String
     ownerPhone: String
-    ownerWhatsapp: String
-    
-    # SEO
-    slug: String
-    seoTitle: String
-    seoDescription: String
-    seoKeywords: String
-    
+    ownerWhatsapp: String 
+    ownerId : String   
     # Media
-    images: [PropertyImageInput!]
-    videos: JSON
-    virtualTourUrl: String
-    
-    # Features
-    amenityIds: [ID!]
-    features: JSON
-    
-    # Status
-    status: PropertyStatus
-    isFeatured: Boolean
-    isVerified: Boolean
-    isActive: Boolean
+  waterLevel : Int
+  landMark : [String]
+  category : String
+  highwayConn : Boolean
+  landZoning : String
+  ownersCount : Int
+  ownershipYes : Boolean
+  soilType: String,
+  listerType : String
+  roadAccess: Boolean,
+  whatsappNumber : String
+  phoneNumber : String
+  pricePerUnit : String
+  totalPrice : Float
+  roadAccessDistance: Int,
+  landMarkName: JSON
+  markers: [MarkerInput!]
+  roadAccessWidth : Int
+  roadAccessDistanceUnit : String
+  boundaries: [BoundaryInput!]
+  images: [PropertyImageInput!]
+  coordinates: [CoordinateInput!]
   }
 
   input PropertyFilters {
@@ -491,6 +495,9 @@ type PaginatedProperties {
     TITLE
   }
 
+   input inputGetPropertyBySlug {
+    slug:String!
+    }
 
  extend type Query {
     properties(input: GetPropertiesInput!): PaginatedProperties
@@ -498,6 +505,8 @@ type PaginatedProperties {
     getRejectedProperties(input: GetPropertiesInput!): PaginatedProperties
     getApprovedProperties(input: GetPropertiesInput!): PaginatedProperties
     getPropertiesPostedByAdmin(input: GetPropertiesInput!): PaginatedProperties
+    getPropertyBySlug(input: inputGetPropertyBySlug!):properties 
+    getUser(id: ID!): PlatformUser
     # Dashboard totals
     topProperties(limit: Int): [Property!]!
     getPropertyTotals(state: String, district: String): PropertyTotals!
@@ -518,7 +527,7 @@ type PaginatedProperties {
     # Property Mutations
   extend type Mutation {
     createProperty(input: CreatePropertyInput!): Property!
-    updateProperty(id: ID!, input: UpdatePropertyInput!): Property!
+    updateProperty(id: ID!, input: UpdatePropertyInput!): Property
     deleteProperty(id: ID!): Boolean!
     updatePropertySeo(input: UpdateSeoInput!): Seo!
     # Status Management
