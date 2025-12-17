@@ -10,6 +10,7 @@ import {
   or,
   ilike,
   isNotNull,
+  notInArray,
 } from "drizzle-orm";
 import { db } from "../../database/connection";
 import { v4 as uuidv4 } from "uuid";
@@ -244,8 +245,8 @@ export class PropertyService {
             and(
               eq(properties.approvalStatus, "APPROVED"),
               eq(properties.isActive, true),
-              eq(properties.source, "2BIGHA"),
               isNotNull(properties.centerPoint),
+              notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
               // Use PostGIS to find properties within radius (in meters)
               sql`ST_DWithin(
                             ${properties.centerPoint}::geography,
@@ -298,8 +299,8 @@ export class PropertyService {
           .where(
             and(
               eq(properties.approvalStatus, "APPROVED"),
-              eq(properties.source, "2BIGHA"),
-              eq(properties.isActive, true)
+              eq(properties.isActive, true),
+              notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
             )
           )
           .groupBy(
@@ -333,8 +334,8 @@ export class PropertyService {
 
       const whereConditions = [
         eq(properties.approvalStatus, "APPROVED"),
-        eq(properties.source, "2BIGHA"),
         eq(properties.isActive, true),
+        notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
       ];
 
       // Add minimum view count filter if provided
@@ -386,13 +387,14 @@ export class PropertyService {
 
   static async getProperties(page: number, limit: number, searchTerm?: string) {
     const offset = (page - 1) * limit;
-    const baseCondition = [eq(properties.approvalStatus, "APPROVED"),eq(properties.source, "2BIGHA")];
+    const baseCondition = [eq(properties.approvalStatus, "APPROVED"),notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"])];
     const createdByUser = alias(platformUsers, "createdByUser");
     const createdByAdmin = alias(adminUsers, "createdByAdmin");
     const userAlias = properties.createdByUserId
       ? createdByUser
       : createdByAdmin;
     const searchCondition = this.buildSearchCondition(searchTerm, userAlias);
+    console.log("searchCondition : " , searchCondition)
     const whereCondition = searchCondition
       ? and(...baseCondition, searchCondition)
       : and(...baseCondition);
@@ -457,10 +459,13 @@ export class PropertyService {
   }
 
   static async getPropertyTotals(state?: string, district?: string) {
-    const whereBase = [eq(properties.approvalStatus, "APPROVED"), eq(properties.source, "2BIGHA")];
+    const whereBase = and(
+    eq(properties.approvalStatus, "APPROVED"),
+    notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"])
+  );
     const withState = state
-      ? and(...whereBase, eq(properties.state, state))
-      : and(...whereBase);
+      ? and(whereBase, eq(properties.state, state))
+      : whereBase;
     const whereCondition = district
       ? and(withState, eq(properties.district, district))
       : withState;
@@ -484,7 +489,7 @@ export class PropertyService {
     searchTerm?: string
   ) {
     const offset = (page - 1) * limit;
-    const conditions = [eq(properties.createdByAdminId, id) ,eq(properties.source, "2BIGHA")];
+    const conditions = [eq(properties.createdByAdminId, id),  notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"])];
     if (approvalstatus) {
       conditions.push(eq(properties.approvalStatus, approvalstatus));
     }
@@ -576,7 +581,7 @@ export class PropertyService {
           eq(properties.createdByUserId, platformUsers.id)
         )
         .innerJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
-        .where(and(eq(properties.approvalStatus, "APPROVED"),  eq(properties.source, "2BIGHA")))
+        .where(and(eq(properties.approvalStatus, "APPROVED"), notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"])))
         .groupBy(properties.id, platformUsers.id, propertySeo.id)
         .orderBy(desc(properties.createdAt))
         .limit(limit);
@@ -653,20 +658,20 @@ export class PropertyService {
     const likePattern = `%${searchTerm.trim()}%`;
     const userAlias = createdByUser || platformUsers;
     return or(
-      ilike(properties.title, likePattern),
-      ilike(properties.city, likePattern),
-      ilike(properties.district, likePattern),
-      ilike(properties.state, likePattern),
-      ilike(properties.address, likePattern),
-      ilike(properties.ownerName, likePattern),
-      ilike(properties.ownerPhone, likePattern),
-      ilike(properties.khasraNumber, likePattern),
-      ilike(properties.murabbaNumber, likePattern),
-      ilike(properties.khewatNumber, likePattern),
-      ilike(userAlias.firstName, likePattern),
-      ilike(userAlias.lastName, likePattern),
-      ilike(userAlias.email, likePattern)
-    ) && eq(properties.source,'2BIGHA');
+    ilike(properties.title, likePattern),
+    ilike(properties.city, likePattern),
+    ilike(properties.district, likePattern),
+    ilike(properties.state, likePattern),
+    ilike(properties.address, likePattern),
+    ilike(properties.ownerName, likePattern),
+    ilike(properties.ownerPhone, likePattern),
+    ilike(properties.khasraNumber, likePattern),
+    ilike(properties.murabbaNumber, likePattern),
+    ilike(properties.khewatNumber, likePattern),
+    ilike(userAlias.firstName, likePattern),
+    ilike(userAlias.lastName, likePattern),
+    ilike(userAlias.email, likePattern)
+  )
   }
 
   static async fetchPropertiesByApprovalStatus(
@@ -677,7 +682,7 @@ export class PropertyService {
   ) {
     const offset = (page - 1) * limit;
 
-    const baseCondition = [eq(properties.approvalStatus, status), eq(properties.source, "2BIGHA")];
+    const baseCondition = and(eq(properties.approvalStatus, status), notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]));
     const createdByUser = alias(platformUsers, "createdByUser");
     const ownerUser = alias(platformUsers, "ownerUser");
     const platformUserProfile = alias(
@@ -693,8 +698,8 @@ export class PropertyService {
       createdByUser
     );
     const whereCondition = searchCondition
-      ? and(...baseCondition, searchCondition)
-      : and(...baseCondition);
+      ? and(baseCondition, searchCondition)
+      : baseCondition;
     try {
       const results = await db
         .select({
@@ -833,7 +838,7 @@ export class PropertyService {
       const [seo] = await db
         .select()
         .from(propertySeo)
-        .where(and(eq(propertySeo.slug, slug), eq(properties.source, "2BIGHA")));
+        .where(eq(propertySeo.slug, slug));
 
       if (!seo) {
         throw new Error(`No property found with slug: ${slug}`);
@@ -915,7 +920,7 @@ export class PropertyService {
                   ON p.owner_id = o.id
                 LEFT JOIN platform_user_profiles op
                   ON o.id = op.user_id
-                WHERE p.id = ${id} AND p.source = '2BIGHA'
+                WHERE p.id = ${id} 
               `);
 
       const owner = {

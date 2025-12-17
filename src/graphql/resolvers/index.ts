@@ -12,6 +12,9 @@ import { geoJsonResolvers } from './geo-json.resolvers';
 import { reportsResolvers } from './reports.resolvers';
 import { crmResolver } from './crm.resolver';
 import { ivrResolvers } from './ivr.resolvers';
+import { farmResolvers } from './farm.resolver';
 
-export const resolvers: any = mergeResolvers([ivrResolvers,adminAuthResolvers, propertyResolvers, rbacResolvers, propertyApprovalResolvers, adminDashboardResolvers, mapPropertiesResolvers, blogResolvers, seoResolvers, savedPropertiesResolvers, geoJsonResolvers,reportsResolvers,crmResolver]);
+
+
+export const resolvers: any = mergeResolvers([ivrResolvers,adminAuthResolvers, propertyResolvers, rbacResolvers, propertyApprovalResolvers, adminDashboardResolvers, mapPropertiesResolvers, blogResolvers, seoResolvers, savedPropertiesResolvers, geoJsonResolvers,reportsResolvers,crmResolver,farmResolvers]);
 

@@ -28,6 +28,7 @@ export const propertyTypeEnum = pgEnum("property_type", [
   "FARMHOUSE",
   "WAREHOUSE",
   "OFFICE",
+  "FARMLAND",
   "OTHER",
 ])
 

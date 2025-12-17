@@ -10,6 +10,7 @@ import {
   or,
   ilike,
   isNotNull,
+  inArray,
 } from "drizzle-orm";
 import { db } from "../../database/connection";
 import { v4 as uuidv4 } from "uuid";
@@ -240,7 +241,7 @@ export class FarmService {
           .where(
             and(
               eq(properties.approvalStatus, "APPROVED"),
-              eq(properties.source, "FARMS"),
+              inArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
               eq(properties.isActive, true),
               isNotNull(properties.centerPoint),
               // Use PostGIS to find properties within radius (in meters)
@@ -295,7 +296,7 @@ export class FarmService {
           .where(
             and(
               eq(properties.approvalStatus, "APPROVED"),
-              eq(properties.source, "FARMS"),
+              inArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
               eq(properties.isActive, true)
             )
           )
@@ -385,7 +386,7 @@ export class FarmService {
 
     const baseCondition = and(
       eq(properties.approvalStatus, "APPROVED"),
-      eq(properties.source, "FARMS")
+      inArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
     );
 
     const owner = alias(platformUsers, "owner");
@@ -477,7 +478,7 @@ export class FarmService {
     // const whereBase = eq(properties.approvalStatus, "APPROVED");
     const whereBase = and(
       eq(properties.approvalStatus, "APPROVED"),
-      eq(properties.source, "FARMS")
+      inArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
     );
 
     const withState = state
@@ -508,7 +509,7 @@ export class FarmService {
     const offset = (page - 1) * limit;
     const conditions = [
       eq(properties.createdByAdminId, id),
-      eq(properties.source, "FARMS"),
+     inArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
     ];
 
     if (approvalstatus) {
@@ -608,7 +609,7 @@ static async getTopFarms(userId?: string, page?: number, limit = 5) {
         .where(
           and(
             eq(properties.approvalStatus, "APPROVED"),
-            eq(properties.source, "FARMS")
+            inArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
           )
         )
         .groupBy(
@@ -644,7 +645,7 @@ static async getTopFarms(userId?: string, page?: number, limit = 5) {
         .where(
           and(
             eq(properties.approvalStatus, "PENDING"),
-            eq(properties.source, "FARMS")
+            inArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
           )
         );
 
@@ -713,9 +714,7 @@ static async getTopFarms(userId?: string, page?: number, limit = 5) {
         .where(
           and(
             eq(properties.approvalStatus, "APPROVED"),
-            eq(properties.source, "FARMS"),
-            // Add filter for properties created in the last 2 days
-            gte(properties.createdAt, twoDaysAgo)
+           inArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
           )
         )
         .groupBy(
@@ -736,7 +735,7 @@ static async getTopFarms(userId?: string, page?: number, limit = 5) {
         .where(
           and(
             eq(properties.approvalStatus, "PENDING"),
-            eq(properties.source, "FARMS"),
+           inArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
             gte(properties.createdAt, twoDaysAgo)
           )
         );
@@ -764,55 +763,55 @@ static async getTopFarms(userId?: string, page?: number, limit = 5) {
     }
   }
 
-  static async getFarmsByUser(userId: string, page: number, limit: number) {
-    const offset = (page - 1) * limit;
+  // static async getFarmsByUser(userId: string, page: number, limit: number) {
+  //   const offset = (page - 1) * limit;
 
-    const results = await db
-      .select({
-        property: properties,
-        seo: propertySeo,
-        images: sql`
-            COALESCE(
-                json_agg(DISTINCT ${propertyImages}.*) 
-                FILTER (WHERE ${propertyImages}.id IS NOT NULL), 
-                '[]'
-            )
-        `.as("images"),
-      })
-      .from(properties)
-      .leftJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
-      .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
-      .where(
-        and(
-          eq(properties.createdByUserId, userId),
-          eq(properties.source, "FARMS")
-        )
-      )
-      .groupBy(properties.id, propertySeo.id)
-      .orderBy(desc(properties.createdAt))
-      .limit(limit)
-      .offset(offset);
+  //   const results = await db
+  //     .select({
+  //       property: properties,
+  //       seo: propertySeo,
+  //       images: sql`
+  //           COALESCE(
+  //               json_agg(DISTINCT ${propertyImages}.*) 
+  //               FILTER (WHERE ${propertyImages}.id IS NOT NULL), 
+  //               '[]'
+  //           )
+  //       `.as("images"),
+  //     })
+  //     .from(properties)
+  //     .leftJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
+  //     .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
+  //     .where(
+  //       and(
+  //         eq(properties.createdByUserId, userId),
+  //         inArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
+  //       )
+  //     )
+  //     .groupBy(properties.id, propertySeo.id)
+  //     .orderBy(desc(properties.createdAt))
+  //     .limit(limit)
+  //     .offset(offset);
 
-    const [{ count }] = await db
-      .select({ count: sql<number>`COUNT(*)` })
-      .from(properties)
-      .where(
-        and(
-          eq(properties.createdByUserId, userId),
-          eq(properties.source, "FARMS")
-        )
-      );
+  //   const [{ count }] = await db
+  //     .select({ count: sql<number>`COUNT(*)` })
+  //     .from(properties)
+  //     .where(
+  //       and(
+  //         eq(properties.createdByUserId, userId),
+  //         inArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
+  //       )
+  //     );
 
-    return {
-      data: results,
-      meta: {
-        total: count,
-        page,
-        limit,
-        totalPages: Math.ceil(count / limit),
-      },
-    };
-  }
+  //   return {
+  //     data: results,
+  //     meta: {
+  //       total: count,
+  //       page,
+  //       limit,
+  //       totalPages: Math.ceil(count / limit),
+  //     },
+  //   };
+  // }
 
   static buildSearchCondition(
     searchTerm?: string,
@@ -823,142 +822,271 @@ static async getTopFarms(userId?: string, page?: number, limit = 5) {
     const likePattern = `%${searchTerm.trim()}%`;
     const userAlias = createdByUser || platformUsers;
     return or(
-      ilike(properties.title, likePattern),
-      ilike(properties.city, likePattern),
-      ilike(properties.district, likePattern),
-      ilike(properties.state, likePattern),
-      ilike(properties.address, likePattern),
-      ilike(properties.ownerName, likePattern),
-      ilike(properties.ownerPhone, likePattern),
-      ilike(userAlias.firstName, likePattern),
-      ilike(userAlias.lastName, likePattern),
-      ilike(userAlias.email, likePattern)
-    );
+    ilike(properties.title, likePattern),
+    ilike(properties.city, likePattern),
+    ilike(properties.district, likePattern),
+    ilike(properties.state, likePattern),
+    ilike(properties.address, likePattern),
+    ilike(properties.ownerName, likePattern),
+    ilike(properties.ownerPhone, likePattern),
+    ilike(userAlias.firstName, likePattern),
+    ilike(userAlias.lastName, likePattern),
+    ilike(userAlias.email, likePattern)
+  )
   }
 
+  // static async fetchFarmsByApprovalStatus(
+  //   status: "PENDING" | "REJECTED" | "APPROVED",
+  //   page: number,
+  //   limit: number,
+  //   searchTerm?: string
+  // ) {
+  //   const offset = (page - 1) * limit;
+
+  //   const baseCondition = [
+  //     eq(properties.approvalStatus, status),inArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"])];
+
+  //   const createdByUser = alias(platformUsers, "createdByUser");
+  //   const ownerUser = alias(platformUsers, "ownerUser");
+  //   const platformUserProfile = alias(
+  //     platformUserProfiles,
+  //     "platformUserProfile"
+  //   );
+  //   const platformOwnerProfile = alias(
+  //     platformUserProfiles,
+  //     "platformOwnerProfile"
+  //   );
+  //   const searchCondition = this.buildSearchCondition(
+  //     searchTerm,
+  //     createdByUser
+  //   );
+  //   const whereCondition = searchCondition
+  //     ? and(...baseCondition, searchCondition)
+  //     : and(...baseCondition);
+  //   try {
+  //     const results = await db
+  //       .select({
+  //         property: properties,
+  //         seo: propertySeo,
+  //         verification: propertyVerification,
+  //         images: sql`
+  //         COALESCE(json_agg(${propertyImages}.*)
+  //         FILTER (WHERE ${propertyImages}.id IS NOT NULL), '[]')
+  //       `.as("images"),
+  //         user: {
+  //           firstName: createdByUser?.firstName ?? ownerUser?.firstName,
+  //           lastName: createdByUser?.lastName ?? ownerUser?.lastName,
+  //           email: createdByUser?.email ?? ownerUser?.email,
+  //           role: sql`CASE WHEN COALESCE(${createdByUser.role}, ${ownerUser.role}) = 'USER' THEN 'OWNER' ELSE COALESCE(${createdByUser.role}, ${ownerUser.role}) END`,
+  //           phone:
+  //             platformUserProfile?.phone ??
+  //             platformOwnerProfile?.phone ??
+  //             properties.ownerPhone,
+  //         },
+  //         createdByUser: {
+  //           firstName: sql`
+  //                         COALESCE(${createdByUser.firstName}, ${adminUsers.firstName})
+  //                       `.as("firstName"),
+  //           lastName: sql`
+  //                         COALESCE(${createdByUser.lastName}, ${adminUsers.lastName})
+  //                       `.as("lastName"),
+  //         },
+  //       })
+  //       .from(properties)
+  //       .innerJoin(
+  //         propertyVerification,
+  //         eq(properties.id, propertyVerification.propertyId)
+  //       )
+  //       .innerJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
+  //       .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
+  //       .leftJoin(
+  //         createdByUser,
+  //         eq(properties.createdByUserId, createdByUser.id)
+  //       )
+  //       .leftJoin(ownerUser, eq(properties.ownerId, ownerUser.id))
+  //       .leftJoin(adminUsers, eq(properties.createdByAdminId, adminUsers.id))
+  //       .leftJoin(
+  //         platformUserProfile,
+  //         eq(platformUserProfile.userId, createdByUser.id)
+  //       )
+  //       .leftJoin(
+  //         platformOwnerProfile,
+  //         eq(platformOwnerProfile.userId, createdByUser.id)
+  //       )
+  //       .where(whereCondition)
+  //       .groupBy(
+  //         properties.id,
+  //         propertySeo.id,
+  //         propertyVerification.id,
+  //         createdByUser.id,
+  //         ownerUser.id,
+  //         platformOwnerProfile.id,
+  //         platformUserProfile.id,
+  //         adminUsers.id
+  //       )
+  //       .orderBy(desc(properties.createdAt))
+  //       .limit(limit)
+  //       .offset(offset);
+
+  //     const [{ count }] = await db
+  //       .select({ count: sql<number>`COUNT(*)` })
+  //       .from(properties)
+  //       .leftJoin(
+  //         createdByUser,
+  //         eq(properties.createdByUserId, createdByUser.id)
+  //       )
+  //       .where(whereCondition);
+
+  //     return {
+  //       data: results,
+  //       meta: {
+  //         total: count,
+  //         page,
+  //         limit,
+  //         totalPages: Math.ceil(count / limit),
+  //       },
+  //     };
+  //   } catch (error) {
+  //     console.error(
+  //       `❌ Failed to fetch ${status.toLowerCase()} properties:`,
+  //       error
+  //     );
+  //     throw new Error(
+  //       `Failed to fetch ${status.toLowerCase()} properties: ${error}`
+  //     );
+  //   }
+  // }
+
   static async fetchFarmsByApprovalStatus(
-    status: "PENDING" | "REJECTED" | "APPROVED",
-    page: number,
-    limit: number,
-    searchTerm?: string
-  ) {
-    const offset = (page - 1) * limit;
+  status: "PENDING" | "REJECTED" | "APPROVED",
+  page: number,
+  limit: number,
+  searchTerm?: string
+) {
+  const offset = (page - 1) * limit;
 
-    const baseCondition = and(
-      eq(properties.approvalStatus, status),
-      eq(properties.source, "FARMS")
-    );
+  // Base conditions
+  const baseCondition = [
+    eq(properties.approvalStatus, status),
+    inArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
+  ];
 
-    const createdByUser = alias(platformUsers, "createdByUser");
-    const ownerUser = alias(platformUsers, "ownerUser");
-    const platformUserProfile = alias(
-      platformUserProfiles,
-      "platformUserProfile"
-    );
-    const platformOwnerProfile = alias(
-      platformUserProfiles,
-      "platformOwnerProfile"
-    );
-    const searchCondition = this.buildSearchCondition(
-      searchTerm,
-      createdByUser
-    );
-    const whereCondition = searchCondition
-      ? and(baseCondition, searchCondition)
-      : baseCondition;
-    try {
-      const results = await db
-        .select({
-          property: properties,
-          seo: propertySeo,
-          verification: propertyVerification,
-          images: sql`
+  // Aliases
+  const createdByUser = alias(platformUsers, "createdByUser"); // creator
+  const ownerUser = alias(platformUsers, "ownerUser"); // owner
+
+  const platformUserProfile = alias(platformUserProfiles, "platformUserProfile"); // creator profile
+  const platformOwnerProfile = alias(platformUserProfiles, "platformOwnerProfile"); // owner profile
+
+  // Search condition (only applied on creator)
+  const searchCondition = this.buildSearchCondition(searchTerm, createdByUser);
+
+  const whereCondition = searchCondition
+    ? and(...baseCondition, searchCondition)
+    : and(...baseCondition);
+
+  try {
+    const results = await db
+      .select({
+        property: properties,
+        seo: propertySeo,
+        verification: propertyVerification,
+        images: sql`
           COALESCE(json_agg(${propertyImages}.*)
           FILTER (WHERE ${propertyImages}.id IS NOT NULL), '[]')
         `.as("images"),
-          user: {
-            firstName: createdByUser?.firstName ?? ownerUser?.firstName,
-            lastName: createdByUser?.lastName ?? ownerUser?.lastName,
-            email: createdByUser?.email ?? ownerUser?.email,
-            role: sql`CASE WHEN COALESCE(${createdByUser.role}, ${ownerUser.role}) = 'USER' THEN 'OWNER' ELSE COALESCE(${createdByUser.role}, ${ownerUser.role}) END`,
-            phone:
-              platformUserProfile?.phone ??
-              platformOwnerProfile?.phone ??
-              properties.ownerPhone,
-          },
-          createdByUser: {
-            firstName: sql`
-                          COALESCE(${createdByUser.firstName}, ${adminUsers.firstName})
-                        `.as("firstName"),
-            lastName: sql`
-                          COALESCE(${createdByUser.lastName}, ${adminUsers.lastName})
-                        `.as("lastName"),
-          },
-        })
-        .from(properties)
-        .innerJoin(
-          propertyVerification,
-          eq(properties.id, propertyVerification.propertyId)
-        )
-        .innerJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
-        .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
-        .leftJoin(
-          createdByUser,
-          eq(properties.createdByUserId, createdByUser.id)
-        )
-        .leftJoin(ownerUser, eq(properties.ownerId, ownerUser.id))
-        .leftJoin(adminUsers, eq(properties.createdByAdminId, adminUsers.id))
-        .leftJoin(
-          platformUserProfile,
-          eq(platformUserProfile.userId, createdByUser.id)
-        )
-        .leftJoin(
-          platformOwnerProfile,
-          eq(platformOwnerProfile.userId, createdByUser.id)
-        )
-        .where(whereCondition)
-        .groupBy(
-          properties.id,
-          propertySeo.id,
-          propertyVerification.id,
-          createdByUser.id,
-          ownerUser.id,
-          platformOwnerProfile.id,
-          platformUserProfile.id,
-          adminUsers.id
-        )
-        .orderBy(desc(properties.createdAt))
-        .limit(limit)
-        .offset(offset);
-
-      const [{ count }] = await db
-        .select({ count: sql<number>`COUNT(*)` })
-        .from(properties)
-        .leftJoin(
-          createdByUser,
-          eq(properties.createdByUserId, createdByUser.id)
-        )
-        .where(whereCondition);
-
-      return {
-        data: results,
-        meta: {
-          total: count,
-          page,
-          limit,
-          totalPages: Math.ceil(count / limit),
+        user: {
+          // OWNER details
+          firstName: ownerUser.firstName,
+          lastName: ownerUser.lastName,
+          email: ownerUser.email,
+          role: sql`
+            CASE 
+              WHEN ${ownerUser.role} = 'USER' THEN 'OWNER'
+              ELSE ${ownerUser.role}
+            END
+          `,
+          phone:
+            platformOwnerProfile.phone ??
+            properties.ownerPhone,
         },
-      };
-    } catch (error) {
-      console.error(
-        `❌ Failed to fetch ${status.toLowerCase()} properties:`,
-        error
-      );
-      throw new Error(
-        `Failed to fetch ${status.toLowerCase()} properties: ${error}`
-      );
-    }
+        createdByUser: {
+          // CREATOR details
+          firstName: sql`
+            COALESCE(${createdByUser.firstName}, ${adminUsers.firstName})
+          `.as("firstName"),
+          lastName: sql`
+            COALESCE(${createdByUser.lastName}, ${adminUsers.lastName})
+          `.as("lastName"),
+        },
+      })
+      .from(properties)
+      .innerJoin(
+        propertyVerification,
+        eq(properties.id, propertyVerification.propertyId)
+      )
+      .innerJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
+      .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
+      // Correct joins for user mapping
+      .leftJoin(
+        createdByUser,
+        eq(properties.createdByUserId, createdByUser.id)
+      )
+      .leftJoin(ownerUser, eq(properties.ownerId, ownerUser.id))
+      .leftJoin(adminUsers, eq(properties.createdByAdminId, adminUsers.id))
+      .leftJoin(
+        platformUserProfile,
+        eq(platformUserProfile.userId, createdByUser.id)
+      )
+      .leftJoin(
+        platformOwnerProfile,
+        eq(platformOwnerProfile.userId, ownerUser.id)
+      )
+      .where(whereCondition)
+      .groupBy(
+        properties.id,
+        propertySeo.id,
+        propertyVerification.id,
+        createdByUser.id,
+        ownerUser.id,
+        platformOwnerProfile.id,
+        platformUserProfile.id,
+        adminUsers.id
+      )
+      .orderBy(desc(properties.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    // Total count
+    const [{ count }] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(properties)
+      .leftJoin(
+        createdByUser,
+        eq(properties.createdByUserId, createdByUser.id)
+      )
+      .where(whereCondition);
+
+    return {
+      data: results,
+      meta: {
+        total: count,
+        page,
+        limit,
+        totalPages: Math.ceil(count / limit),
+      },
+    };
+  } catch (error) {
+    console.error(
+      `❌ Failed to fetch ${status.toLowerCase()} properties:`,
+      error
+    );
+    throw new Error(
+      `Failed to fetch ${status.toLowerCase()} properties: ${error}`
+    );
   }
+}
+
 
   static async getPendingApprovalFarms(
     page: number,
@@ -1026,13 +1154,16 @@ static async getTopFarms(userId?: string, page?: number, limit = 5) {
                   p.murabba_number as "murabbaNumber",
                   p.khewat_number as "khewatNumber",
                   p.water_level as "waterLevel",
-                  p.land_mark as "landMark",
-                  p.category as "category",
+                  p.property_name as "propertyName",
+                  p.listing_type as "listingType",
                   p.highway_conn as "highwayConn",
-                  p.land_zoning as "landZoning",
-                  p.owners_count as "ownersCount",
-                  p.ownership_yes as "ownershipYes",
-                  p.soil_type as "soilType",
+                  p.is_price_negotiable as "isPriceNegotiable",
+                  p.has_gated_community as "hasGatedCommunity",
+                  p.multiple_size_options as "multipleSizeOptions",
+                  p.nearest_major_city as "nearestMajorCity",
+                  p.nearby_activities as "nearbyActivities",
+                  p.scenic_features as "scenicFeatures",
+                  p.amenities as "amenities",
                   p.road_access as "roadAccess",
                   p.road_access_distance as "roadAccessDistance",
                   p.address as "address",
@@ -1071,7 +1202,8 @@ static async getTopFarms(userId?: string, page?: number, limit = 5) {
                 LEFT JOIN platform_user_profiles op
                   ON o.id = op.user_id
                 WHERE p.id = ${id}
-                AND p.source = 'FARMS'
+                
+ 
               `);
 
       const owner = {
@@ -1333,7 +1465,7 @@ static async getTopFarms(userId?: string, page?: number, limit = 5) {
         .insert(properties)
         .values({
           id: propertyId,
-          source: "FARMS",
+          source: propertyData.farmDetailsSchema.source,
           propertyName: propertyData.farmDetailsSchema.propertyName,
           propertyType:
             propertyData.farmDetailsSchema.propertyType.toUpperCase(),
@@ -1379,6 +1511,7 @@ static async getTopFarms(userId?: string, page?: number, limit = 5) {
         createdProperty[0].listing_id,
         // propertyData.propertyDetailsSchema.farmName
         propertyData.farmDetailsSchema.propertyName,
+        propertyData.farmDetailsSchema.propertyType,
         propertyData.location.city,
         propertyData.location.district
       );

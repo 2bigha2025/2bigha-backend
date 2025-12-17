@@ -162,7 +162,7 @@ type Property {
   approvalStatus: ApprovalStatus!
   approvalMessage: String
   approvedBy: ID
-  approvedAt: String
+  approvedAt: Date
   rejectionReason: String
   rejectedBy: ID
   rejectedAt: String

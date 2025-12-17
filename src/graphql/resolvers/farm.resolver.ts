@@ -17,17 +17,17 @@ export const farmResolvers = {
       return results;
     },
 
-    getFarmsByUser: async (
-      _: any,
-      { input }: { input: { userId: string; page: number; limit: number } }
-    ) => {
-      const results = await FarmService.getFarmsByUser(
-        input.userId,
-        input.page,
-        input.limit
-      );
-      return results;
-    },
+    // getFarmsByUser: async (
+    //   _: any,
+    //   { input }: { input: { userId: string; page: number; limit: number } }
+    // ) => {
+    //   const results = await FarmService.getFarmsByUser(
+    //     input.userId,
+    //     input.page,
+    //     input.limit
+    //   );
+    //   return results;
+    // },
 
     getFarmById: async (_: any, { id }: { id: string }) => {
       try {

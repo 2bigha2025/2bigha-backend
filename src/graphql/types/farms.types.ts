@@ -113,8 +113,9 @@ type Property {
   uuid: String
   title: String
   description: String
-  propertyType: PropertyType!
+  propertyType: PropertyType
   propertyName:String
+  source:String
   status: String!
   price: Float!
   pricePerUnit: Float
@@ -133,7 +134,7 @@ type Property {
   createdByType: CreatedByType!
   images: [Image!]!
   videos: String
-   listingAs: ListingAs!
+   listingAs: ListingAs
    listingType:ListingType
    isPriceNegotiable :Boolean
     hasGatedCommunity : Boolean
@@ -211,6 +212,7 @@ type Properties {
     FARMHOUSE
     WAREHOUSE
     OFFICE
+    FARMLAND
     OTHER
   }
 
@@ -254,6 +256,7 @@ input FarmDetailsSchemaInput {
   area: String
   areaUnit: String
   price: Float
+  source:String
   pricePerUnit: Float
   waterLevel : Int
   landMark : [String]
@@ -356,6 +359,7 @@ enum PropertyStatus {
     description: String
     propertyType: PropertyType
     propertyName :String
+    source:String
     price: Float
     area: Float
     areaUnit: AreaUnit
