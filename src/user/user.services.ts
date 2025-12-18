@@ -1,4 +1,4 @@
-import { eq, and, or, like, sql, gt, ilike } from "drizzle-orm"
+import { eq, and, or, like, sql, gt, ilike, desc, isNotNull } from "drizzle-orm"
 import { db } from "../database/connection"
 import * as schema from "../database/schema/index"
 import bcrypt from 'bcryptjs';
@@ -11,6 +11,7 @@ import { twilioSMSService } from "../graphql/services/twilio-sms.service"
 import { googleAuthService } from "../graphql/services/google-auth.service"
 import { azureStorage } from "../utils/azure-storage"
 import { filterDefined } from "../utils/filteredundefined";
+import { int } from "drizzle-orm/mysql-core";
 
 
 const { platformUsers, platformUserProfiles, otpTokens } = schema
@@ -105,7 +106,7 @@ export class PlatformUserService {
             if (!existingUser) {
                 throw new Error(`User with ID ${userId} not found`);
             }
-            console.log("existinguser",existingUser);
+            // console.log("existinguser",existingUser);
             console.log("userdata", userData);
             const validatedData = validateInput(updateUserSchema.partial(), userData);
             // Handle optional avatar upload to Azure (users folder)
@@ -129,12 +130,14 @@ export class PlatformUserService {
             }
             // update user
             // console.log("validatedData", validatedData);
+            console.log('>>>>>>userData>>>>>>',userData.isVerified)
             const userUpdates = filterDefined({
                 email: validatedData.email?.trim().toLowerCase(),
                 firstName: validatedData.firstName?.trim(),
                 lastName: validatedData.lastName?.trim(),
                 ...(normalizedRole ? { role: normalizedRole } : {}),
                 updatedby: updated_by,
+                isVerified : userData.isVerified,
                 updatedAt: new Date(),
             });
 
@@ -210,6 +213,8 @@ export class PlatformUserService {
                             lastLoginAt: platformUsers.lastLoginAt,
                             isActive: platformUsers.isActive,
                             updatedAt: platformUsers.updatedAt,
+                            isVerified: platformUsers.isVerified,
+                            listings: sql<number>`COUNT(${schema.properties.listingId})`.as("listings")
                         },
                         profile: {
                             id: platformUserProfiles.id,
@@ -225,10 +230,21 @@ export class PlatformUserService {
                     .innerJoin(
                         platformUserProfiles,
                         eq(platformUsers.id, platformUserProfiles.userId)
-                    )
+                    ).leftJoin(
+                        schema.properties,
+                        or(
+                          eq(platformUsers.id, schema.properties.createdByUserId),
+                          eq(platformUsers.id, schema.properties.ownerId)
+                        )
+                      ).groupBy(
+                        platformUsers.id,
+                        platformUserProfiles.id
+                      )
                     .limit(limit)
-                    .offset(offset);
-
+                    .orderBy(
+                        desc(sql`COUNT(${schema.properties.listingId})::int`)
+                      )
+                    .offset(offset)
                 const [{ count }] = await db
                     .select({ count: sql<number>`COUNT(*)` })
                     .from(platformUsers)
@@ -470,7 +486,6 @@ export class PlatformUserService {
                 .where(
                     and(eq(otpTokens.platformUserId, user.id), eq(otpTokens.type, "PHONE_LOGIN"), eq(otpTokens.isUsed, false)),
                 )
-                console.log('>>>>>>user>>>>>',user)
             // Create new OTP
             await db.insert(otpTokens).values({
                 platformUserId: user.id,
@@ -507,7 +522,6 @@ export class PlatformUserService {
             if (!user) {
                 throw new Error("User not found with this phone number")
             }
-            console.log('>>>>>>verifyUser>>>>>',user)
 
             // Find valid OTP
             const [otpRecord] = await db
