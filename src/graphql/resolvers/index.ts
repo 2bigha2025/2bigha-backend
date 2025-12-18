@@ -13,6 +13,9 @@ import { reportsResolvers } from './reports.resolvers';
 import { crmResolver } from './crm.resolver';
 import { ivrResolvers } from './ivr.resolvers';
 import { crmWhatsAppResolver } from './crm-whatsapp.resolver';
+import { farmResolvers } from './farm.resolver';
 
-export const resolvers: any = mergeResolvers([crmWhatsAppResolver,ivrResolvers,adminAuthResolvers, propertyResolvers, rbacResolvers, propertyApprovalResolvers, adminDashboardResolvers, mapPropertiesResolvers, blogResolvers, seoResolvers, savedPropertiesResolvers, geoJsonResolvers,reportsResolvers,crmResolver]);
+
+
+export const resolvers: any = mergeResolvers([crmWhatsAppResolver,ivrResolvers,adminAuthResolvers, propertyResolvers, rbacResolvers, propertyApprovalResolvers, adminDashboardResolvers, mapPropertiesResolvers, blogResolvers, seoResolvers, savedPropertiesResolvers, geoJsonResolvers,reportsResolvers,crmResolver,farmResolvers]);
 

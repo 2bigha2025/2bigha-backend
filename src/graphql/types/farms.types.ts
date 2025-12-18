@@ -1,16 +1,9 @@
-
-
-export const propertyTypeDefs = `#graphql
-  # Property Types
+export const farmsTypeDefs = `#graphql
+  # farm Types
   scalar Date
   scalar JSON
   scalar Upload
-enum PropertyType {
-  COMMERCIAL
-  RESIDENTIAL
-  AGRICULTURAL
-  INDUSTRIAL
-}
+
 
 enum ApprovalStatus {
   PENDING
@@ -37,12 +30,17 @@ enum ListingAs {
   OWNER
   AGENT
   BUILDER
+  COMPANY
+}
+
+enum ListingType{
+ SALE
+ LEASE
 }
 
 enum landStatus {
     AVAILABLE
     SOLD
-    MANAGED
 }
 
 type Seo {
@@ -52,8 +50,18 @@ type Seo {
   seoTitle: String!
   seoDescription: String!
   seoKeywords: String!
-  createdAt: Date!
-  updatedAt: Date!
+}
+
+type NearestMajorCity {
+  city: String
+  distance: Int
+  unit: String
+}
+
+input NearestMajorCityInput {
+  city: String
+  distance: Int
+  unit: String
 }
 
 type Verification {
@@ -82,7 +90,7 @@ input UpdateSeoInput {
   schema: JSON
 }
 
-type PropertyImageVariants {
+type PropertyImageVariants   {
   thumbnail: String
   medium: String
   large: String
@@ -91,13 +99,8 @@ type PropertyImageVariants {
 
 type PropertyImage {
 
-  variants: PropertyImageVariants
+  variants: PropertyImageVariants  
   
-}
-
-enum ListingType{
- SALE
- LEASE
 }
 
 type location {
@@ -105,39 +108,24 @@ type location {
   address: String
 }
 
-type NearestMajorCity {
-  city: String
-  distance: Int
-  unit: String
-}
-
-enum ListingAs {
-  OWNER
-  AGENT
-  BUILDER
-  COMPANY
-}
 type Property {
   id: ID!
   uuid: String
+  title: String
+  description: String
+  propertyType: PropertyType
   propertyName:String
-  title: String!
-  description: String!
-  propertyType: PropertyType!
+  source:String
   status: String!
   price: Float!
   pricePerUnit: Float
   area: Float!
   areaUnit: AreaUnit!
-  khasraNumber: String
-  murabbaNumber: String
-  khewatNumber: String
   address: String
   city: String
   district: String
   state: String
   country: String
-  pinCode: String
   latLng: String
   location: location
   boundary: JSON
@@ -146,7 +134,15 @@ type Property {
   createdByType: CreatedByType!
   images: [Image!]!
   videos: String
-  listingAs: ListingAs!
+   listingAs: ListingAs
+   listingType:ListingType
+   isPriceNegotiable :Boolean
+    hasGatedCommunity : Boolean
+    multipleSizeOptions :Boolean
+    nearestMajorCity:NearestMajorCity
+    nearbyActivities :[String]
+    scenicFeatures:[String]
+    amenities:[String]
   ownerName: String
   ownerPhone: String
   ownerWhatsapp: String
@@ -175,32 +171,16 @@ type Property {
   waterLevel : Int
   category : String
   highwayConn : Boolean
-  landZoning : String
-  ownersCount : Int
-  ownershipYes : Boolean
-  soilType: String
   roadAccess: Boolean
   roadAccessDistance: Int
-  landMark: String
-  landMarkName: String
   roadAccessWidth : Int
   roadAccessDistanceUnit : String
-   listingType:ListingType
-   isPriceNegotiable :Boolean
-    hasGatedCommunity : Boolean
-    multipleSizeOptions :Boolean
-    nearestMajorCity:NearestMajorCity
-    nearbyActivities :[String]
-    scenicFeatures:[String]
-    amenities:[String]
-
 }
 
 type createdByUser {
   firstName: String
   lastName: String
 }
-
 type propertyUser {
   firstName: String
    lastName: String
@@ -208,19 +188,20 @@ type propertyUser {
  role: String
  phone: String
 }
- 
-type properties {
+
+type Properties {
   seo: Seo
   verification: Verification
   property: Property
   images: [PropertyImage]
   user: propertyUser
   createdByUser: createdByUser
+  saved: Boolean
 }
 
 
   # Enums
-  enum PropertyType {
+ enum PropertyType {
     AGRICULTURAL
     COMMERCIAL
     RESIDENTIAL
@@ -231,6 +212,7 @@ type properties {
     FARMHOUSE
     WAREHOUSE
     OFFICE
+    FARMLAND
     OTHER
   }
 
@@ -249,14 +231,7 @@ type properties {
   }
 
 
-  enum ListingAs {
-    PROPERTY_OWNER
-    REAL_ESTATE_AGENT
-    PROPERTY_DEALER
-    BUILDER
-  }
-
-  # Property Input Types
+  # Farm Input Types
  input SeoInput {
   slug: String
   seoTitle: String
@@ -270,47 +245,55 @@ input LocationInput {
   state: String
   district: String
   city: String
-  pincode: String
   address: String
 
 }
 
-input PropertyDetailsSchemaInput {
+input FarmDetailsSchemaInput {
+  propertyName: String
+  listingAs: String
   propertyType: String
-  khasraNumber: String
-  murabbaNumber: String
-  khewatNumber: String
   area: String
   areaUnit: String
-  totalPrice: String
-  pricePerUnit: String
+  price: Float
+  source:String
+  pricePerUnit: Float
   waterLevel : Int
   landMark : [String]
   category : String
   highwayConn : Boolean
-  landZoning : String
-  ownersCount : Int
-  ownershipYes : Boolean
-  soilType: String,
-  roadAccess: Boolean,
-  roadAccessDistance: Int,
-  description: String,
-  landMarkName: JSON
+  roadAccess: Boolean
+  roadAccessDistance: Int
+  description: String
   roadAccessWidth : Int
   roadAccessDistanceUnit : String
+  listingType: String
+  isPriceNegotiable: Boolean 
+  hasGatedCommunity: Boolean
+  multipleSizeOptions: Boolean
+  nearestMajorCity :NearestMajorCityInput
+  nearbyActivities: [String] 
+  scenicFeatures: [String]
+  amenities: [String] 
 }
 
 input ContactDetailsInput {
-  listerType: String
+  listingAs: String
   ownerName: String
   phoneNumber: String
-  whatsappNumber: String
-  ownerId : String
+  alternativePhone: String
 }
 
 input CoordinateInput {
   lat: Float
   lng: Float
+}
+
+ input LocationBasedFarmsInput {
+  lat: Float
+  lng: Float
+  radius: Int
+  limit: Int = 10
 }
 
 input MapCoordinateInput {
@@ -343,10 +326,9 @@ input MapInput {
 # Placeholder if structure is unknown; update if needed
 scalar JSON
 
-input CreatePropertyInput {
-
+input CreateFarmsInput {
   location: LocationInput
-  propertyDetailsSchema: PropertyDetailsSchemaInput
+  farmDetailsSchema: FarmDetailsSchemaInput
   contactDetails: ContactDetailsInput
   images: [Upload!] # or define an ImageInput type if structure is available
   map: MapInput
@@ -372,11 +354,12 @@ enum PropertyStatus {
     isMain: Boolean
   }
 
-  input UpdatePropertyInput {
+  input UpdateFarmInput {
     title: String
     description: String
     propertyType: PropertyType
- 
+    propertyName :String
+    source:String
     price: Float
     area: Float
     areaUnit: AreaUnit
@@ -386,10 +369,14 @@ enum PropertyStatus {
     parking: Int
     furnished: Boolean
     
-    # Indian Property Fields
-    khasraNumber: String
-    murabbaNumber: String
-    khewatNumber: String
+    listingType: String
+    isPriceNegotiable: Boolean 
+    hasGatedCommunity: Boolean 
+    multipleSizeOptions: Boolean
+    nearestMajorCity:NearestMajorCityInput
+    nearbyActivities: [String]
+    scenicFeatures: [String] 
+    amenities: [String] 
     
     # Location
     address: String
@@ -458,12 +445,12 @@ enum PropertyStatus {
     lng: Float!
   }
 
-input GetPropertiesInput {
+input GetFarmsInput {
+ userId: String
   page: Int!
   limit: Int!
   searchTerm: String
   approvalstatus:ApprovalStatus
-  availablilityStatus:landStatus
 }
   # Property Queries
  type PaginationMeta {
@@ -474,8 +461,8 @@ input GetPropertiesInput {
 }
 
 
-type PaginatedProperties {
-  data: [properties !]!
+type PaginatedFarms {
+  data: [Properties]!
   meta: PaginationMeta
 }
 
@@ -525,56 +512,26 @@ type PaginatedProperties {
 
 
  extend type Query {
-    properties(input: GetPropertiesInput!): PaginatedProperties
-    getPendingApprovalProperties(input: GetPropertiesInput!): PaginatedProperties
-    getRejectedProperties(input: GetPropertiesInput!): PaginatedProperties
-    getApprovedProperties(input: GetPropertiesInput!): PaginatedProperties
-    getPropertiesPostedByAdmin(input: GetPropertiesInput!): PaginatedProperties
+    getFarms(input: GetFarmsInput!): PaginatedFarms
+    getFarmsByUser(input: GetFarmsInput):PaginatedFarms
+    getFarmById(id:String):PaginatedFarms
+    getPendingApprovalFarms(input: GetFarmsInput!): PaginatedFarms
+    getRejectedFarms(input: GetFarmsInput!): PaginatedFarms
+    getApprovedFarms(input: GetFarmsInput!): PaginatedFarms
+    getFarmsPostedByAdmin(input: GetFarmsInput!): PaginatedFarms
     # Dashboard totals
-    topProperties(limit: Int): [Property!]!
-    getPropertyTotals(state: String, district: String): PropertyTotals!
-    # Location and view count based queries
-    # property(id: ID, uuid: String, slug: String): Property
-    # featuredProperties(limit: Int): [Property!]!
-    # nearbyProperties(latitude: Float!, longitude: Float!, radius: Float!, limit: Int): [Property!]!
-    # propertiesCount(filter: PropertyFilters): Int!
-    # propertiesInBounds(minLat: Float!, maxLat: Float!, minLng: Float!, maxLng: Float!, limit: Int): [Property!]!
-    # propertiesNearPoint(lat: Float!, lng: Float!, radiusKm: Float!, limit: Int): [Property!]!
-    # # Amenities
-    # propertyAmenities(category: String): [PropertyAmenity!]!
-    
-    # # Analytics
-    # propertyAnalytics(propertyId: ID!): PropertyAnalytics!
+    getTopFarms(input: GetFarmsInput): PaginatedFarms
+    getNewFarms(input: GetFarmsInput): PaginatedFarms
+    getFarmsTotals(state: String, district: String): PropertyTotals!
+    getFarmsByLocation(input:LocationBasedFarmsInput! ):[Property!]! 
   }
 
     # Property Mutations
   extend type Mutation {
-    createProperty(input: CreatePropertyInput!): Property!
-    updateProperty(id: ID!, input: UpdatePropertyInput!): Property!
-    deleteProperty(id: ID!): Boolean!
-    updatePropertySeo(input: UpdateSeoInput!): Seo!
-    # Status Management
-    # approveProperty(id: ID!): Property!
-    # rejectProperty(id: ID!, reason: String!): Property!
-    # featureProperty(id: ID!): Property!
-    # unfeatureProperty(id: ID!): Property!
-    # verifyProperty(id: ID!): Property!
-    # unverifyProperty(id: ID!): Property!
-    
-    # # Analytics
-    # recordPropertyView(propertyId: ID!, sessionId: String, viewDuration: Int): PropertyView!
-    
-    # # Price Management
-    # updatePropertyPrice(id: ID!, newPrice: Float!, reason: String): PropertyPriceHistory!
-    
-    # # Image Management
-    # addPropertyImages(propertyId: ID!, images: [PropertyImageInput!]!): [PropertyImage!]!
-    # removePropertyImage(imageId: ID!): Boolean!
-    # setMainPropertyImage(imageId: ID!): PropertyImage!
-    
-    # # Amenity Management
-    # createPropertyAmenity(name: String!, category: String!, icon: String, description: String): PropertyAmenity!
-    # updatePropertyAmenity(id: ID!, name: String, category: String, icon: String, description: String): PropertyAmenity!
-    # deletePropertyAmenity(id: ID!): Boolean!
+    createFarmByAdmin(input: CreateFarmsInput!): Property!
+    createFarmByUser(input: CreateFarmsInput!): Properties!
+    # updateFarms(id: ID!, input: UpdateFarmsInput!): Property!
+    # deleteFarms(id: ID!): Boolean!
+    updateFarmSeo(input: UpdateSeoInput!): Seo!
   }
-`
+`;

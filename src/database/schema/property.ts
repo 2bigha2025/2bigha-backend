@@ -28,6 +28,7 @@ export const propertyTypeEnum = pgEnum("property_type", [
   "FARMHOUSE",
   "WAREHOUSE",
   "OFFICE",
+  "FARMLAND",
   "OTHER",
 ])
 
@@ -72,6 +73,7 @@ export const areaUnitEnum = pgEnum("area_unit", [
 export const listingAsEnum = pgEnum("listing_as", [
   "OWNER",
   "AGENT",
+  "COMPANY",
 ])
 
 export const approvalStatusEnum = pgEnum("approval_status", [
@@ -81,6 +83,13 @@ export const approvalStatusEnum = pgEnum("approval_status", [
   "REJECTED",
 ])
 
+export const propertyOriginEnum = pgEnum("property_origin", [
+  "PM",
+  "2BIGHA",
+  "FARMS",
+  "DASHBOARD",
+  "APP",
+]);
 
 export const createdByEnum = pgEnum("created_by_type", [
   "USER", "ADMIN"
@@ -177,6 +186,42 @@ export const properties = pgTable("properties", {
   landMarkName: jsonb("landmark_name").$type<Record<string,string>>(),
   roadAccessWidth: integer("road_access_width"),
   roadAccessDistanceUnit: text("road_access_distance_unit"),
+  propertyName : text('property_name'),
+   // New columns added
+  
+  listingType: text("listing_type").default("SALE"),
+  isPriceNegotiable: boolean("is_price_negotiable").default(false),
+  source: propertyOriginEnum("source").default("2BIGHA"),
+  hasGatedCommunity: boolean("has_gated_community").default(false),
+  multipleSizeOptions: boolean("multiple_size_options").default(false),
+  nearestMajorCity: jsonb("nearest_major_city").$type<{
+    city?: string;
+    distance?: number;
+    unit?: string;
+  } | null>(),
+  
+  nearbyActivities: jsonb("nearby_activities")
+    .$type<
+      (
+        | "Boating"
+        | "Walks"
+        | "Jet Skiing"
+        | "Trekking"
+        | "Camping"
+        | "Fishing"
+      )[]
+    >()
+    .default([]),
+
+  scenicFeatures: jsonb("scenic_features")
+    .$type<
+      ("Riverside" | "Hills" | "Mountains" | "Forest" | "Valley" | "Lake")[]
+    >()
+    .default([]),
+
+  amenities: jsonb("amenities")
+    .$type<("Club House" | "Swimming Pool" | "Mud House" | "Solar Power")[]>()
+    .default([]),
 })
 
 export const propertyVerification = pgTable("property_verification", {
