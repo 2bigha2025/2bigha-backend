@@ -1,9 +1,9 @@
 import { GraphQLError } from "graphql"
-import { eq, sql, desc, getTableColumns, or, inArray, and } from "drizzle-orm"
+import { eq, sql, desc, getTableColumns, or, inArray } from "drizzle-orm"
 import { db } from "../../database/connection"
 import * as schema from "../../database/schema/index";
 import { PropertyService } from "./property.services";
-import { propertyMeta, lead, callLogs, propertyGroups, broadcast, callHistoryNotes } from "../../database/schema/crm-model";
+import { propertyMeta, lead, callLogs, propertyGroups, callHistoryNotes } from "../../database/schema/crm-model";
 import { adminUsers } from "../../database/schema/admin-user";
 import _ from "lodash";
 
@@ -545,86 +545,7 @@ export class CrmService {
     }
 
 
-    // Broadcasts CRUD Operations
-    static async getAllBroadcasts() {
-        const result = await db.select({
-            ...getTableColumns(broadcast),
-            groupName: propertyGroups.groupName,
-            senderName: sql`${adminUsers.firstName} || ' ' || ${adminUsers.lastName}`.as("senderName"),
-        }).from(broadcast).leftJoin(propertyGroups, eq(broadcast.groupId, propertyGroups.Id))
-            .leftJoin(adminUsers, eq(broadcast.sentBy, adminUsers.id))
-            .orderBy(desc(broadcast.createdAt));
-        return {
-            result,
-            message: "Broadcast fetched successfully",
-            STATUS_CODES: 200
-        }
-    }
-
-    static async getBroadcastById(id: any) {
-        const result = await db.select({
-            ...getTableColumns(broadcast),
-            groupName: propertyGroups.groupName,
-            senderName: sql`${adminUsers.firstName} || ' ' || ${adminUsers.lastName}`.as("senderName"),
-        }).from(broadcast).where(eq(propertyGroups.Id, id)).leftJoin(propertyGroups, eq(broadcast.groupId, propertyGroups.Id))
-            .leftJoin(adminUsers, eq(broadcast.sentBy, adminUsers.id));
-
-        return {
-            result: result[0],
-            message: "Specific Broadcast fetched successfully",
-            STATUS_CODES: 200
-        }
-    }
-
-    static async createBroadcast(input: any, adminId: string) {
-        const { campaignName, connectionNumber, TemplateName, groupId, callStatus } = input;
-        const result = await db.insert(broadcast).values({
-            campaignName, connectionNumber, TemplateName, groupId, callStatus, sentBy: adminId,
-        }).returning();
-
-        const [senderName] = await db.select({
-            firstName: adminUsers.firstName,
-            lastName: adminUsers.lastName,
-        }).from(adminUsers).where(eq(adminUsers.id, adminId));
-
-        const [groupName] = await db.select({
-            groupName: propertyGroups.groupName,
-        }).from(propertyGroups).where(eq(propertyGroups.Id, groupId));
-
-        return {
-            result: {
-                ...result[0],
-                senderName: senderName
-                    ? `${senderName.firstName} ${senderName.lastName}`
-                    : null,
-                groupName: groupName ? groupName.groupName : null,
-            },
-            message: "Broadcast created successfully",
-            STATUS_CODES: 201
-        }
-    }
-
-    static async updateBroadcast(id: any, input: any) {
-        const { campaignName, connectionNumber, TemplateName, groupId, callStatus } = input;
-        const result = await db.update(broadcast).set({
-            campaignName, connectionNumber, TemplateName, groupId, callStatus,
-        }).where(eq(broadcast.Id, id))
-            .returning();;
-        return {
-            result: result[0],
-            message: "Broadcast updated successfully",
-            STATUS_CODES: 200
-        }
-    }
-
-    static async deleteBroadcast(id: string) {
-        await db.delete(broadcast).where(eq(broadcast.Id, id))
-        return {
-            message: "Broadcast deleted successfully",
-            STATUS_CODES: 200
-        }
-    }
-
+  
 
     // CallLogs CRUD Operations
     static async getAllCallLogs() {
