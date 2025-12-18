@@ -203,8 +203,10 @@ export const farmResolvers = {
         );
         return property;
       } catch (error) {
-        console.log(error);
-        console.error("Create property error:", error);
+        if (error instanceof GraphQLError) {
+          throw error; // This is crucial!
+        }
+        // Handle other errors
         throw new GraphQLError("Failed to create property", {
           extensions: { code: "INTERNAL_ERROR" },
         });

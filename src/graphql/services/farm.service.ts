@@ -27,6 +27,7 @@ import {
 import { azureStorage, FileUpload } from "../../../src/utils/azure-storage";
 import { SeoGenerator } from "./seo-generator.service";
 import { alias } from "drizzle-orm/pg-core";
+import { GraphQLError } from "graphql";
 
 interface FarmImageData {
   imageUrl: string;
@@ -1407,6 +1408,22 @@ static async getTopFarms(userId?: string, page?: number, limit = 5) {
 
     if (ownerUser.length > 0) {
       // User exists - get from joined result
+       if (
+    ownerUser[0].firstName &&
+    propertyData?.contactDetails?.ownerName  &&
+    propertyData?.contactDetails?.ownerName.trim().toLowerCase() !==
+     ownerUser[0].firstName.toLowerCase()
+  ) {
+    throw new GraphQLError(
+      "This phone number already exists with a different user/company name",
+      {
+        extensions: {
+          code: "OWNER_NAME_MISMATCH",
+          field: "contactDetails.ownerName",
+        },
+      }
+    );
+  }
       ownerId = ownerUser[0].userId;
       console.log("📌 Existing user found by phone, using ownerId:", ownerId);
     } else {
