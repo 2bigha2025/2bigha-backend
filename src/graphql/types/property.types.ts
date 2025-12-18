@@ -433,6 +433,7 @@ input GetPropertiesInput {
   limit: Int!
   searchTerm: String
   approvalstatus:ApprovalStatus
+  availablilityStatus:landStatus
 }
   # Property Queries
  type PaginationMeta {
