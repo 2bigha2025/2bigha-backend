@@ -12,10 +12,9 @@ import { geoJsonResolvers } from './geo-json.resolvers';
 import { reportsResolvers } from './reports.resolvers';
 import { crmResolver } from './crm.resolver';
 import { ivrResolvers } from './ivr.resolvers';
-import { crmWhatsAppResolver } from './crm-whatsapp.resolver';
 import { farmResolvers } from './farm.resolver';
 
-
+import { crmWhatsAppResolver } from './crm-whatsapp.resolver';
 
 export const resolvers: any = mergeResolvers([crmWhatsAppResolver,ivrResolvers,adminAuthResolvers, propertyResolvers, rbacResolvers, propertyApprovalResolvers, adminDashboardResolvers, mapPropertiesResolvers, blogResolvers, seoResolvers, savedPropertiesResolvers, geoJsonResolvers,reportsResolvers,crmResolver,farmResolvers]);
 
