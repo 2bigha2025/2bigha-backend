@@ -10,6 +10,8 @@ import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHt
 import { graphqlUploadExpress } from "graphql-upload";
 import { platformUserTypeDefs } from "./user/user.types";
 import { platformUserResolvers } from "./user/user.resolvers";
+import { PropertyManagementResolver } from "./graphql/resolvers/property-management.resolvers";
+import { propertyManagementTypedefs } from "./graphql/types/property-management.types";
 import { getSession } from "./config/auth";
 dotenv.config();
 interface MyContext {
@@ -25,8 +27,8 @@ const startServer = async () => {
     const httpServer = http.createServer(app);
     // ✅ Build schema with constraint directive    
     const schema = makeExecutableSchema({
-           typeDefs: [platformUserTypeDefs],
-           resolvers: [platformUserResolvers]
+           typeDefs: [platformUserTypeDefs,propertyManagementTypedefs],
+           resolvers: [platformUserResolvers,PropertyManagementResolver]
     });
     await constraintDirective()(schema);
     const server = new ApolloServer<MyContext>({

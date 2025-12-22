@@ -14,7 +14,8 @@ import { crmTypeDefs } from './crm.types';
 import { ivrTypeDefs } from './ivr.types';
 import { farmsTypeDefs } from './farms.types';
 import { crmWhatsAppTypeDefs } from './crm-whatsapp-types';
+import {propertyManagementTypedefs} from './property-management.types'
 
-export const typeDefs = mergeTypeDefs([crmWhatsAppTypeDefs,ivrTypeDefs,userPropertyTypeDefs, authTypeDefs, propertyTypeDefs, rbacTypeDefs, propertyApprovalEnhancedTypeDefs, adminDashboardTypeDefs, mapPropertiesTypeDefs, blogTypeDefs, seoTypeDefs, geoJsonTypeDefs,reportDefs,crmTypeDefs,farmsTypeDefs]);
+export const typeDefs = mergeTypeDefs([propertyManagementTypedefs,crmWhatsAppTypeDefs,ivrTypeDefs,userPropertyTypeDefs, authTypeDefs, propertyTypeDefs, rbacTypeDefs, propertyApprovalEnhancedTypeDefs, adminDashboardTypeDefs, mapPropertiesTypeDefs, blogTypeDefs, seoTypeDefs, geoJsonTypeDefs,reportDefs,crmTypeDefs,farmsTypeDefs]);
 
 
