@@ -12,6 +12,7 @@ import {
   not,
   isNotNull,
   notInArray,
+  inArray,
 } from "drizzle-orm";
 import { db } from "../../database/connection";
 import { v4 as uuidv4 } from "uuid";
@@ -25,7 +26,7 @@ import {
   propertyVerification,
   savedProperties,
 } from "../../database/schema/index";
-import { azureStorage, FileUpload } from "../../../src/utils/azure-storage";
+import { azureStorage, AzureStorageService, FileUpload } from "../../../src/utils/azure-storage";
 import { SeoGenerator } from "./seo-generator.service";
 import { alias } from "drizzle-orm/pg-core";
 import {
@@ -87,6 +88,7 @@ function toWktPolygon(coords: PolygonCoordinate[]): string {
 }
 
 export class PropertyService {
+  static azureStorage = new AzureStorageService();
   static async updateSeoProperty(input: {
     propertyId: string;
     slug: string;
@@ -1073,6 +1075,7 @@ export class PropertyService {
                   p.city,
                   p.created_at as "createdAt",
                   p.created_by_type as "createdByType",
+                p.created_by_user_id as "createdByUserId",
                   p.district,
                   p.state,
                   p.is_verified as "isVerified",
@@ -1093,7 +1096,9 @@ export class PropertyService {
                   COALESCE(u.last_name, o.last_name) AS last_name,
                   COALESCE(up.phone, op.phone,p.owner_phone) AS phone,
                   COALESCE(u.role, o.role) AS role,
-                  COALESCE(up.avatar, op.avatar) AS avatar
+                  COALESCE(up.avatar, op.avatar) AS avatar,
+                  p.owner_id as "ownerId",
+                  p.created_by_user_id as "createdByUserId"
                 FROM properties p
                 LEFT JOIN platform_users u
                   ON p.created_by_user_id = u.id
@@ -1284,6 +1289,133 @@ export class PropertyService {
     };
 
     return result;
+  }
+
+
+  static async getPropertyImageFilenames(deleteImageIds: string[]) {
+    return db
+    .select({
+      filename: sql<string>`
+        regexp_replace(
+          ${propertyImages.imageUrl},
+          '^.*/',
+          ''
+        )
+      `.as("filename"),
+    })
+    .from(propertyImages)
+    .where(inArray(propertyImages.id, deleteImageIds));  
+  }
+
+  static async updateProperty(
+    propertyData: any,
+    userID: string,
+    status: "draft" | "published"
+  ) {
+    const images = propertyData.images;
+    const propertyId = propertyData.propertyId;
+    const parse = await parsePropertyPolygon(propertyData?.map);
+    let processedImages: PropertyImageData[] = [];
+    if (images && images.length > 0) {
+      if (images && images.length > 0) {
+        const resolvedUploads = await Promise.all(
+          images.map(async (upload: any) => {
+            return await upload.promise;
+          })
+        );
+
+        processedImages = await this.processPropertyImages(resolvedUploads);
+
+        console.log("🖼️ Processed images:", processedImages);
+      }
+    }
+    try {
+    await db.transaction(async (tx) => {
+      // Delete requested images first (if any)
+      if (Array.isArray(propertyData.deleteImageIds) && propertyData.deleteImageIds.length > 0) {
+        const filenames = await this.getPropertyImageFilenames(propertyData.deleteImageIds);
+        const filenamesArray = filenames.map((file) => file.filename);
+        await this.azureStorage.deleteBulkFiles(filenamesArray, "properties");
+        await tx.delete(propertyImages).where(inArray(propertyImages.id, propertyData.deleteImageIds));
+      }
+
+      await tx
+        .update(properties)
+        .set({
+          propertyType:
+            propertyData.propertyDetailsSchema.propertyType.toUpperCase(),
+          status: "PUBLISHED",
+          price: parseFloat(propertyData.propertyDetailsSchema.totalPrice),
+          area: parseFloat(propertyData.propertyDetailsSchema.area),
+          pricePerUnit: parseFloat(propertyData.propertyDetailsSchema.pricePerUnit),
+          areaUnit: propertyData.propertyDetailsSchema.areaUnit.toUpperCase(),
+          khasraNumber: propertyData.propertyDetailsSchema.khasraNumber,
+          murabbaNumber: propertyData.propertyDetailsSchema.murabbaNumber,
+          khewatNumber: propertyData.propertyDetailsSchema.khewatNumber,
+          address: propertyData.location.address,
+          city: propertyData.location.city,
+          district: propertyData.location.district,
+          state: propertyData.location.state,
+          pinCode: propertyData.location.pincode,
+          ...parse,
+          ownerName: propertyData.contactDetails.ownerName,
+          ownerPhone: propertyData.contactDetails.phoneNumber,
+          ownerWhatsapp: propertyData.contactDetails.whatsappNumber || null,
+          isActive: true,
+          ownerId: propertyData.contactDetails.ownerId,
+          waterLevel: propertyData.propertyDetailsSchema.waterLevel,
+          landMark: propertyData.propertyDetailsSchema.landMark,
+          category: propertyData.propertyDetailsSchema.category,
+          highwayConn: propertyData.propertyDetailsSchema.highwayConn,
+          landZoning: propertyData.propertyDetailsSchema.landZoning,
+          ownersCount: propertyData.propertyDetailsSchema.ownersCount,
+          ownershipYes: propertyData.propertyDetailsSchema.ownershipYes,
+          soilType: propertyData.propertyDetailsSchema.soilType,
+          roadAccess: propertyData.propertyDetailsSchema.roadAccess,
+          roadAccessDistance:
+            propertyData.propertyDetailsSchema.roadAccessDistance,
+          landMarkName: propertyData.propertyDetailsSchema.landMarkName,
+          roadAccessWidth: propertyData.propertyDetailsSchema.roadAccessWidth,
+          roadAccessDistanceUnit:
+            propertyData.propertyDetailsSchema.roadAccessDistanceUnit,
+        }).where(eq(properties.id, propertyId))
+
+        if (processedImages.length > 0) {
+          const imageInserts = processedImages.map((img, index) => ({
+            propertyId,
+            imageUrl: img.imageUrl,
+            imageType: img.imageType || "general",
+            caption: img.caption || "",
+            altText: img.altText || "",
+            sortOrder: img.sortOrder || index,
+            variants: img.variants,
+            isMain: img.isMain || index === 0,
+          }));
+  
+          await tx.insert(propertyImages).values(imageInserts);
+        }
+    });
+
+    const [property] = await db
+      .select()
+      .from(properties)
+      .where(eq(properties.id,propertyId));
+    // const [seo] = await db
+    //   .select()
+    //   .from(propertySeo)
+    //   .where(eq(propertySeo.propertyId, propertyId));
+    // const [verification] = await db
+    //   .select()
+    //   .from(propertyVerification)
+    //   .where(eq(propertyVerification.propertyId, propertyId));
+    // const imagesResult = await db
+    //   .select()
+    //   .from(propertyImages)
+    //   .where(eq(propertyImages.propertyId, propertyId));
+    return property;
+  } catch(err) {
+    throw new Error('Failed to update property')
+  }
   }
 
   static async createPropertyByUser(propertyData: any, userID: string) {

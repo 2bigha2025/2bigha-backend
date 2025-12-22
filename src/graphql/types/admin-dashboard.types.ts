@@ -21,7 +21,6 @@ export const adminDashboardTypeDefs = `#graphql
 
   type PlatformUser {
     id: ID!
-    uuid: String!
     email: String
     firstName: String
     lastName: String

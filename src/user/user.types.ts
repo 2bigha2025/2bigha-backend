@@ -54,8 +54,8 @@ type Seo {
   seoTitle: String!
   seoDescription: String!
   seoKeywords: String!
-  createdAt: String!
-  updatedAt: String!
+  createdAt: Date!
+  updatedAt: Date!
   schema: JSON
 }
 
@@ -83,7 +83,7 @@ type PropertyImageVariants {
 }
 
 type PropertyImage {
-
+  id : String
   variants: PropertyImageVariants
   
 }
@@ -140,7 +140,7 @@ type Property {
   approvalStatus: ApprovalStatus!
   approvalMessage: String
   approvedBy: ID
-  approvedAt: Date
+  approvedAt: String
   rejectionReason: String
   rejectedBy: ID
   rejectedAt: String
@@ -159,7 +159,7 @@ type Property {
   roadAccess: Boolean
   roadAccessDistance: Int
   landMark: String
-  landMarkName: JSON
+  landMarkName: String
   landType : String
   roadAccessWidth : Int
   roadAccessDistanceUnit : String

@@ -103,15 +103,18 @@ export const platformUserResolvers = {
                     lastName: user.lastName,
                     role: user.role,
                     isActive: user.isActive,
-
+                    isVerified: user.isVerified,
                     createdAt: user.createdAt.toISOString(),
                     profile: user.profile
                         ? {
                             id: user.profile.id.toString(),
                             bio: user.profile.bio,
                             avatar: user.profile.avatar,
+                            phone: user.profile.phone,
+                            address: user.profile.address,
                             city: user.profile.city,
                             state: user.profile.state,
+                            pincode: user.profile.pincode,
                             specializations: user.profile.specializations,
                             serviceAreas: user.profile.serviceAreas,
                             languages: user.profile.languages,
