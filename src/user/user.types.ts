@@ -73,7 +73,7 @@ type PropertyImageVariants {
 }
 
 type PropertyImage {
-
+  id : String
   variants: PropertyImageVariants
   
 }

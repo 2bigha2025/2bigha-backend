@@ -10,6 +10,7 @@ import {
   or,
   ilike,
   isNotNull,
+  inArray,
 } from "drizzle-orm";
 import { db } from "../../database/connection";
 import { v4 as uuidv4 } from "uuid";
@@ -1100,11 +1101,9 @@ export class PropertyService {
     userID: string,
     status: "draft" | "published"
   ) {
-    console.log('>>>>>>>propertyData>>>>>>',propertyData)
-    const propertyId = uuidv4();
     const images = propertyData.images;
+    const propertyId = propertyData.propertyId;
     const parse = await parsePropertyPolygon(propertyData?.map);
-
     let processedImages: PropertyImageData[] = [];
     if (images && images.length > 0) {
       if (images && images.length > 0) {
@@ -1119,9 +1118,14 @@ export class PropertyService {
         console.log("🖼️ Processed images:", processedImages);
       }
     }
-
+    try {
     await db.transaction(async (tx) => {
-      const updatedProperty = await tx
+      // Delete requested images first (if any)
+      if (Array.isArray(propertyData.deleteImageIds) && propertyData.deleteImageIds.length > 0) {
+        await tx.delete(propertyImages).where(inArray(propertyImages.id, propertyData.deleteImageIds));
+      }
+
+      await tx
         .update(properties)
         .set({
           propertyType:
@@ -1160,52 +1164,44 @@ export class PropertyService {
           roadAccessWidth: propertyData.propertyDetailsSchema.roadAccessWidth,
           roadAccessDistanceUnit:
             propertyData.propertyDetailsSchema.roadAccessDistanceUnit,
-        }).where(eq(properties.listingId, propertyData.listingId))
+        }).where(eq(properties.id, propertyId))
 
-        console.log('>>>>>>updatedProperty>>>>>',updatedProperty)
-
-
-      // if (processedImages.length > 0) {
-      //   const imageInserts = processedImages.map((img, index) => ({
-      //     propertyId,
-      //     imageUrl: img.imageUrl,
-      //     imageType: img.imageType || "general",
-      //     caption: img.caption || "",
-      //     altText: img.altText || "",
-      //     sortOrder: img.sortOrder || index,
-      //     variants: img.variants,
-      //     isMain: img.isMain || index === 0,
-      //   }));
-
-      //   await tx.insert(propertyImages).values(imageInserts);
-      // }
-
+        if (processedImages.length > 0) {
+          const imageInserts = processedImages.map((img, index) => ({
+            propertyId,
+            imageUrl: img.imageUrl,
+            imageType: img.imageType || "general",
+            caption: img.caption || "",
+            altText: img.altText || "",
+            sortOrder: img.sortOrder || index,
+            variants: img.variants,
+            isMain: img.isMain || index === 0,
+          }));
+  
+          await tx.insert(propertyImages).values(imageInserts);
+        }
     });
 
     const [property] = await db
       .select()
       .from(properties)
-      .where(eq(properties.id, propertyId));
-    const [seo] = await db
-      .select()
-      .from(propertySeo)
-      .where(eq(propertySeo.propertyId, propertyId));
-    const [verification] = await db
-      .select()
-      .from(propertyVerification)
-      .where(eq(propertyVerification.propertyId, propertyId));
-    const imagesResult = await db
-      .select()
-      .from(propertyImages)
-      .where(eq(propertyImages.propertyId, propertyId));
-    const result = {
-      ...property,
-      seo,
-      verification,
-      images: imagesResult,
-    };
-
-    return result;
+      .where(eq(properties.id,propertyId));
+    // const [seo] = await db
+    //   .select()
+    //   .from(propertySeo)
+    //   .where(eq(propertySeo.propertyId, propertyId));
+    // const [verification] = await db
+    //   .select()
+    //   .from(propertyVerification)
+    //   .where(eq(propertyVerification.propertyId, propertyId));
+    // const imagesResult = await db
+    //   .select()
+    //   .from(propertyImages)
+    //   .where(eq(propertyImages.propertyId, propertyId));
+    return property;
+  } catch(err) {
+    throw new Error('Failed to update property')
+  }
   }
 
   static async createPropertyByUser(propertyData: any, userID: string) {

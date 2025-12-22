@@ -89,6 +89,7 @@ type PropertyImageVariants {
 }
 
 type PropertyImage {
+    id: ID!
 
   variants: PropertyImageVariants
   
@@ -355,52 +356,15 @@ enum PropertyStatus {
   }
 
   input UpdatePropertyInput {
-    title: String
-    description: String
-    propertyType: PropertyType
     location : LocationInput
-    price: Float
-    area: String
-    areaUnit: AreaUnit    
-    khasraNumber: String
-    murabbaNumber: String
-    khewatNumber: String    
-    address: String
-    city: String
-    district: String
-    state: String
-    country: String
-    pincode: String
-    boundary: JSON
-    geoJson: JSON    
-    listingAs: ListingAs
-    ownerName: String
-    ownerPhone: String
-    ownerWhatsapp: String 
-    ownerId : String   
-    # Media
-  waterLevel : Int
-  landMark : [String]
-  category : String
-  highwayConn : Boolean
-  landZoning : String
-  ownersCount : Int
-  ownershipYes : Boolean
-  soilType: String,
-  listerType : String
-  roadAccess: Boolean,
-  whatsappNumber : String
-  phoneNumber : String
-  pricePerUnit : String
-  totalPrice : Float
-  roadAccessDistance: Int,
-  landMarkName: JSON
-  markers: [MarkerInput!]
-  roadAccessWidth : Int
-  roadAccessDistanceUnit : String
-  boundaries: [BoundaryInput!]
-  images: [PropertyImageInput!]
-  coordinates: [CoordinateInput!]
+    map: MapInput
+    contactDetails: ContactDetailsInput
+    propertyDetailsSchema: PropertyDetailsSchemaInput
+    images: [Upload!]!
+    deleteImageIds: [ID!]
+    markers: [MarkerInput!]
+    boundaries: [BoundaryInput!]
+    coordinates: [CoordinateInput!]
   }
 
   input PropertyFilters {

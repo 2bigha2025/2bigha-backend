@@ -201,6 +201,33 @@ export const propertyResolvers = {
         });
       }
     },
+    updateProperty: async (
+      _: any,
+      { id, input }: { id: string; input: any },
+      context: AdminContext
+    ) => {
+      if (!context.admin) {
+        throw new GraphQLError("Not authenticated", {
+          extensions: { code: "UNAUTHENTICATED" },
+        });
+      }
+
+      try {
+        // Service expects listingId to match DB column used in WHERE clause
+        const payload = { ...input, propertyId: id };
+        const updated = await PropertyService.updateProperty(
+          payload,
+          context.admin.adminId,
+          "published"
+        );
+        return updated;
+      } catch (error) {
+        console.error("Update property error:", error);
+        throw new GraphQLError("Failed to update property", {
+          extensions: { code: "INTERNAL_ERROR" },
+        });
+      }
+    },
     updatePropertySeo: async (
       _: any,
       { input }: { input: any },
