@@ -1092,6 +1092,7 @@ export class PropertyService {
                   p.last_reviewed_at as "lastReviewedAt",
                   COALESCE(u.id, o.id) AS owner_id,
                   COALESCE(u.email, o.email) AS email,
+                  COALESCE(u.is_verified, o.is_verified) AS is_verified,
                   COALESCE(u.first_name, o.first_name,p.owner_name) AS first_name,
                   COALESCE(u.last_name, o.last_name) AS last_name,
                   COALESCE(up.phone, op.phone,p.owner_phone) AS phone,
@@ -1118,6 +1119,7 @@ export class PropertyService {
         phone: property.phone,
         avatar: property.avatar,
         role: property.role === "USER" ? "OWNER" : property.role || "OWNER",
+        isVerified: property.is_verified,
       };
 
       if (!property) {

@@ -34,6 +34,7 @@ export const adminDashboardTypeDefs = `#graphql
     updatedAt: String!
     updatedby: String
     profile: PlatformUserProfile
+    listings : String
   }
 
   type PlatformUserProfile {
@@ -188,6 +189,7 @@ export const adminDashboardTypeDefs = `#graphql
     phone: String,
     address: String,
     avatar: Upload,
+    isVerified : Boolean
 }
 
   # Queries

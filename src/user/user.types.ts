@@ -262,6 +262,7 @@ type owner {
   phone: String
   avatar : String
   role : String
+  isVerified : Boolean
 }
 
 type properties {
