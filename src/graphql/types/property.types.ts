@@ -42,6 +42,7 @@ enum ListingAs {
 enum landStatus {
     AVAILABLE
     SOLD
+    MANAGED
 }
 
 type Seo {
@@ -462,6 +463,7 @@ input GetPropertiesInput {
   limit: Int!
   searchTerm: String
   approvalstatus:ApprovalStatus
+  availablilityStatus:landStatus
 }
   # Property Queries
  type PaginationMeta {

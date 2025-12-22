@@ -12,8 +12,9 @@ import { geoJsonTypeDefs } from './geoJson.types';
 import { reportDefs } from './reports.types';
 import { crmTypeDefs } from './crm.types';
 import { ivrTypeDefs } from './ivr.types';
-import { farmsTypeDefs } from './farms.types';
 import { crmWhatsAppTypeDefs } from './crm-whatsapp-types';
+import { farmsTypeDefs } from './farms.types';
 
 export const typeDefs = mergeTypeDefs([crmWhatsAppTypeDefs,ivrTypeDefs,userPropertyTypeDefs, authTypeDefs, propertyTypeDefs, rbacTypeDefs, propertyApprovalEnhancedTypeDefs, adminDashboardTypeDefs, mapPropertiesTypeDefs, blogTypeDefs, seoTypeDefs, geoJsonTypeDefs,reportDefs,crmTypeDefs,farmsTypeDefs]);
+
 

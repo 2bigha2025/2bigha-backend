@@ -15,7 +15,7 @@ export const propertyResolvers = {
   Query: {
     properties: async (
       _: any,
-      { input }: { input: { page: number; limit: number; searchTerm?: string } }
+      { input }: { input: { page: number; limit: number; searchTerm?: string;} }
     ) => {
       const results = await PropertyService.getProperties(
         input.page,
@@ -27,12 +27,13 @@ export const propertyResolvers = {
     },
     getPendingApprovalProperties: async (
       _: any,
-      { input }: { input: { page: number; limit: number; searchTerm?: string } }
+      { input }: { input: { page: number; limit: number; searchTerm?: string; availablilityStatus?:"MANAGED"} }
     ) => {
       const results = await PropertyService.getPendingApprovalProperties(
         input.page,
         input.limit,
-        input.searchTerm // pass searchTerm here
+        input.searchTerm, // pass searchTerm here
+        input.availablilityStatus
       );
 
       console.log(results);
@@ -41,12 +42,13 @@ export const propertyResolvers = {
     },
     getRejectedProperties: async (
       _: any,
-      { input }: { input: { page: number; limit: number; searchTerm?: string } }
+      { input }: { input: { page: number; limit: number; searchTerm?: string;availablilityStatus?:"MANAGED" } }
     ) => {
       const results = await PropertyService.getRejectedProperties(
         input.page,
         input.limit,
-        input.searchTerm
+        input.searchTerm,
+        input.availablilityStatus
       );
 
       console.log(results);
@@ -56,12 +58,13 @@ export const propertyResolvers = {
 
     getApprovedProperties: async (
       _: any,
-      { input }: { input: { page: number; limit: number; searchTerm?: string } }
+      { input }: { input: { page: number; limit: number; searchTerm?: string;availablilityStatus?:"MANAGED" } }
     ) => {
       const results = await PropertyService.getApprovedProperties(
         input.page,
         input.limit,
-        input.searchTerm
+        input.searchTerm,
+        input.availablilityStatus
       );
 
       console.log(results);

@@ -9,6 +9,7 @@ import {
   sql,
   or,
   ilike,
+  not,
   isNotNull,
   notInArray,
 } from "drizzle-orm";
@@ -27,6 +28,13 @@ import {
 import { azureStorage, FileUpload } from "../../../src/utils/azure-storage";
 import { SeoGenerator } from "./seo-generator.service";
 import { alias } from "drizzle-orm/pg-core";
+import {
+  Plan,
+  planvariants,
+  propertyVisits,
+  propertyVisitMedia,
+  userProperty,
+} from "../../database/schema/manage-recrod";
 
 interface PropertyImageData {
   imageUrl: string;
@@ -244,6 +252,7 @@ export class PropertyService {
           .where(
             and(
               eq(properties.approvalStatus, "APPROVED"),
+              eq(properties.availablilityStatus, "AVAILABLE"),
               eq(properties.isActive, true),
               isNotNull(properties.centerPoint),
               notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
@@ -264,7 +273,7 @@ export class PropertyService {
           .orderBy(desc(properties.createdAt))
           .limit(limit);
 
-            console.log("success results :" , results.length)
+        console.log("success results :", results.length);
         return results;
       } else {
         // Return random properties if no coordinates provided
@@ -301,6 +310,7 @@ export class PropertyService {
               eq(properties.approvalStatus, "APPROVED"),
               eq(properties.isActive, true),
               notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
+              not(eq(properties.availablilityStatus, "MANAGED"))
             )
           )
           .groupBy(
@@ -311,8 +321,8 @@ export class PropertyService {
           )
           .orderBy(sql`RANDOM()`) // Random order
           .limit(limit);
-          
-          console.log("results :" , results)
+
+        console.log("results :", results);
 
         return results;
       }
@@ -334,6 +344,7 @@ export class PropertyService {
 
       const whereConditions = [
         eq(properties.approvalStatus, "APPROVED"),
+        eq(properties.availablilityStatus, "AVAILABLE"),
         eq(properties.isActive, true),
         notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
       ];
@@ -387,7 +398,10 @@ export class PropertyService {
 
   static async getProperties(page: number, limit: number, searchTerm?: string) {
     const offset = (page - 1) * limit;
-    const baseCondition = [eq(properties.approvalStatus, "APPROVED"),notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"])];
+    const baseCondition = [and(
+      eq(properties.approvalStatus, "APPROVED"),notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
+      not(eq(properties.availablilityStatus, "MANAGED"))
+    )];
     const createdByUser = alias(platformUsers, "createdByUser");
     const createdByAdmin = alias(adminUsers, "createdByAdmin");
     const userAlias = properties.createdByUserId
@@ -460,9 +474,10 @@ export class PropertyService {
 
   static async getPropertyTotals(state?: string, district?: string) {
     const whereBase = and(
-    eq(properties.approvalStatus, "APPROVED"),
-    notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"])
-  );
+      eq(properties.approvalStatus, "APPROVED"),
+    notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
+      not(eq(properties.availablilityStatus, "MANAGED"))
+    );
     const withState = state
       ? and(whereBase, eq(properties.state, state))
       : whereBase;
@@ -581,7 +596,11 @@ export class PropertyService {
           eq(properties.createdByUserId, platformUsers.id)
         )
         .innerJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
-        .where(and(eq(properties.approvalStatus, "APPROVED"), notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"])))
+        .where(and(
+            eq(properties.approvalStatus, "APPROVED"), notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),
+            not(eq(properties.availablilityStatus, "MANAGED"))
+          )
+        )
         .groupBy(properties.id, platformUsers.id, propertySeo.id)
         .orderBy(desc(properties.createdAt))
         .limit(limit);
@@ -627,7 +646,12 @@ export class PropertyService {
       .from(properties)
       .leftJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
       .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
-      .where(eq(properties.createdByUserId, userId))
+      .where(
+        and(
+          eq(properties.createdByUserId, userId),
+          eq(properties.availablilityStatus, "AVAILABLE")
+        )
+      )
       .groupBy(properties.id, propertySeo.id)
       .orderBy(desc(properties.createdAt))
       .limit(limit)
@@ -636,7 +660,12 @@ export class PropertyService {
     const [{ count }] = await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(properties)
-      .where(eq(properties.createdByUserId, userId));
+      .where(
+        and(
+          eq(properties.createdByUserId, userId),
+          eq(properties.availablilityStatus, "AVAILABLE")
+        )
+      );
 
     return {
       data: results,
@@ -646,6 +675,143 @@ export class PropertyService {
         limit,
         totalPages: Math.ceil(count / limit),
       },
+    };
+  }
+
+  static async getUserProperties(
+    userId: string,
+    page: number = 1,
+    limit: number = 10
+  ) {
+    page = Math.max(1, page);
+    const offset = (page - 1) * limit;
+
+    // 1️⃣ Count total rows for pagination
+    const totalRow = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(userProperty)
+      .leftJoin(properties, eq(userProperty.propertyId, properties.id))
+      .where(
+        and(
+          eq(userProperty.userId, userId),
+          eq(properties.availablilityStatus, "MANAGED")
+        )
+      );
+
+    const total = totalRow[0].count;
+    const totalPages = Math.ceil(total / limit);
+
+    const rows = await db
+      .select({
+        userPropertyId: userProperty.id,
+        visitsRemaining: userProperty.visitsRemaining,
+        visitsUsed: userProperty.visitsUsed,
+        property: properties,
+        images: sql`
+          COALESCE(
+            json_agg(DISTINCT ${propertyImages}.*) 
+            FILTER (WHERE ${propertyImages}.id IS NOT NULL),
+            '[]'
+          )
+        `.as("images"),
+        planDetails: sql`
+          json_build_object(
+            'id', ${Plan.planId},
+            'planName', ${Plan.planName},
+            'description', ${Plan.description},
+            'billingCycle', ${planvariants.billingCycle},
+            'durationInDays', ${planvariants.durationInDays},
+            'visitsAllowed', ${planvariants.visitsAllowed}
+          )
+        `.as("planDetails"),
+      })
+      .from(userProperty)
+      .leftJoin(properties, eq(userProperty.propertyId, properties.id))
+      .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
+      .leftJoin(planvariants, eq(userProperty.planVariantId, planvariants.id))
+      .leftJoin(Plan, eq(planvariants.planId, Plan.planId))
+      .where(
+        and(
+          eq(userProperty.userId, userId),
+          eq(properties.availablilityStatus, "MANAGED")
+        )
+      )
+      .groupBy(userProperty.id, properties.id, planvariants.id, Plan.planId)
+      .limit(limit)
+      .offset(offset);
+    console.log(rows);
+    console.log(page, limit, total, totalPages);
+    return {
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+      rows,
+    };
+  }
+
+  static async getUserPropertiesById(userId: string, propertyId: string) {
+    // 2️⃣ Fetch rows with aggregated images and nested planDetails
+    const rows = await db
+      .select({
+        userPropertyId: userProperty.id,
+        visitsRemaining: userProperty.visitsRemaining,
+        visitsUsed: userProperty.visitsUsed,
+        property: properties,
+        images: sql`
+          COALESCE(
+            json_agg(DISTINCT ${propertyImages}.*)
+            FILTER (WHERE ${propertyImages}.id IS NOT NULL),
+            '[]'
+          )
+        `.as("images"),
+        planDetails: sql`
+          json_build_object(
+            'id', ${Plan.planId},
+            'planName', ${Plan.planName},
+            'description', ${Plan.description},
+            'billingCycle', ${planvariants.billingCycle},
+            'durationInDays', ${planvariants.durationInDays},
+            'visitsAllowed', ${planvariants.visitsAllowed}
+          )
+        `.as("planDetails"),
+        visits: sql`
+          COALESCE(
+            json_agg(DISTINCT ${propertyVisits}.*)
+            FILTER (WHERE ${propertyVisits}.id IS NOT NULL),
+            '[]'
+          )
+        `.as("visits"),
+        visitMedia: sql`
+          COALESCE(
+            json_agg(DISTINCT ${propertyVisitMedia}.*)
+            FILTER (WHERE ${propertyVisitMedia}.id IS NOT NULL),
+            '[]'
+          )
+        `.as("visitMedia"),
+      })
+      .from(userProperty)
+      .leftJoin(properties, eq(userProperty.propertyId, properties.id))
+      .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
+      .leftJoin(planvariants, eq(userProperty.planVariantId, planvariants.id))
+      .leftJoin(Plan, eq(planvariants.planId, Plan.planId))
+      .leftJoin(propertyVisits, eq(propertyVisits.propertyId, propertyId))
+      .leftJoin(
+        propertyVisitMedia,
+        eq(propertyVisitMedia.visitId, propertyVisits.id)
+      )
+      .where(
+        and(
+          eq(userProperty.propertyId, propertyId),
+          eq(properties.availablilityStatus, "MANAGED")
+        )
+      )
+      .groupBy(userProperty.id, properties.id, planvariants.id, Plan.planId);
+
+    return {
+      ...rows[0],
     };
   }
 
@@ -678,11 +844,19 @@ export class PropertyService {
     status: "PENDING" | "REJECTED" | "APPROVED",
     page: number,
     limit: number,
-    searchTerm?: string
+    searchTerm?: string,
+    availablilityStatus?: "AVAILABLE" | "SOLD" | "MANAGED"
   ) {
     const offset = (page - 1) * limit;
-
-    const baseCondition = and(eq(properties.approvalStatus, status), notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]));
+    const availablilityCondition = availablilityStatus
+      ? and(eq(properties.availablilityStatus, availablilityStatus))
+      : null;
+      let baseCondition;
+      if(availablilityCondition){
+         baseCondition = and(eq(properties.approvalStatus, status), notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]));
+      }else{
+         baseCondition = and(eq(properties.approvalStatus, status),notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]),not(eq(properties.availablilityStatus, 'MANAGED')));
+      }
     const createdByUser = alias(platformUsers, "createdByUser");
     const ownerUser = alias(platformUsers, "ownerUser");
     const platformUserProfile = alias(
@@ -698,7 +872,11 @@ export class PropertyService {
       createdByUser
     );
     const whereCondition = searchCondition
-      ? and(baseCondition, searchCondition)
+      ? availablilityCondition
+        ? and(baseCondition, searchCondition, availablilityCondition)
+        : and(baseCondition, searchCondition)
+      : availablilityCondition
+      ? and(baseCondition, availablilityCondition)
       : baseCondition;
     try {
       const results = await db
@@ -730,11 +908,11 @@ export class PropertyService {
           },
         })
         .from(properties)
-        .innerJoin(
+        .leftJoin(
           propertyVerification,
           eq(properties.id, propertyVerification.propertyId)
         )
-        .innerJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
+        .leftJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
         .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
         .leftJoin(
           createdByUser,
@@ -797,39 +975,46 @@ export class PropertyService {
   static async getPendingApprovalProperties(
     page: number,
     limit: number,
-    searchTerm?: string
+    searchTerm?: string,
+    availablilityStatus?: "AVAILABLE" | "SOLD" | "MANAGED"
   ) {
     return this.fetchPropertiesByApprovalStatus(
-      "PENDING",
+    "PENDING",
       page,
       limit,
-      searchTerm
+      searchTerm,
+      availablilityStatus
     );
   }
 
   static async getRejectedProperties(
     page: number,
     limit: number,
-    searchTerm?: string
+    searchTerm?: string,
+    availablilityStatus?: "AVAILABLE" | "SOLD" | "MANAGED"
+
   ) {
     return this.fetchPropertiesByApprovalStatus(
       "REJECTED",
       page,
       limit,
-      searchTerm
+      searchTerm,
+      availablilityStatus
     );
   }
 
   static async getApprovedProperties(
     page: number,
     limit: number,
-    searchTerm?: string
+    searchTerm?: string,
+    availablilityStatus?: "AVAILABLE" | "SOLD" | "MANAGED"
   ) {
     return this.fetchPropertiesByApprovalStatus(
       "APPROVED",
       page,
       limit,
-      searchTerm
+      searchTerm,
+      availablilityStatus
     );
   }
 
@@ -853,10 +1038,9 @@ export class PropertyService {
     }
   }
 
-
-    static async getPropertyById(id: string) {
-        try {
-            const [property] = await db.execute(sql`
+  static async getPropertyById(id: string) {
+    try {
+      const [property] = await db.execute(sql`
                 SELECT
                   p.id,
                   p.listing_id as "listingId",
@@ -992,7 +1176,9 @@ export class PropertyService {
           status: "PUBLISHED",
           price: parseFloat(propertyData.propertyDetailsSchema.totalPrice),
           area: parseFloat(propertyData.propertyDetailsSchema.area),
-          pricePerUnit: parseFloat(propertyData.propertyDetailsSchema.pricePerUnit),
+          pricePerUnit: parseFloat(
+            propertyData.propertyDetailsSchema.pricePerUnit
+          ),
           areaUnit: propertyData.propertyDetailsSchema.areaUnit.toUpperCase(),
           khasraNumber: propertyData.propertyDetailsSchema.khasraNumber,
           murabbaNumber: propertyData.propertyDetailsSchema.murabbaNumber,
@@ -1102,11 +1288,14 @@ export class PropertyService {
 
   static async createPropertyByUser(propertyData: any, userID: string) {
     const propertyId = uuidv4();
-
+    console.log(propertyData);
     const images = propertyData.images;
-
-    const parse = await parsePropertyPolygon(propertyData?.map);
-
+    const isManaged = propertyData.flag === "MANAGED";
+    const planId = propertyData.planId ?? null;
+    let parse: any;
+    if (!isManaged) {
+      parse = await parsePropertyPolygon(propertyData?.map);
+    }
     let processedImages: PropertyImageData[] = [];
     if (images && images.length > 0) {
       if (images && images.length > 0) {
@@ -1129,68 +1318,62 @@ export class PropertyService {
         .insert(properties)
         .values({
           id: propertyId,
-          propertyType:
-            propertyData.propertyDetailsSchema.propertyType.toUpperCase(),
+          propertyType: propertyData.propertyDetailsSchema?.propertyType
+            ? propertyData.propertyDetailsSchema.propertyType.toUpperCase()
+            : propertyData.PropertyType,
           status: "PUBLISHED",
-          price: parseFloat(propertyData.propertyDetailsSchema.totalPrice),
-          area: parseFloat(propertyData.propertyDetailsSchema.area),
-          pricePerUnit: parseFloat(
-            propertyData.propertyDetailsSchema.pricePerUnit
-          ),
-          areaUnit: propertyData.propertyDetailsSchema.areaUnit.toUpperCase(),
-          khasraNumber: propertyData.propertyDetailsSchema.khasraNumber,
-          murabbaNumber: propertyData.propertyDetailsSchema.murabbaNumber,
-          khewatNumber: propertyData.propertyDetailsSchema.khewatNumber,
-          address: propertyData.location.address,
-          city: propertyData.location.city,
-          district: propertyData.location.district,
-          state: propertyData.location.state,
-          pinCode: propertyData.location.pincode,
-          ...parse,
+          price:
+            parseFloat(propertyData?.propertyDetailsSchema?.totalPrice) ||
+            parseFloat("0"),
+          area:
+            parseFloat(propertyData?.propertyDetailsSchema?.area) ||
+            parseFloat(propertyData.Area),
+          title: propertyData.title ?? "",
+          description: propertyData.description ?? "",
+          pricePerUnit:
+            parseFloat(propertyData?.propertyDetailsSchema?.pricePerUnit) ||
+            parseFloat("0"),
+          areaUnit:
+            propertyData?.propertyDetailsSchema?.areaUnit.toUpperCase() ||
+            propertyData.AreaUnit,
+          khasraNumber:
+            propertyData?.propertyDetailsSchema?.khasraNumber ?? null,
+          murabbaNumber:
+            propertyData?.propertyDetailsSchema?.murabbaNumber ?? null,
+          khewatNumber:
+            propertyData?.propertyDetailsSchema?.khewatNumber ?? null,
+          address: propertyData?.location?.address ?? "Property Management",
+          city: propertyData?.location?.city ?? propertyData?.city ?? null,
+          district:
+            propertyData?.location?.district ?? propertyData?.district ?? null,
+          state: propertyData?.location?.state ?? propertyData?.state ?? null,
+          pinCode: propertyData?.location?.pincode ?? propertyData?.pincode,
+          ...parse, // leaving as-is, this is your spread object
           isActive: true,
           publishedAt: new Date(),
           createdByType: "USER",
           createdByUserId: userID,
-          waterLevel: propertyData.propertyDetailsSchema.waterLevel,
-          landMark: propertyData.propertyDetailsSchema.landMark,
-          category: propertyData.propertyDetailsSchema.category,
-          highwayConn: propertyData.propertyDetailsSchema.highwayConn,
-          landZoning: propertyData.propertyDetailsSchema.landZoning,
-          ownersCount: propertyData.propertyDetailsSchema.ownersCount,
-          ownershipYes: propertyData.propertyDetailsSchema.ownershipYes,
-          soilType: propertyData.propertyDetailsSchema.soilType,
-          roadAccess: propertyData.propertyDetailsSchema.roadAccess,
+          waterLevel: propertyData?.propertyDetailsSchema?.waterLevel ?? null,
+          landMark: propertyData?.propertyDetailsSchema?.landMark ?? null,
+          category: propertyData?.propertyDetailsSchema?.category ?? null,
+          highwayConn: propertyData?.propertyDetailsSchema?.highwayConn ?? null,
+          landZoning: propertyData?.propertyDetailsSchema?.landZoning ?? null,
+          ownersCount: propertyData?.propertyDetailsSchema?.ownersCount ?? null,
+          ownershipYes:
+            propertyData?.propertyDetailsSchema?.ownershipYes ?? null,
+          soilType: propertyData?.propertyDetailsSchema?.soilType ?? null,
+          roadAccess: propertyData?.propertyDetailsSchema?.roadAccess ?? null,
           roadAccessDistance:
-            propertyData.propertyDetailsSchema.roadAccessDistance,
-          landMarkName: propertyData.propertyDetailsSchema.landMarkName,
-          roadAccessWidth: propertyData.propertyDetailsSchema.roadAccessWidth,
+            propertyData?.propertyDetailsSchema?.roadAccessDistance ?? null,
+          landMarkName:
+            propertyData?.propertyDetailsSchema?.landMarkName ?? null,
+          roadAccessWidth:
+            propertyData?.propertyDetailsSchema?.roadAccessWidth ?? null,
           roadAccessDistanceUnit:
-            propertyData.propertyDetailsSchema.roadAccessDistanceUnit,
+            propertyData?.propertyDetailsSchema?.roadAccessDistanceUnit ?? null,
+          availablilityStatus: isManaged ? "MANAGED" : "AVAILABLE",
         })
         .returning({ listing_id: properties.listingId });
-
-      const generateSeo = await SeoGenerator.generateSEOFields(
-        createdProperty[0].listing_id,
-        propertyData.propertyDetailsSchema.propertyType,
-        propertyData.location.city,
-        propertyData.location.district
-      );
-
-      await tx
-        .update(properties)
-        .set({
-          title: generateSeo.title,
-          description: generateSeo.seoDescription,
-        })
-        .where(eq(properties.listingId, createdProperty[0].listing_id));
-
-      await tx.insert(propertySeo).values({
-        propertyId,
-        seoTitle: generateSeo.seoTitle,
-        seoDescription: generateSeo.seoDescription,
-        slug: generateSeo.slug,
-        seoKeywords: generateSeo.seoKeywords,
-      });
       if (processedImages.length > 0) {
         const imageInserts = processedImages.map((img, index) => ({
           propertyId,
@@ -1206,36 +1389,88 @@ export class PropertyService {
         await tx.insert(propertyImages).values(imageInserts);
       }
 
-      await tx.insert(propertyVerification).values({
-        propertyId,
-        isVerified: false,
-        verificationMessage: "Verification Pending",
-      });
+      if (!isManaged && !planId) {
+        const generateSeo = await SeoGenerator.generateSEOFields(
+          createdProperty[0].listing_id,
+          propertyData.propertyDetailsSchema.propertyType,
+          propertyData.location.city,
+          propertyData.location.district
+        );
+        await tx
+          .update(properties)
+          .set({
+            title: generateSeo.title,
+            description: generateSeo.seoDescription,
+          })
+          .where(eq(properties.listingId, createdProperty[0].listing_id));
+
+        await tx.insert(propertySeo).values({
+          propertyId,
+          seoTitle: generateSeo.seoTitle,
+          seoDescription: generateSeo.seoDescription,
+          slug: generateSeo.slug,
+          seoKeywords: generateSeo.seoKeywords,
+        });
+
+        await tx.insert(propertyVerification).values({
+          propertyId,
+          isVerified: false,
+          verificationMessage: "Verification Pending",
+        });
+      }
+
+      if (isManaged) {
+        await tx.insert(userProperty).values({
+          userId: userID,
+          propertyId,
+          planVariantId: planId,
+          agentId: propertyData.agentId ?? null,
+          assignedBy: propertyData.assignedBy ?? null,
+          assignedAt: propertyData.agentId ? new Date() : null,
+          startDate: propertyData.startDate ?? null,
+          endDate: propertyData.endDate ?? null,
+          visitsRemaining: propertyData.visitsRemaining ?? null,
+          status: "ACTIVE",
+          active: true,
+        });
+      }
     });
 
+    // 5️⃣ FETCH PROPERTY
     const [property] = await db
       .select()
       .from(properties)
       .where(eq(properties.id, propertyId));
-    const [seo] = await db
-      .select()
-      .from(propertySeo)
-      .where(eq(propertySeo.propertyId, propertyId));
-    const [verification] = await db
-      .select()
-      .from(propertyVerification)
-      .where(eq(propertyVerification.propertyId, propertyId));
+
     const imagesResult = await db
       .select()
       .from(propertyImages)
       .where(eq(propertyImages.propertyId, propertyId));
-    const result = {
+
+    // 6️⃣ CONDITIONAL RETURN BASED ON MANAGED FLAG
+    if (isManaged) {
+      return {
+        property: property,
+        images: imagesResult,
+      };
+    }
+
+    // Fetch required data when NOT managed
+    const [seo] = await db
+      .select()
+      .from(propertySeo)
+      .where(eq(propertySeo.propertyId, propertyId));
+
+    const [verification] = await db
+      .select()
+      .from(propertyVerification)
+      .where(eq(propertyVerification.propertyId, propertyId));
+
+    return {
       ...property,
       seo,
       verification,
       images: imagesResult,
     };
-
-    return result;
   }
 }

@@ -174,15 +174,6 @@ export const platformUserResolvers = {
                 );
                 return properties;
 
-                // return {
-                //     id: user.id.toString(),
-                //     uuid: user.uuid,
-                //     firstName: user.firstName,
-                //     lastName: user.lastName,
-                //     role: user.role,
-                //     companyName: user.companyName,
-                //     profile: user.profile,
-                // }
             } catch (error) {
                 console.log(error)
                 throw new GraphQLError("Failed to get user profile", {
@@ -201,39 +192,39 @@ export const platformUserResolvers = {
 
             return results;
         },
-         getPropertiesByLocation: async (
-      _: any,
-      { input }: { input: { lat?: number; lng?: number; radius?: number; limit?: number } }
-    ) => {
-      try {
-        const results = await PropertyService.getPropertiesByLocation(
-          input.lat,
-          input.lng,
-          input.radius,
-          input.limit || 10
-        );
-        return results;
-      } catch (error) {
-        console.error("❌ Resolver error in getPropertiesByLocation:", error);
-        throw new Error("Unable to fetch properties by location");
-      }
-    },
+        getPropertiesByLocation: async (
+            _: any,
+            { input }: { input: { lat?: number; lng?: number; radius?: number; limit?: number } }
+        ) => {
+            try {
+                const results = await PropertyService.getPropertiesByLocation(
+                    input.lat,
+                    input.lng,
+                    input.radius,
+                    input.limit || 10
+                );
+                return results;
+            } catch (error) {
+                console.error("❌ Resolver error in getPropertiesByLocation:", error);
+                throw new Error("Unable to fetch properties by location");
+            }
+        },
 
-    getPropertiesByViewCount: async (
-      _: any,
-      { input }: { input: { limit?: number; minViewCount?: number } }
-    ) => {
-      try {
-        const results = await PropertyService.getPropertiesByViewCount(
-          input.limit || 10,
-          input.minViewCount
-        );
-        return results;
-      } catch (error) {
-        console.error("❌ Resolver error in getPropertiesByViewCount:", error);
-        throw new Error("Unable to fetch properties by view count");
-      }
-    },
+        getPropertiesByViewCount: async (
+            _: any,
+            { input }: { input: { limit?: number; minViewCount?: number } }
+        ) => {
+            try {
+                const results = await PropertyService.getPropertiesByViewCount(
+                    input.limit || 10,
+                    input.minViewCount
+                );
+                return results;
+            } catch (error) {
+                console.error("❌ Resolver error in getPropertiesByViewCount:", error);
+                throw new Error("Unable to fetch properties by view count");
+            }
+        },
         getTopProperties: async (
             _: any,
             { },
@@ -271,6 +262,39 @@ export const platformUserResolvers = {
             _: any,
             { lat, lng, radiusKm }: { lat: number; lng: number; radiusKm: number }
         ) => GeoJsonService.findFeaturesWithinRadius(lat, lng, radiusKm),
+        getManagedProeprtiesByUser: async (
+            _: any,
+            { page, limit }: { page: number, limit: number },
+            context: PlatformUserContext
+        ) => {
+            if (!context?.user?.userId) {
+                throw new GraphQLError("Not authenticated", {
+                    extensions: { code: "UNAUTHENTICATED" },
+                });
+            }
+            const result = await PropertyService.getUserProperties(context.user.userId, page, limit)
+            return {
+                meta: result.meta,
+                data: result.rows
+            }
+
+
+        },
+        getManagedUserPropertiesID: async (
+            _: any,
+            { property_id }: { property_id: string },
+            context: PlatformUserContext
+        ) => {
+
+            if (!context?.user?.userId) {
+                throw new GraphQLError("Not authenticated", {
+                    extensions: { code: "UNAUTHENTICATED" },
+                });
+            }
+            const result = await PropertyService.getUserPropertiesById(context.user.userId, property_id)
+            console.log(result, "It is from resolver")
+            return result
+        }
     },
 
 
@@ -287,14 +311,14 @@ export const platformUserResolvers = {
                         extensions: { code: "VALIDATION_ERROR" },
                     });
                 }
-                const {profile, ...userdata} = input;
+                const { profile, ...userdata } = input;
                 const createUserData = {
-                    ...userdata, 
+                    ...userdata,
                     phone: profile?.phone,
                     profileImage: profile?.avatar,
-                    address : profile?.address,
+                    address: profile?.address,
                 }
-                 console.log(input,createUserData);
+                console.log(input, createUserData);
                 const user = await PlatformUserService.createUser(createUserData);
                 const sessionToken = PlatformUserService.createUserSession(
                     user.id,
@@ -329,7 +353,7 @@ export const platformUserResolvers = {
                     email: input.email,
                     ip: context.ip,
                 });
-            
+
                 throw new GraphQLError((error as Error).message, {
                     extensions: { code: "SIGNUP_FAILED" },
                 });
@@ -508,7 +532,7 @@ export const platformUserResolvers = {
                     await PlatformUserService.authenticateWithGoogle(input.googleToken);
                 const sessionToken = PlatformUserService.createUserSession(
                     user.id,
-                    user?.email|| "",
+                    user?.email || "",
                     user.role
                 );
 
@@ -717,6 +741,32 @@ export const platformUserResolvers = {
                     input,
                     context.user.userId
                 );
+                return property;
+            } catch (error) {
+                console.log(error)
+                console.error("Create property error:", error);
+                throw new GraphQLError("Failed to create property", {
+                    extensions: { code: "INTERNAL_ERROR" },
+                });
+            }
+        },
+        createManagedPropertyByUser: async (
+            _: any,
+            { input }: { input: any },
+            context: PlatformUserContext
+        ) => {
+            if (!context.user) {
+                throw new GraphQLError("Not authenticated", {
+                    extensions: { code: "UNAUTHENTICATED" },
+                });
+            }
+
+            try {
+                const property = await PropertyService.createPropertyByUser(
+                    input,
+                    context.user.userId
+                );
+                console.log(property);
                 return property;
             } catch (error) {
                 console.log(error)
