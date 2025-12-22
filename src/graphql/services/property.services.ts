@@ -24,7 +24,7 @@ import {
   propertyVerification,
   savedProperties,
 } from "../../database/schema/index";
-import { azureStorage, FileUpload } from "../../../src/utils/azure-storage";
+import { azureStorage, AzureStorageService, FileUpload } from "../../../src/utils/azure-storage";
 import { SeoGenerator } from "./seo-generator.service";
 import { alias } from "drizzle-orm/pg-core";
 
@@ -79,6 +79,7 @@ function toWktPolygon(coords: PolygonCoordinate[]): string {
 }
 
 export class PropertyService {
+  static azureStorage = new AzureStorageService();
   static async updateSeoProperty(input: {
     propertyId: string;
     slug: string;
@@ -1096,6 +1097,22 @@ export class PropertyService {
     return result;
   }
 
+
+  static async getPropertyImageFilenames(deleteImageIds: string[]) {
+    return db
+    .select({
+      filename: sql<string>`
+        regexp_replace(
+          ${propertyImages.imageUrl},
+          '^.*/',
+          ''
+        )
+      `.as("filename"),
+    })
+    .from(propertyImages)
+    .where(inArray(propertyImages.id, deleteImageIds));  
+  }
+
   static async updateProperty(
     propertyData: any,
     userID: string,
@@ -1122,6 +1139,9 @@ export class PropertyService {
     await db.transaction(async (tx) => {
       // Delete requested images first (if any)
       if (Array.isArray(propertyData.deleteImageIds) && propertyData.deleteImageIds.length > 0) {
+        const filenames = await this.getPropertyImageFilenames(propertyData.deleteImageIds);
+        const filenamesArray = filenames.map((file) => file.filename);
+        await this.azureStorage.deleteBulkFiles(filenamesArray, "properties");
         await tx.delete(propertyImages).where(inArray(propertyImages.id, propertyData.deleteImageIds));
       }
 
