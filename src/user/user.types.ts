@@ -35,6 +35,7 @@ enum ListingAs {
   OWNER
   AGENT
   BUILDER
+  COMPANY
 }
 
 type Seo {
@@ -197,6 +198,7 @@ type properties {
     REAL_ESTATE_AGENT
     PROPERTY_DEALER
     BUILDER
+    COMPANY
   }
 
 
