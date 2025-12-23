@@ -49,7 +49,7 @@ export const publishedStatusEnum = pgEnum("published_status", [
 export const availablilityStatus = pgEnum("availiblity_status", [
   "AVAILABLE",
   "SOLD",
-  "MANAGED",
+  "MANAGED"
 ])
 
 

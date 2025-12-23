@@ -18,7 +18,7 @@ export const platformUsers = pgTable("platform_users", {
   twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  updatedby:uuid("updated_by").references(() => adminUsers.id, { onDelete: "set null", }),
+  updatedby:uuid("updated_by"),
   createdByAdminId:uuid("created_by_admin_id").references(() => adminUsers.id, { onDelete: "set null" })
 })
 
@@ -30,7 +30,7 @@ export const platformUserProfiles = pgTable("platform_user_profiles", {
     .references(() => platformUsers.id, { onDelete: "cascade" }),
   bio: text("bio"),
   avatar: text("avatar"),
-  phone: text("phone").unique(),
+  phone: text("phone"),
   alternativePhone : text('alternate_phone'),
   whatsappNumber: text("whatsapp_number"),
   address: text("address"),

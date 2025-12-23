@@ -1,4 +1,4 @@
-import { eq, and, gte, lte, like, desc, sql, inArray, or, notInArray } from "drizzle-orm"
+import { eq, and, gte, lte, like, desc, sql, inArray, or, notInArray,not } from "drizzle-orm"
 import { db } from "../../database/connection"
 import * as schema from "../../database/schema/index"
 
@@ -110,7 +110,7 @@ export class MapPropertiesService {
             .leftJoin(platformUsers, eq(properties.createdByUserId, platformUsers.id))
             // .leftJoin(schema.propertyVerification, eq(properties.id, schema.propertyVerification.propertyId))
             .innerJoin(schema.propertySeo, eq(properties.id, schema.propertySeo.propertyId))
-            .where(and (eq(properties.approvalStatus, "APPROVED"), notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"])))
+            .where(and(eq(properties.approvalStatus, "APPROVED"), not(eq(properties.availablilityStatus, "MANAGED")), notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"])))
             .groupBy(properties.id, platformUsers.id, schema.propertySeo.id)
 
             .orderBy(desc(properties.createdAt)) // or `desc(properties.views)` if you have views
@@ -121,7 +121,8 @@ export class MapPropertiesService {
                     schema.savedProperties,
                     and(
                       eq(properties.id, schema.savedProperties.propertyId),
-                      eq(schema.savedProperties.userId, userId)
+                      eq(schema.savedProperties.userId, userId),
+                      eq(properties.availablilityStatus, "AVAILABLE")
                     )
                   )
             }
