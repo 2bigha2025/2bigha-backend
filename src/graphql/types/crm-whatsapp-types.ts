@@ -148,6 +148,7 @@ type WhatsAppMessage{
     direction: String
     msgType: String
     message: String
+    interaktMessageId: ID
     templateId: ID
     headerFormat:String
     header:String
@@ -207,3 +208,5 @@ extend type Mutation{
     sendTextMessage(input: SendTextInput): SendTextMessageResponse
 }
 `;
+
+
