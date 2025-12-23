@@ -23,6 +23,14 @@ type PropertyVisitMedia {
   mediaType: String
 }
 
+type userdata{
+    userId:String,
+    firstName: String,
+    lastName: String,
+    phone:String,
+    email:String
+}
+
   type meta {
     page:Int
     limit:Int
@@ -38,6 +46,7 @@ type PropertyVisitMedia {
   planDetails: PlanDetails!
   visits: [PropertyVisit!]
   visitMedia: [PropertyVisitMedia!]
+  user:userdata
 }
 
 
@@ -108,7 +117,7 @@ input createManagedPropertyInput {
 type Query {
   getManagedProeprtiesByUser(page: Int, limit: Int): UserPropertyResult
   getManagedUserPropertiesID(property_id: String): UserProperty
-  getAllManagedProperties(page: Int, limit: Int): UserPropertyResult
+  getAllManagedProperties(page: Int, limit: Int, searchTerm:String): UserPropertyResult
 }
 
 type Mutation {

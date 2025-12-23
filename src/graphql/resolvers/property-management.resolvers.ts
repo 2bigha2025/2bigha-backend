@@ -41,7 +41,7 @@ export const PropertyManagementResolver = {
     },
     getAllManagedProperties: async (
         _: any,
-        { page, limit }: { page: number, limit:number },
+        { page, limit , searchTerm }: { page: number, limit:number ,searchTerm?:string },
         context: AdminContext
     ) => {
 
@@ -50,7 +50,7 @@ export const PropertyManagementResolver = {
                 extensions: { code: "UNAUTHENTICATED" },
             });
         }
-        const result = await PropertyManagementService.getAllManagedProperties(page,limit)
+        const result = await PropertyManagementService.getAllManagedProperties(page,limit,searchTerm)
         console.log(result, "It is from resolver")
         return {
             meta: result.meta,
