@@ -23,6 +23,7 @@ type Lead{
     callStatus:String
     feedback: String
     followUp:String
+    groupId: ID
     groupName:String
     adminNumber:String
 }
@@ -193,39 +194,7 @@ input PropertyMetaInput{
 }
 
 
-type Broadcast{
-    Id:ID!
-    campaignName:String!
-    connectionNumber:String!
-    TemplateName:String!
-    groupId: ID
-    callStatus:String
-    sentAt:Date!
-    createdAt:Date!
-    sentBy:ID!
-    senderName:String
-    groupName:String
-}
-
-input CreateBroadcastInput{
-    campaignName:String!
-    connectionNumber:String!
-    TemplateName:String!
-    groupId: ID
-    callStatus:String
-}
-
-type CreateBroadcastResponse{
-    result: Broadcast
-    message: String
-    STATUS_CODES: Int
-}
-type BroadcastResponse{
-    result: [Broadcast]
-    message: String
-    STATUS_CODES: Int
-}
-
+# Group
 type Group{
     Id:ID!
     groupName: String!
@@ -399,16 +368,6 @@ type PropertyNotes{
     createdBy:ID!
 }
 
-type Template{
-    Id:ID!
-    name:String!
-    category:String
-    status:String
-    language:String
-    createdBy:ID!
-    createdAt:Date!
-    updatedAt:Date!
-}
 
 type ResponseMessage{
     message:String!
@@ -423,9 +382,6 @@ extend type Query {
 
     getAllGroup: GroupResponse
     getGroupById(id:ID!):CreateGroupResponse
-
-    getAllBroadcasts: BroadcastResponse
-    getBroadcastById(id:ID!):CreateBroadcastResponse
 
     getAllCallLogs: CallLogesResponse
     getCallSummary: CallSummaryResponse
@@ -449,10 +405,6 @@ extend type Query {
     updateGroup(id: ID!, input: CreateGroupInput!): CreateGroupResponse!
     updateActiveGroup(id: ID!, input: CreateGroupActiveInput!): ResponseMessage!
     deleteGroup(id: ID!): ResponseMessage
-
-    createBroadcast(input: CreateBroadcastInput):CreateBroadcastResponse
-    updateBroadcast(id: ID!, input: CreateBroadcastInput!): CreateBroadcastResponse!
-    deleteBroadcast(id: ID!): ResponseMessage
 
     bulkImportCallLogs(input: [BulkImportCallLogsInput]!): ResponseMessage!
     updateCallStatus(id: ID!, input: UpdateCallStatusInput!): ResponseMessage!

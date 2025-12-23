@@ -15,7 +15,7 @@ export interface SessionData {
 // In-memory session store (use Redis in production)
 const sessions = new Map<string, SessionData>()
 
-export function createSession(userId: string, email: string, role: string,phone: string): string {
+export function createSession(userId: string, email: string, role: string,phone?: string): string {
   const sessionId = uuidv4()
   const sessionData: SessionData = {
     userId,

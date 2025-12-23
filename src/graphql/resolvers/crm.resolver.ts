@@ -89,29 +89,6 @@ export const crmResolver = {
       }
       ,
 
-      // Broadcast Resolvers
-      getAllBroadcasts: async (_: any) => {
-         try {
-            const broadcast = await CrmService.getAllBroadcasts()
-            return broadcast;
-         } catch (error) {
-            throw new GraphQLError(`Failed to get broadcast: ${(error as Error).message}`, {
-               extensions: { code: "INTERNAL_ERROR" },
-            })
-         }
-      }
-      ,
-      getBroadcastById: async (_: any, { id }: any) => {
-         try {
-            const broadcast = await CrmService.getBroadcastById(id)
-            return broadcast;
-         } catch (error) {
-            throw new GraphQLError(`Failed to get broadcast: ${(error as Error).message}`, {
-               extensions: { code: "INTERNAL_ERROR" },
-            })
-         }
-      },
-
       // call logs
       getAllCallLogs: async (_: any,) => {
          try {
@@ -378,57 +355,7 @@ export const crmResolver = {
          }
       },
 
-      // Broadcast Mutations
-      createBroadcast: async (_: any, { input }: any, context: AdminContext) => {
-         if (!context.admin?.adminId) {
-            throw new GraphQLError("Authentication required", {
-               extensions: { code: "UNAUTHENTICATED" },
-            });
-         }
-         try {
-            const data = await CrmService.createBroadcast(input, context.admin.adminId);
-            return data;
-         } catch (error) {
-            throw new GraphQLError(`Failed to create Broadcast: ${(error as Error).message}`, {
-               extensions: { code: "INTERNAL_ERROR" },
-            });
-         }
-      },
-
-      updateBroadcast: async (_: any, { id, input }: any, context: AdminContext) => {
-         if (!context.admin?.adminId) {
-            throw new GraphQLError("Authentication required", {
-               extensions: { code: "UNAUTHENTICATED" },
-            });
-         }
-         try {
-            const data = await CrmService.updateBroadcast(id, input);
-            return data;
-         } catch (error) {
-            throw new GraphQLError(`Failed to update Broadcast: ${(error as Error).message}`, {
-               extensions: { code: "INTERNAL_ERROR" },
-            });
-         }
-      }
-      ,
-      deleteBroadcast: async (_: any, { id }: any, context: AdminContext) => {
-         if (!context.admin?.adminId) {
-            throw new GraphQLError("Authentication required", {
-               extensions: { code: "UNAUTHENTICATED" },
-            })
-         }
-         try {
-            const data = await CrmService.deleteBroadcast(id);
-            return data;
-         } catch (error) {
-            console.log(error);
-            throw new GraphQLError(`Failed to create Lead: ${(error as Error).message}`, {
-               extensions: { code: "INTERNAL_ERROR" },
-            })
-         }
-
-      }
-      ,
+   //   Call Logs
       bulkImportCallLogs: async (_: any, { input }: any, context: AdminContext) => {
          if (!context.admin?.adminId) {
             throw new GraphQLError("Authentication required", {

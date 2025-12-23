@@ -163,20 +163,29 @@ export class BlogService {
 
 static async getAllBlogs(status?: string,page:number=1,limit?:number) {
     const offset = (page - 1) * (limit || 20);
-      const data = db.select({
-        ...getTableColumns(blogPosts),
-        authorName: sql`${adminUsers.firstName} || ' ' || ${adminUsers.lastName}`.as("authorName"),
-      }).from(blogPosts).where(status ? eq(blogPosts.status, status as any) : sql`1=1`)
-      .leftJoin(adminUsers, eq(blogPosts.authorId, adminUsers.id))
-      .orderBy(desc(blogPosts.createdAt))
-      .limit(limit || 50)
-      .offset(offset || 0);
+    let query = db
+    .select({
+      ...getTableColumns(blogPosts),
+      authorName: sql`${adminUsers.firstName} || ' ' || ${adminUsers.lastName}`.as("authorName"),
+    })
+    .from(blogPosts)
+    .leftJoin(adminUsers, eq(blogPosts.authorId, adminUsers.id))
+    .where(status ? eq(blogPosts.status, status as any) : sql`1=1`)
+    .orderBy(desc(blogPosts.createdAt))
+    .$dynamic();
+  
+    if (limit !== undefined) {
+      query = query.limit(limit as number);
+    }
+    
+    if (offset !== undefined) {
+      query = query.offset(offset);
+    }
     const totalCountQuery = db.select({
       count: sql`COUNT(*)`.as("count"),
     }).from(blogPosts).where(status ? eq(blogPosts.status, status as any) : sql`1=1`);
-    const [blogs, totalCountResult] = await Promise.all([data, totalCountQuery]);
+    const [blogs, totalCountResult] = await Promise.all([query, totalCountQuery]);
     const totalCount = parseInt(totalCountResult[0].count as string, 10);
-    console.log(blogs);
     return {
       data: blogs,
       meta: { 
