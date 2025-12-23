@@ -213,7 +213,7 @@ export class PlatformUserService {
                             lastLoginAt: platformUsers.lastLoginAt,
                             isActive: platformUsers.isActive,
                             updatedAt: platformUsers.updatedAt,
-                            isVerified: platformUsers.isVerified,
+                        isVerified: sql<boolean>`COALESCE(${platformUsers.isVerified}, false)`,
                             listings: sql<number>`COUNT(${schema.properties.listingId})`.as("listings")
                         },
                         profile: {
@@ -375,6 +375,7 @@ export class PlatformUserService {
                         email: platformUsers.email,
                         role: platformUsers.role,
                         isActive: platformUsers.isActive,
+                        isVerified: sql<boolean>`COALESCE(${platformUsers.isVerified}, false)`,
                         lastLoginAt: platformUsers.lastLoginAt,
                         updatedAt: platformUsers.updatedAt,
                         createdAt: platformUsers.createdAt,
