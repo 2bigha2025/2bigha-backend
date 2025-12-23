@@ -143,6 +143,7 @@ type Property {
     nearbyActivities :[String]
     scenicFeatures:[String]
     amenities:[String]
+    ownerId:String
   ownerName: String
   ownerPhone: String
   ownerWhatsapp: String
@@ -528,7 +529,7 @@ type PaginatedFarms {
 
     # Property Mutations
   extend type Mutation {
-    createFarmByAdmin(input: CreateFarmsInput!): Property!
+    createFarmByAdmin(input: CreateFarmsInput!): Properties!
     createFarmByUser(input: CreateFarmsInput!): Properties!
     # updateFarms(id: ID!, input: UpdateFarmsInput!): Property!
     # deleteFarms(id: ID!): Boolean!

@@ -203,6 +203,7 @@ export const farmResolvers = {
         );
         return property;
       } catch (error) {
+        console.log("error : ", error)
         if (error instanceof GraphQLError) {
           throw error; // This is crucial!
         }
