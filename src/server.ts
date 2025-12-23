@@ -107,16 +107,27 @@ const startServer = async () => {
   app.post("/interakt/callback", async (req, res) => {
     try {
       const payload = req.body;
-      console.log('>>>>entityType>>>>>',payload.entityType)
+      console.log('>>>>entityType>>>>>', payload.entityType)
       console.log("Incoming WhatsApp Reply:", payload);
 
       // verify event type
-      if (payload.entityType === "USER_MESSAGE") {
-        await CrmWhatsAppService.handleMessageReceived(payload);
-      }else if(payload.entityType==="SERVER_EVENT"){
+      if (payload.data.message.chat_message_type === "CustomerMessage") {
+        await CrmWhatsAppService.handleMessageReceived(payload.data);
+      } else if (payload.entityType === "SERVER_EVENT") {
 
-      }else if(payload.entityType==="USER_EVENT"){
+      } else if (payload.entityType === "USER_EVENT") {
 
+      }
+
+      if (payload.type === "message_api_sent" || payload.type === "message_api_delivered" || payload.type === "message_api_read") {
+        const messageData = {
+          messageId : payload.message.id,
+          status : payload.message.message_status.toLowerCase(),
+          receivedAt :payload.message.received_at_utc,
+          seenAt :payload.message.seen_at_utc,
+          deliveredAt :payload.message.delivered_at_utc
+        }
+        await CrmWhatsAppService.handleMessageStatus(messageData);
       }
 
       // Always respond OK

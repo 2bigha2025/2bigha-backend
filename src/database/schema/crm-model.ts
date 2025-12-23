@@ -149,6 +149,9 @@ export const template = pgTable("template", {
   status: text("status"),
   waTemplateId: text('wa_template_id'),
   variablePresent: text('variable_present'),
+  fileHandle:text("file_handle"),
+  fileUrl:text("file_url"),
+  fileName:text("file_name"),
   createdBy: uuid("created_by").references(() => adminUsers.id, {
     onDelete: "set null",
   }),
@@ -204,8 +207,12 @@ export const chatMessage = pgTable("chat_message", {
   direction: text("direction").notNull(), // "incoming" | "outgoing"
   msgType: text("msg_type").notNull(), // "template" | "text" | "media" | "reply"
   message: text("message"),
-  meta: jsonb("meta"), // store template metadata, buttons, or other JSON
+  templateId:uuid("templateId").references(() => template.Id, { onDelete: "set null"  }),
   interaktMessageId: text("interakt_message_id"),
+  status:text("status"),
+  receivedAt:timestamp("received_at"),
+  deliveredAt:timestamp("delivered_at"),
+  seenAt:timestamp("seen_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   createdBy: uuid("created_by").references(() => adminUsers.id, { onDelete: "set null"  }),
 });
