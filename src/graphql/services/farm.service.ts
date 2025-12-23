@@ -528,6 +528,16 @@ export class FarmService {
         property: properties,
         seo: propertySeo,
         verification: propertyVerification,
+        user: {
+          // CREATOR details
+          firstName: sql`
+            COALESCE(${adminUsers.firstName})
+          `.as("firstName"),
+          lastName: sql`
+            COALESCE(${adminUsers.lastName})
+          `.as("lastName"),
+        },
+      
         images: sql`
                     COALESCE(json_agg(${propertyImages}.*) 
                     FILTER (WHERE ${propertyImages}.id IS NOT NULL), '[]')
@@ -539,14 +549,14 @@ export class FarmService {
         eq(properties.id, propertyVerification.propertyId)
       )
       .innerJoin(propertySeo, eq(properties.id, propertySeo.propertyId))
-      .leftJoin(platformUsers, eq(properties.createdByUserId, platformUsers.id))
+      .leftJoin(adminUsers, eq(properties.createdByAdminId, adminUsers.id))
       .leftJoin(propertyImages, eq(properties.id, propertyImages.propertyId))
       .where(whereCondition)
       .groupBy(
         properties.id,
         propertySeo.id,
         propertyVerification.id,
-        platformUsers.id
+        adminUsers.id
       )
       .orderBy(desc(properties.createdAt))
       .limit(limit)
@@ -555,7 +565,7 @@ export class FarmService {
     const [{ count }] = await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(properties)
-      .leftJoin(platformUsers, eq(properties.createdByUserId, platformUsers.id))
+      .leftJoin(adminUsers, eq(properties.createdByAdminId, adminUsers.id))
       .where(whereCondition);
 
     return {
@@ -1294,6 +1304,8 @@ static async getTopFarms(userId?: string, page?: number, limit = 5) {
           createdByAdminId: userID,
           approvalStatus: "PENDING",
           ownerId: propertyData.contactDetails.ownerId,
+          ownerName: propertyData.contactDetails.ownerName,
+          ownerPhone: propertyData.contactDetails.phoneNumber,
           waterLevel: propertyData.farmDetailsSchema.waterLevel,
           highwayConn: propertyData.farmDetailsSchema.highwayConn,
           roadAccess: propertyData.farmDetailsSchema.roadAccess,
@@ -1399,7 +1411,7 @@ const [property] = await db
       images: imagesResult,
       user: user,
     };
-    
+
     return result;
   }
 
