@@ -103,7 +103,7 @@ export const platformUserResolvers = {
                     lastName: user.lastName,
                     role: user.role,
                     isActive: user.isActive,
-                    isVerified: user.isVerified,
+                    isVerified: Boolean(user.isVerified),
                     createdAt: user.createdAt.toISOString(),
                     profile: user.profile
                         ? {
@@ -611,7 +611,7 @@ export const platformUserResolvers = {
                     lastName: updatedUser.lastName,
                     role: updatedUser.role,
                     isActive: updatedUser.isActive,
-                    isVerified: updatedUser.isVerified,
+                    isVerified: Boolean(updatedUser.isVerified),
                     updatedAt: new Date().toISOString(),
                     profile: updatedUser.profile
                         ? {
