@@ -1271,16 +1271,17 @@ static async getTopFarms(userId?: string, page?: number, limit = 5) {
         .insert(properties)
         .values({
           id: propertyId,
-          source: "FARMS",
+          source: propertyData.farmDetailsSchema.source,
+          propertyName: propertyData.farmDetailsSchema.propertyName,
           propertyType:
-            propertyData.propertyDetailsSchema.propertyType.toUpperCase(),
+            propertyData.farmDetailsSchema.propertyType.toUpperCase(),
           status: "PUBLISHED",
-          price: parseFloat(propertyData.propertyDetailsSchema.totalPrice),
-          area: parseFloat(propertyData.propertyDetailsSchema.area),
+          price: parseFloat(propertyData.farmDetailsSchema.price),
+          area: parseFloat(propertyData.farmDetailsSchema.area),
           pricePerUnit: parseFloat(
-            propertyData.propertyDetailsSchema.pricePerUnit
+            propertyData.farmDetailsSchema.pricePerUnit
           ),
-          areaUnit: propertyData.propertyDetailsSchema.areaUnit.toUpperCase(),
+          areaUnit: propertyData.farmDetailsSchema.areaUnit.toUpperCase(),
 
           address: propertyData.location.address,
           city: propertyData.location.city,
@@ -1293,27 +1294,33 @@ static async getTopFarms(userId?: string, page?: number, limit = 5) {
           createdByAdminId: userID,
           approvalStatus: "PENDING",
           ownerId: propertyData.contactDetails.ownerId,
-          waterLevel: propertyData.propertyDetailsSchema.waterLevel,
-          landMark: propertyData.propertyDetailsSchema.landMark,
-          category: propertyData.propertyDetailsSchema.category,
-          highwayConn: propertyData.propertyDetailsSchema.highwayConn,
-          landZoning: propertyData.propertyDetailsSchema.landZoning,
-          ownersCount: propertyData.propertyDetailsSchema.ownersCount,
-          ownershipYes: propertyData.propertyDetailsSchema.ownershipYes,
-          soilType: propertyData.propertyDetailsSchema.soilType,
-          roadAccess: propertyData.propertyDetailsSchema.roadAccess,
-          roadAccessDistance:
-            propertyData.propertyDetailsSchema.roadAccessDistance,
-          landMarkName: propertyData.propertyDetailsSchema.landMarkName,
-          roadAccessWidth: propertyData.propertyDetailsSchema.roadAccessWidth,
+          waterLevel: propertyData.farmDetailsSchema.waterLevel,
+          highwayConn: propertyData.farmDetailsSchema.highwayConn,
+          roadAccess: propertyData.farmDetailsSchema.roadAccess,
+          roadAccessDistance: propertyData.farmDetailsSchema.roadAccessDistance,
+          roadAccessWidth: propertyData.farmDetailsSchema.roadAccessWidth,
           roadAccessDistanceUnit:
-            propertyData.propertyDetailsSchema.roadAccessDistanceUnit,
+            propertyData.farmDetailsSchema.roadAccessDistanceUnit,
+
+          //  added column
+          listingType: propertyData.farmDetailsSchema.listingType,
+          listingAs: propertyData.contactDetails.listingAs,
+          isPriceNegotiable: propertyData.farmDetailsSchema.isPriceNegotiable,
+          hasGatedCommunity: propertyData.farmDetailsSchema.hasGatedCommunity,
+          multipleSizeOptions:
+            propertyData.farmDetailsSchema.multipleSizeOptions,
+          nearestMajorCity: propertyData.farmDetailsSchema.nearestMajorCity,
+          nearbyActivities: propertyData.farmDetailsSchema.nearbyActivities,
+          scenicFeatures: propertyData.farmDetailsSchema.scenicFeatures,
+          amenities: propertyData.farmDetailsSchema.amenities,
         })
         .returning({ listing_id: properties.listingId });
 
-      const generateSeo = await SeoGenerator.generateSEOFields(
+      const generateSeo = await SeoGenerator.generateFarmsSEOFields(
         createdProperty[0].listing_id,
-        propertyData.propertyDetailsSchema.propertyType,
+        // propertyData.propertyDetailsSchema.farmName
+        propertyData.farmDetailsSchema.propertyName,
+        propertyData.farmDetailsSchema.propertyType,
         propertyData.location.city,
         propertyData.location.district
       );
@@ -1354,11 +1361,11 @@ static async getTopFarms(userId?: string, page?: number, limit = 5) {
         verificationMessage: "Verification Pending",
       });
     });
-
-    const [property] = await db
+const [property] = await db
       .select()
       .from(properties)
       .where(eq(properties.id, propertyId));
+
     const [seo] = await db
       .select()
       .from(propertySeo)
@@ -1371,28 +1378,9 @@ static async getTopFarms(userId?: string, page?: number, limit = 5) {
       .select()
       .from(propertyImages)
       .where(eq(propertyImages.propertyId, propertyId));
-    const result = {
-      ...property,
-      seo,
-      verification,
-      images: imagesResult,
-    };
-
-    return result;
-  }
-
-  static async createFarmByUser(propertyData: any, userID: string) {
-    const propertyId = uuidv4();
-
-    const phone = propertyData?.contactDetails?.phoneNumber;
-    if (!phone) {
-      throw new Error("Phone number is required in contactDetails");
-    }
-
-    let ownerUser = await db
+    let [user] = await db
       .select({
-        userId: platformUsers.id,
-        userPhone: platformUserProfiles.phone, // or whatever the column is named
+        phone: platformUserProfiles.phone, // or whatever the column is named
         firstName: platformUsers.firstName,
         role: platformUsers.role,
       })
@@ -1401,61 +1389,95 @@ static async getTopFarms(userId?: string, page?: number, limit = 5) {
         platformUserProfiles,
         eq(platformUsers.id, platformUserProfiles.userId)
       )
-      .where(eq(platformUserProfiles.phone, phone)) // Query from profile table
+      .where(eq(platformUserProfiles.userId, userID)) // Query from profile table
       .limit(1);
 
-    let ownerId: string;
-
-    if (ownerUser.length > 0) {
-      // User exists - get from joined result
-       if (
-    ownerUser[0].firstName &&
-    propertyData?.contactDetails?.ownerName  &&
-    propertyData?.contactDetails?.ownerName.trim().toLowerCase() !==
-     ownerUser[0].firstName.toLowerCase()
-  ) {
-    throw new GraphQLError(
-      "This phone number already exists with a different user/company name",
-      {
-        extensions: {
-          code: "OWNER_NAME_MISMATCH",
-          field: "contactDetails.ownerName",
-        },
-      }
-    );
+    const result = {
+      property: property,
+      seo,
+      verification,
+      images: imagesResult,
+      user: user,
+    };
+    
+    return result;
   }
-      ownerId = ownerUser[0].userId;
-      console.log("📌 Existing user found by phone, using ownerId:", ownerId);
-    } else {
-      // Create new user
-      const newUserId = uuidv4();
 
-      await db.transaction(async (tx) => {
-        // Insert into platformUsers
-        await tx.insert(platformUsers).values({
-          id: newUserId,
-          firstName: propertyData?.contactDetails?.ownerName || null,
-          role: propertyData?.contactDetails?.listingAs || null,
-          isActive: true,
-          createdAt: new Date(),
-        });
+  static async createFarmByUser(propertyData: any, userID: string) {
+    const propertyId = uuidv4();
 
-        // Insert into platform_user_profile with phone
-        await tx.insert(platformUserProfiles).values({
-          id: uuidv4(), // if needed
-          userId: newUserId,
-          phone: phone,
-          alternativePhone: propertyData?.contactDetails?.alternativePhone,
-          // other profile fields if available
-          // createdAt: new Date(),
-        });
-      });
+  //   const phone = propertyData?.contactDetails?.phoneNumber;
+  //   if (!phone) {
+  //     throw new Error("Phone number is required in contactDetails");
+  //   }
 
-      ownerId = newUserId;
-      console.log("✨ New platform user created with profile:", newUserId);
-    }
+  //   let ownerUser = await db
+  //     .select({
+  //       userId: platformUsers.id,
+  //       userPhone: platformUserProfiles.phone, // or whatever the column is named
+  //       firstName: platformUsers.firstName,
+  //       role: platformUsers.role,
+  //     })
+  //     .from(platformUsers)
+  //     .innerJoin(
+  //       platformUserProfiles,
+  //       eq(platformUsers.id, platformUserProfiles.userId)
+  //     )
+  //     .where(eq(platformUserProfiles.phone, phone)) // Query from profile table
+  //     .limit(1);
 
-    // Use ownerId also as createdByUserId
+  //   let ownerId: string;
+
+  //   if (ownerUser.length > 0) {
+  //     // User exists - get from joined result
+  //      if (
+  //   ownerUser[0].firstName &&
+  //   propertyData?.contactDetails?.ownerName  &&
+  //   propertyData?.contactDetails?.ownerName.trim().toLowerCase() !==
+  //    ownerUser[0].firstName.toLowerCase()
+  // ) {
+  //   throw new GraphQLError(
+  //     "This phone number already exists with a different user/company name",
+  //     {
+  //       extensions: {
+  //         code: "OWNER_NAME_MISMATCH",
+  //         field: "contactDetails.ownerName",
+  //       },
+  //     }
+  //   );
+  // }
+  //     ownerId = ownerUser[0].userId;
+  //     console.log("📌 Existing user found by phone, using ownerId:", ownerId);
+  //   } else {
+  //     // Create new user
+  //     const newUserId = uuidv4();
+
+  //     await db.transaction(async (tx) => {
+  //       // Insert into platformUsers
+  //       await tx.insert(platformUsers).values({
+  //         id: newUserId,
+  //         firstName: propertyData?.contactDetails?.ownerName || null,
+  //         role: propertyData?.contactDetails?.listingAs || null,
+  //         isActive: true,
+  //         createdAt: new Date(),
+  //       });
+
+  //       // Insert into platform_user_profile with phone
+  //       await tx.insert(platformUserProfiles).values({
+  //         id: uuidv4(), // if needed
+  //         userId: newUserId,
+  //         phone: phone,
+  //         alternativePhone: propertyData?.contactDetails?.alternativePhone,
+  //         // other profile fields if available
+  //         // createdAt: new Date(),
+  //       });
+  //     });
+
+  //     ownerId = newUserId;
+  //     console.log("✨ New platform user created with profile:", newUserId);
+  //   }
+
+  //   // Use ownerId also as createdByUserId
 
     const images = propertyData.images;
 
@@ -1500,7 +1522,7 @@ static async getTopFarms(userId?: string, page?: number, limit = 5) {
           publishedAt: new Date(),
           createdByType: "USER",
           createdByUserId: userID,
-          ownerId: ownerId,
+          ownerId: userID,
           approvalStatus: "PENDING",
           waterLevel: propertyData.farmDetailsSchema.waterLevel,
           highwayConn: propertyData.farmDetailsSchema.highwayConn,
@@ -1599,7 +1621,7 @@ static async getTopFarms(userId?: string, page?: number, limit = 5) {
         platformUserProfiles,
         eq(platformUsers.id, platformUserProfiles.userId)
       )
-      .where(eq(platformUserProfiles.userId, ownerId)) // Query from profile table
+      .where(eq(platformUserProfiles.userId, userID)) // Query from profile table
       .limit(1);
 
     const result = {

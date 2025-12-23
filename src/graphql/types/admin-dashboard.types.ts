@@ -17,6 +17,7 @@ export const adminDashboardTypeDefs = `#graphql
     OWNER
     AGENT
     USER
+    COMPANY
   }
 
   type PlatformUser {
