@@ -117,7 +117,7 @@ input createManagedPropertyInput {
 type Query {
   getManagedProeprtiesByUser(page: Int, limit: Int): UserPropertyResult
   getManagedUserPropertiesID(property_id: String): UserProperty
-  getAllManagedProperties(page: Int, limit: Int, searchTerm:String): UserPropertyResult
+  getAllManagedProperties(page: Int, limit: Int, searchTerm:String, billingCycle: String, planName: String, status: String): UserPropertyResult
 }
 
 type Mutation {
