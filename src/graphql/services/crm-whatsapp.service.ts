@@ -6,8 +6,8 @@ import { adminUsers } from "../../database/schema/admin-user";
 import whatsAppInstance from '../../axios-instances/whatsApp'
 import { alias } from "drizzle-orm/pg-core";
 
+import { io } from "../../server";
 
-// import { io } from "socket.io"
 export class CrmWhatsAppService {
 
     // Template
@@ -603,6 +603,8 @@ export class CrmWhatsAppService {
             lastName: adminUsers.lastName,
         }).from(adminUsers).where(eq(adminUsers.id, adminId));
 
+        io.to(threadId).emit("new-message", savedMessage);
+
         return {
             result: {
                 ...savedMessage,
@@ -662,15 +664,22 @@ export class CrmWhatsAppService {
         const { customer, message } = payload;
 
         let threadDetail = null;
+        let customerNumber = customer.phone_number;
+        let fullNumber = "+91" + customerNumber;
 
-        const [leadData] = await db.select({leadId: lead.Id}).from(lead)
-            .innerJoin(schema.platformUserProfiles,eq(schema.platformUserProfiles.userId, lead.clientId)).where(eq(schema.platformUserProfiles.phone, customer.phone_number));
+        const [leadData] = await db.select({ leadId: lead.Id }).from(lead)
+            .innerJoin(schema.platformUserProfiles, eq(schema.platformUserProfiles.userId, lead.clientId)).where(
+                or(
+                    eq(schema.platformUserProfiles.phone, customerNumber),
+                    eq(schema.platformUserProfiles.phone, fullNumber)
+                )
+            );
 
         [threadDetail] = await db.select({ Id: chatThread.Id, createdBy: chatThread.createdBy }).from(chatThread).where(eq(chatThread.leadId, leadData.leadId));
 
 
         // Save to DB (Prisma Example)
-        await db.insert(chatMessage).values({
+        const [savedMessage] = await db.insert(chatMessage).values({
             threadId: threadDetail.Id,
             leadId: leadData.leadId,
             direction: "incoming",
@@ -679,8 +688,11 @@ export class CrmWhatsAppService {
             interaktMessageId: message.id,
             createdAt: new Date(message.received_at_utc),
             createdBy: threadDetail.createdBy,
-            status:message.message_status.toLowerCase(),
-        });
+            status: message.message_status.toLowerCase(),
+        }).returning();
+
+        io.to(threadDetail.Id).emit("new-message", savedMessage);
+
     }
 
     static async handleMessageStatus(messageData: any) {
@@ -689,7 +701,15 @@ export class CrmWhatsAppService {
             receivedAt: messageData.receivedAt,
             seenAt: messageData.seenAt,
             deliveredAt: messageData.deliveredAt
-        }).where(eq(chatMessage.Id, messageData.messageId));
+        }).where(eq(chatMessage.interaktMessageId, messageData.messageId));
+
+        const [threadId] = await db.select({ Id: chatMessage.threadId }).from(chatMessage).where(eq(chatMessage.interaktMessageId, messageData.messageId));
+
+        io.to(threadId.Id).emit("message-status-update", {
+            messageId: messageData.messageId,
+            status: messageData.status,
+        });
+
     }
 
 
