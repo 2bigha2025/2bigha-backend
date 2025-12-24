@@ -1,4 +1,5 @@
 export const crmWhatsAppTypeDefs = `#graphql
+scalar Upload
 
 # Template
 type Template{
@@ -13,6 +14,8 @@ type Template{
     buttonType: String
     buttons: JSON
     status: String
+    fileUrl: String
+    fileName: String
     waTemplateId: String
     variablePresent: String
     createdBy: ID
@@ -35,6 +38,7 @@ input CreateTemplateInput{
     headerFormat:String
     header:String
     body:String
+    # imageFile: String
     footer:String
     buttonType:String
     buttons:JSON
@@ -78,9 +82,8 @@ type Broadcast{
 
 input CreateBroadcastInput{
     templateId:ID
-    TemplateName:String!
     campaignId:ID!
-    phoneNumbers:JSON
+    recipients:JSON
     groupId: ID
     callStatus:String
 }
@@ -116,10 +119,8 @@ type ResponseMessage {
 # WhatsApp Chat
 input SendTemplateInput{
     phoneNumber:String
-    templateName:String
     leadId:ID
-    templateBody:String
-    meta: JSON
+    templateId: ID
 }
 
 type WhatsAppThread{
@@ -127,6 +128,7 @@ type WhatsAppThread{
     leadId:ID
     lastMessage:String
     lastMessageAt:Date
+    unreadCount:Int
     unread:Int
     clientPhone:String
     clientName:String
@@ -146,10 +148,23 @@ type WhatsAppMessage{
     direction: String
     msgType: String
     message: String
-    meta: JSON
+    interaktMessageId: ID
+    templateId: ID
+    headerFormat:String
+    header:String
+    body:String
+    footer:String
+    buttons:JSON
+    fileUrl:String
+    unreadCount:Int
+    status:String
+    receivedAt:Date
+    deliveredAt:Date
+    seenAt:Date
     createdBy: String
     createdAt: Date
     createdByName: String
+
 }
 
 type WhatsAppMessageResponse{
@@ -193,3 +208,5 @@ extend type Mutation{
     sendTextMessage(input: SendTextInput): SendTextMessageResponse
 }
 `;
+
+

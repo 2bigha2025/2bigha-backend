@@ -37,6 +37,7 @@ enum ListingAs {
   OWNER
   AGENT
   BUILDER
+  COMPANY
 }
 
 enum landStatus {
