@@ -2,15 +2,16 @@ import axios from "axios";
 
 const baseURL = process.env.WHATSAPP_DOMAIN || "";
 
+// JSON APIs (templates, messages)
 const whatsAppInstance = axios.create({
   baseURL,
   headers: {
     "Content-Type": "application/json",
-    "Authorization": `Basic ${process.env.WHATSAPP_SECRET_KEY}`,
+    Authorization: `Basic ${process.env.WHATSAPP_SECRET_KEY}`,
   },
 });
 
-// Optional: interceptors for logging / error handling
+// Interceptors
 whatsAppInstance.interceptors.response.use(
   (response) => response.data,
   (error) => {

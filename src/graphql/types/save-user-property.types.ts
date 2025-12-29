@@ -6,7 +6,7 @@ enum PropertyType { RESIDENTIAL COMMERCIAL }
 enum AreaUnit { SQFT SQM SQYRD }
 enum CreatedByType { USER ADMIN }
 enum ApprovalStatus { APPROVED PENDING REJECTED }
-enum ListingAs { OWNER AGENT BUILDER }
+enum ListingAs { OWNER AGENT BUILDER COMPANY}
 
 type Image {
   url: String!

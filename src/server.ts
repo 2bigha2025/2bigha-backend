@@ -14,6 +14,9 @@ import { resolvers } from './graphql/resolvers'
 import { getSession } from './config/auth'
 import { CrmWhatsAppService } from './graphql/services/crm-whatsapp.service'
 
+import { Server as SocketIOServer } from "socket.io";
+
+
 dotenv.config()
 
 interface MyContext {
@@ -29,7 +32,7 @@ const startServer = async () => {
   const app = express()
   const httpServer = http.createServer(app)
 
-  // ✅ Build schema with constraint directive
+  // Build schema with constraint directive
   const schema = makeExecutableSchema({
     typeDefs,
     resolvers,
@@ -43,7 +46,15 @@ const startServer = async () => {
 
   await server.start()
 
-  // ✅ Middleware order matters
+  // socket
+  const io = new SocketIOServer(httpServer, {
+  cors: {
+    origin: "*", // tighten later
+  },
+});
+
+
+  // Middleware order matters
   app.use(cors())
 
   // Increase payload size limit (JSON + URL-encoded)
@@ -79,6 +90,24 @@ const startServer = async () => {
     })
   )
 
+  // socket
+  io.on("connection", (socket) => {
+  console.log("Socket connected:", socket.id);
+
+  socket.on("join-thread", (threadId: string) => {
+    socket.join(threadId);
+    console.log(`Socket ${socket.id} joined thread ${threadId}`);
+  });
+
+  socket.on("leave-thread", (threadId: string) => {
+    socket.leave(threadId);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Socket disconnected:", socket.id);
+  });
+});
+
 
   // Kommuno webhook for call events
   app.post("/kommuno/callback", express.json(), async (req, res) => {
@@ -104,19 +133,30 @@ const startServer = async () => {
     }
   });
 
+  // Interakt WhatsApp webhook for incoming message
   app.post("/interakt/callback", async (req, res) => {
     try {
       const payload = req.body;
-      console.log('>>>>entityType>>>>>',payload.entityType)
       console.log("Incoming WhatsApp Reply:", payload);
 
       // verify event type
-      if (payload.entityType === "USER_MESSAGE") {
-        await CrmWhatsAppService.handleMessageReceived(payload);
-      }else if(payload.entityType==="SERVER_EVENT"){
+      if (payload.data.message.chat_message_type === "CustomerMessage") {
+        await CrmWhatsAppService.handleMessageReceived(payload.data);
+      } else if (payload.entityType === "SERVER_EVENT") {
 
-      }else if(payload.entityType==="USER_EVENT"){
+      } else if (payload.entityType === "USER_EVENT") {
 
+      }
+
+      if (payload.type === "message_api_sent" || payload.type === "message_api_delivered" || payload.type === "message_api_read") {
+        const messageData = {
+          messageId : payload.message.id,
+          status : payload.message.message_status.toLowerCase(),
+          receivedAt :payload.message.received_at_utc,
+          seenAt :payload.message.seen_at_utc,
+          deliveredAt :payload.message.delivered_at_utc
+        }
+        await CrmWhatsAppService.handleMessageStatus(messageData);
       }
 
       // Always respond OK
@@ -133,6 +173,9 @@ const startServer = async () => {
     console.log(`🚀 Server ready at http://localhost:${PORT}/graphql`)
   })
 }
+
+export let io: SocketIOServer;
+
 
 startServer().catch((err) => {
   console.error('Failed to start server:', err)
