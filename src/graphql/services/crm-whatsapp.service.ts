@@ -287,7 +287,7 @@ export class CrmWhatsAppService {
         const [templateData] = await db.select().from(template).where(eq(template.Id, templateId))
 
         // 2. Prepare chunking
-        const CHUNK_SIZE = 2; // 50 at a time (YOU CAN CHANGE THIS)
+        const CHUNK_SIZE = 50; // 50 at a time (YOU CAN CHANGE THIS)
         const DELAY_BETWEEN_CHUNKS = 500; // 0.5 sec delay to avoid rate limit
 
         const chunks = CrmWhatsAppService.chunkArray(recipients, CHUNK_SIZE);

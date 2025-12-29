@@ -107,7 +107,6 @@ const startServer = async () => {
   app.post("/interakt/callback", async (req, res) => {
     try {
       const payload = req.body;
-      console.log('>>>>entityType>>>>>', payload.entityType)
       console.log("Incoming WhatsApp Reply:", payload);
 
       // verify event type
