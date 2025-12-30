@@ -6,7 +6,7 @@ import { adminUsers } from "./admin-user";
 
 export const PlanType = pgEnum("PlanType", [
     "BASIC",
-    "STANDARD",
+    "ADVANCED",
     "PREMIUM"
 ])
 // --- Order / Payment related enums ---
@@ -43,7 +43,7 @@ export const TransactionType = pgEnum("TransactionType", [
 
 export const billingCycle = pgEnum("billingCycle",[
     "MONTHLY",
-    "QUATERLY",
+    "QUARTERLY",
     "YEARLY"
 ])
 
