@@ -69,6 +69,7 @@ input createManagedPropertyInput {
      pincode:Int
      AreaUnit: AreaUnit!,
      images: [Upload!],
+     userId: String
   }
 
   type managedPropertyResponse {

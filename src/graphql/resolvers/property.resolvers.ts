@@ -204,6 +204,32 @@ export const propertyResolvers = {
         });
       }
     },
+    createManagedProperty: async (
+      _: any,
+      { input }: { input: any },
+      context: AdminContext
+    ) => {
+      if (!context.admin?.adminId) {
+        throw new GraphQLError("Not authenticated", {
+          extensions: { code: "UNAUTHENTICATED" },
+        });
+      }
+
+      try {
+        const property = await PropertyService.createProperty(
+          input,
+          context.admin.adminId,
+          "published"
+        );
+
+        return property;
+      } catch (error) {
+        console.error("Create property error:", error);
+        throw new GraphQLError("Failed to create property", {
+          extensions: { code: "INTERNAL_ERROR" },
+        });
+      }
+    },
     updateProperty: async (
       _: any,
       { id, input }: { id: string; input: any },

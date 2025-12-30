@@ -522,6 +522,7 @@ type PaginatedProperties {
     # Property Mutations
   extend type Mutation {
     createProperty(input: CreatePropertyInput!): Property!
+    createManagedProperty(input: createManagedPropertyInput!): managedPropertyResponse!    
     updateProperty(id: ID!, input: UpdatePropertyInput!): Property
     deleteProperty(id: ID!): Boolean!
     updatePropertySeo(input: UpdateSeoInput!): Seo!

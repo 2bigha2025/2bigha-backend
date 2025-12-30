@@ -5,6 +5,11 @@ async function seedPlans() {
  
   dotenv.config()
     console.log("🌱 Seeding Admin Users with UUID and Activity Logs...")
+
+//TRUNCATE TABLE planvariants
+// RESTART IDENTITY
+// CASCADE;
+
   
     try {
       // Test connection
@@ -24,7 +29,7 @@ async function seedPlans() {
     },
     {
       planId: 2,
-      planName: "STANDARD",
+      planName: "ADVANCED",
       description: "A balanced plan designed for users who need more flexibility and additional visit allowances.",
       createdAt: new Date(),
       updatedAt: new Date()
