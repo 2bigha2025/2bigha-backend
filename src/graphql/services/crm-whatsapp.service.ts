@@ -560,7 +560,6 @@ export class CrmWhatsAppService {
             templateId: templateId || null,
             createdBy: adminId,
         }
-        console.log('>>>>>>insertingValues>>>>>',insertingValues)
         const message = await db.insert(chatMessage).values(insertingValues).returning()
 
         if (!response.result) {
@@ -690,20 +689,8 @@ export class CrmWhatsAppService {
                     eq(schema.platformUserProfiles.whatsappNumber, fullNumber)
                 )
             );
-            const data = await db.select({ leadId: lead.Id }).from(lead)
-            .innerJoin(schema.platformUserProfiles, eq(schema.platformUserProfiles.userId, lead.clientId)).where(
-                or(
-                    eq(schema.platformUserProfiles.whatsappNumber, customerNumber),
-                    eq(schema.platformUserProfiles.whatsappNumber, fullNumber)
-                )
-            ).toSQL()
 
-        console.log('>>>>>>>data>>>>',data)
-        console.log('>>>>>>>leadData>>>>>>',leadData);
         [threadDetail] = await db.select({ Id: chatThread.Id, createdBy: chatThread.createdBy }).from(chatThread).where(eq(chatThread.leadId, leadData.leadId));
-
-        console.log('>>>>>threadDetail>>>>>>',threadDetail)
-
 
         // Save to DB (Prisma Example)
         const messageData = {
@@ -717,11 +704,7 @@ export class CrmWhatsAppService {
             createdBy: threadDetail.createdBy,
             status: message.message_status.toLowerCase(),
         }
-        console.log('>>>>>>>messageData>>>>>',messageData)
         const [savedMessage] = await db.insert(chatMessage).values(messageData).returning();
-
-        console.log('>>>>>>>savedMessage>>>>>>',savedMessage)
-
         // io.to(threadDetail.Id).emit("new-message", savedMessage);
 
     }

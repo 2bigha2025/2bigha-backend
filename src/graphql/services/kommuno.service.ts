@@ -28,11 +28,7 @@ export class KommunoService {
             pilotNumber: kommunoConfig.virtualNumber,
         };
 
-        console.log('>>>>>>>body>>>>>',body)
-
         const data = await kommunoInstance.post("/kcrm/clickToCallWithLiveStatus", body);
-        console.log('>>>>>>>>data>>>>>',data)
-
         return { sessionId, data };
     }
 
@@ -81,8 +77,6 @@ export class KommunoService {
             });
         } else {
             // UPDATE STATUS ONLY
-            console.log('>>>>>>live_event>>>>>',live_event)
-            console.log('>>>>>>callId>>>>>>',callId)
            const response =  await db
                 .update(callLogs)
                 .set({
@@ -90,7 +84,6 @@ export class KommunoService {
                     AgentId: agentId ? agentId[0]?.Id : null
                 })
                 .where(eq(callLogs.Id, callId));            
-            console.log('>>>>>>response>>>>>',response)
         }
     }
 
