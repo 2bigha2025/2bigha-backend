@@ -530,6 +530,7 @@ export class CrmWhatsAppService {
     }
 
     static async saveMessages(response: any, leadId: string, templateMessage: string | null, adminId: string, templateId: string) {
+        try {
         let [templateSendAlready] = await db.select().from(chatThread).where(eq(chatThread.leadId, leadId));
         let result = null;
         if (!templateSendAlready) {
@@ -549,7 +550,7 @@ export class CrmWhatsAppService {
 
         result = templateSendAlready || result;
         // insert DB message
-        const message = await db.insert(chatMessage).values({
+        const insertingValues = {
             threadId: result?.Id,
             leadId: leadId,
             direction: "outgoing",
@@ -558,17 +559,20 @@ export class CrmWhatsAppService {
             interaktMessageId: response.id,
             templateId: templateId || null,
             createdBy: adminId,
-        }).returning()
-
-        console.log('>>>>>>message>>>>>>',message)
+        }
+        console.log('>>>>>>insertingValues>>>>>',insertingValues)
+        const message = await db.insert(chatMessage).values(insertingValues).returning()
 
         if (!response.result) {
             await db.update(chatMessage).set({
                 status: response.message
             }).where(eq(chatMessage.Id, message[0].Id))
         }
-
+        
         return response.message
+    } catch(err){
+        console.log('>>>>>>error>>>>>>',err)
+    }
     }
 
     static async sendTextMessage(input: any, adminId: any) {
