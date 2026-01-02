@@ -82,13 +82,17 @@ export class KommunoService {
             });
         } else {
             // UPDATE STATUS ONLY
-            await db
+            console.log('>>>>>>live_event>>>>>',live_event)
+            console.log('>>>>>>>systemAgentId>>>>>',systemAgentId)
+            console.log('>>>>>>callId>>>>>>',callId)
+           const response =  await db
                 .update(callLogs)
                 .set({
                     systemStatus: live_event === "evt_popup" ? "CONNECTED" : "RINGING",
                     AgentId: systemAgentId
                 })
-                .where(eq(callLogs.Id, callId));
+                .where(eq(callLogs.Id, callId));            
+            console.log('>>>>>>response>>>>>',response)
         }
     }
 
