@@ -619,7 +619,7 @@ export class CrmWhatsAppService {
             lastName: adminUsers.lastName,
         }).from(adminUsers).where(eq(adminUsers.id, adminId));
 
-        io.to(threadId).emit("new-message", savedMessage);
+        // io.to(threadId).emit("new-message", savedMessage);
 
         return {
             result: {
@@ -722,7 +722,7 @@ export class CrmWhatsAppService {
 
         console.log('>>>>>>>savedMessage>>>>>>',savedMessage)
 
-        io.to(threadDetail.Id).emit("new-message", savedMessage);
+        // io.to(threadDetail.Id).emit("new-message", savedMessage);
 
     }
 
@@ -738,10 +738,10 @@ export class CrmWhatsAppService {
         const  result = await db.select({ Id: chatMessage.threadId }).from(chatMessage).where(eq(chatMessage.interaktMessageId, messageData.messageId)).toSQL()
         const [threadId] = await db.select({ Id: chatMessage.threadId }).from(chatMessage).where(eq(chatMessage.interaktMessageId, messageData.messageId));
 
-        io.to(threadId.Id).emit("message-status-update", {
-            messageId: messageData.messageId,
-            status: messageData.status,
-        });
+        // io.to(threadId.Id).emit("message-status-update", {
+        //     messageId: messageData.messageId,
+        //     status: messageData.status,
+        // });
 
     }
 
