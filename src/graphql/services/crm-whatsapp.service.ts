@@ -508,7 +508,8 @@ export class CrmWhatsAppService {
         console.log('>>>>>>templateData>>>>>>>',templateData)
         const templateBody:any = {
             phoneNumber, TemplateName: templateData.name,
-            fileName: templateData.fileName
+            fileName: templateData.fileName,
+            headerValues : ['']
         }
         if(templateData.fileUrl){
             templateBody['headerValues'] = [templateData.fileUrl]
