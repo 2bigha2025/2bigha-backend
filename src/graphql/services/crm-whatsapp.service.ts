@@ -698,9 +698,9 @@ export class CrmWhatsAppService {
     static async handleMessageStatus(messageData: any) {
         await db.update(chatMessage).set({
             status: messageData.status,
-            receivedAt: messageData.receivedAt,
-            seenAt: messageData.seenAt,
-            deliveredAt: messageData.deliveredAt
+            receivedAt: messageData.receivedAt ? new Date(messageData.receivedAt) : null,
+            seenAt: messageData.seenAt ? new Date(messageData.seenAt) : null,
+            deliveredAt: messageData.deliveredAt ? new Date(messageData.deliveredAt) : null
         }).where(eq(chatMessage.interaktMessageId, messageData.messageId));
 
         const [threadId] = await db.select({ Id: chatMessage.threadId }).from(chatMessage).where(eq(chatMessage.interaktMessageId, messageData.messageId));
