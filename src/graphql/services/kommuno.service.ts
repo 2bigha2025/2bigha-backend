@@ -46,7 +46,6 @@ export class KommunoService {
             date_time
         } = payload;
 
-        const systemAgentId = agent_details?.agent_id || null;
         const agentNumber = agent_details?.agent_number || null;
         const clientNumber = from || null;
         let agentId = null;
@@ -83,13 +82,12 @@ export class KommunoService {
         } else {
             // UPDATE STATUS ONLY
             console.log('>>>>>>live_event>>>>>',live_event)
-            console.log('>>>>>>>systemAgentId>>>>>',systemAgentId)
             console.log('>>>>>>callId>>>>>>',callId)
            const response =  await db
                 .update(callLogs)
                 .set({
                     systemStatus: live_event === "evt_popup" ? "CONNECTED" : "RINGING",
-                    AgentId: systemAgentId
+                    AgentId: agentId ? agentId[0]?.Id : null
                 })
                 .where(eq(callLogs.Id, callId));            
             console.log('>>>>>>response>>>>>',response)
