@@ -706,7 +706,7 @@ export class CrmWhatsAppService {
 
 
         // Save to DB (Prisma Example)
-        const [savedMessage] = await db.insert(chatMessage).values({
+        const messageData = {
             threadId: threadDetail.Id,
             leadId: leadData.leadId,
             direction: "incoming",
@@ -716,7 +716,11 @@ export class CrmWhatsAppService {
             createdAt: new Date(message.received_at_utc),
             createdBy: threadDetail.createdBy,
             status: message.message_status.toLowerCase(),
-        }).returning();
+        }
+        console.log('>>>>>>>messageData>>>>>',messageData)
+        const [savedMessage] = await db.insert(chatMessage).values(messageData).returning();
+
+        console.log('>>>>>>>savedMessage>>>>>>',savedMessage)
 
         io.to(threadDetail.Id).emit("new-message", savedMessage);
 
