@@ -156,6 +156,7 @@ const startServer = async () => {
           seenAt :payload.message.seen_at_utc,
           deliveredAt :payload.message.delivered_at_utc
         }
+        console.log('>>>>>messageData>>>>>>>',messageData)
         await CrmWhatsAppService.handleMessageStatus(messageData);
       }
 
