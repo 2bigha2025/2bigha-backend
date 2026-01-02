@@ -149,13 +149,13 @@ const startServer = async () => {
       }
 
       if (payload.type === "message_api_sent" || payload.type === "message_api_delivered" || payload.type === "message_api_read") {
-        console.log('>>>>>>payloadData>>>>>',payload.data)
+        const payloadData = payload.data
         const messageData = {
-          messageId : payload.message.id,
-          status : payload.message.message_status.toLowerCase(),
-          receivedAt :payload.message.received_at_utc,
-          seenAt :payload.message.seen_at_utc,
-          deliveredAt :payload.message.delivered_at_utc
+          messageId : payloadData.message.id,
+          status : payloadData.message.message_status.toLowerCase(),
+          receivedAt :payloadData.message.received_at_utc,
+          seenAt :payloadData.message.seen_at_utc,
+          deliveredAt :payloadData.message.delivered_at_utc
         }
         console.log('>>>>>messageData>>>>>>>',messageData)
         await CrmWhatsAppService.handleMessageStatus(messageData);
