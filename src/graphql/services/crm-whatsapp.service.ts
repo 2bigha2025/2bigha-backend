@@ -506,11 +506,15 @@ export class CrmWhatsAppService {
 
         const [templateData] = await db.select().from(template).where(eq(template.Id, templateId))
         console.log('>>>>>>templateData>>>>>>>',templateData)
-
-        const response = await CrmWhatsAppService.sendTemplateApi({
-            phoneNumber, TemplateName: templateData.name, headerValues: [templateData.fileUrl],
+        const templateBody:any = {
+            phoneNumber, TemplateName: templateData.name,
             fileName: templateData.fileName
-        });
+        }
+        if(templateData.fileUrl){
+            templateBody['headerValues'] = [templateData.fileUrl]
+        }
+
+        const response = await CrmWhatsAppService.sendTemplateApi(templateBody);
         console.log('>>>>>>response>>>>>',response)
         console.log('>>>>>>leadId>>>>>>',leadId)
         console.log('>>>>>>>templateData>>>>>>',templateData)
