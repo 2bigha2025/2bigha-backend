@@ -28,7 +28,10 @@ export class KommunoService {
             pilotNumber: kommunoConfig.virtualNumber,
         };
 
+        console.log('>>>>>>>body>>>>>',body)
+
         const data = await kommunoInstance.post("/kcrm/clickToCallWithLiveStatus", body);
+        console.log('>>>>>>>>data>>>>>',data)
 
         return { sessionId, data };
     }
