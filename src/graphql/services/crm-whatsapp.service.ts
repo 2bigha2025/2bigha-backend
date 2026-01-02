@@ -510,6 +510,11 @@ export class CrmWhatsAppService {
             phoneNumber, TemplateName: templateData.name, headerValues: [templateData.fileUrl],
             fileName: templateData.fileName
         });
+        console.log('>>>>>>response>>>>>',response)
+        console.log('>>>>>>leadId>>>>>>',leadId)
+        console.log('>>>>>>>templateData>>>>>>',templateData)
+        console.log('>>>>>>>adminId>>>>>>',adminId)
+        console.log('>>>>>>>templateId>>>>>>',templateId)
 
         const message = await CrmWhatsAppService.saveMessages(response, leadId, templateData?.body, adminId, templateId);
 
