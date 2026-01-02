@@ -407,11 +407,12 @@ export class CrmWhatsAppService {
             template: {
                 name: TemplateName,
                 languageCode: "en",
-                fileName: fileName
             }
         }
-        if(headerValues) {
+
+        if(headerValues){
             templatePayload.template.headerValues = headerValues
+            templatePayload.template.fileName = fileName
         }
         console.log('>>>>>>headerValues>>>>>>',headerValues)
         console.log('>>>>>>>templatePayload>>>>>>',templatePayload)
