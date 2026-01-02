@@ -413,6 +413,8 @@ export class CrmWhatsAppService {
         if(headerValues) {
             templatePayload.template.headerValues = headerValues
         }
+        console.log('>>>>>>headerValues>>>>>>',headerValues)
+        console.log('>>>>>>>templatePayload>>>>>>',templatePayload)
         try {
             const templateData = await whatsAppInstance.post("/message/", templatePayload) as { result?: any, message?: string, id?: string };
             return templateData;
@@ -512,15 +514,14 @@ export class CrmWhatsAppService {
             phoneNumber,
             TemplateName: templateData.name,
             fileName: templateData.fileName,
-            headerValues : [templateData.fileUrl]
+            headerValues : null
+        }
+
+        if(templateData.fileUrl){
+            templateBody['headerValues'] = [templateData.fileUrl]
         }
 
         const response = await CrmWhatsAppService.sendTemplateApi(templateBody);
-        console.log('>>>>>>response>>>>>',response)
-        console.log('>>>>>>leadId>>>>>>',leadId)
-        console.log('>>>>>>>templateData>>>>>>',templateData)
-        console.log('>>>>>>>adminId>>>>>>',adminId)
-        console.log('>>>>>>>templateId>>>>>>',templateId)
 
         const message = await CrmWhatsAppService.saveMessages(response, leadId, templateData?.body, adminId, templateId);
 
