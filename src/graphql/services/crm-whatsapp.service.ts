@@ -527,7 +527,7 @@ export class CrmWhatsAppService {
     static async saveMessages(response: any, leadId: string, templateMessage: string | null, adminId: string, templateId: string) {
         let [templateSendAlready] = await db.select().from(chatThread).where(eq(chatThread.leadId, leadId));
         let result = null;
-        console.log('>>>>>>templateSendAlready>>>>>',templateSendAlready)
+        // console.log('>>>>>>templateSendAlready>>>>>',templateSendAlready)
         if (!templateSendAlready) {
             result = await db.insert(chatThread).values({
                 leadId: leadId,
@@ -535,18 +535,19 @@ export class CrmWhatsAppService {
                 lastMessageAt: new Date(),
                 createdBy: adminId,
             }).returning();
-            console.log('>>>>>>result>>>>>',result)
+            // console.log('>>>>>>result>>>>>',result)
         } else {
             // update last templateMessage
             const result = await db.update(chatThread).set({
                 lastMessage: templateMessage?.slice(0, 30),
                 lastMessageAt: new Date(),
             }).where(eq(chatThread.Id, templateSendAlready.Id));
-            console.log('>>>>>>>resultForUpdate>>>>>>',result)
+            // console.log('>>>>>>>resultForUpdate>>>>>>',result)
         }
 
         result = templateSendAlready || result;
         // insert DB message
+        console.log('>>>>>>>response>>>>>',response)
         console.log('>>>>>threadId>>>>>',result.Id)
         console.log('>>>>>>leadId>>>>>',leadId)
         console.log('>>>>>>response.id>>>>>',response.id)
