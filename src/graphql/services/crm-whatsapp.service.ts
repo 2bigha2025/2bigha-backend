@@ -686,15 +686,15 @@ export class CrmWhatsAppService {
         const [leadData] = await db.select({ leadId: lead.Id }).from(lead)
             .innerJoin(schema.platformUserProfiles, eq(schema.platformUserProfiles.userId, lead.clientId)).where(
                 or(
-                    eq(schema.platformUserProfiles.phone, customerNumber),
-                    eq(schema.platformUserProfiles.phone, fullNumber)
+                    eq(schema.platformUserProfiles.whatsappNumber, customerNumber),
+                    eq(schema.platformUserProfiles.whatsappNumber, fullNumber)
                 )
             );
             const data = await db.select({ leadId: lead.Id }).from(lead)
             .innerJoin(schema.platformUserProfiles, eq(schema.platformUserProfiles.userId, lead.clientId)).where(
                 or(
-                    eq(schema.platformUserProfiles.phone, customerNumber),
-                    eq(schema.platformUserProfiles.phone, fullNumber)
+                    eq(schema.platformUserProfiles.whatsappNumber, customerNumber),
+                    eq(schema.platformUserProfiles.whatsappNumber, fullNumber)
                 )
             ).toSQL()
 
