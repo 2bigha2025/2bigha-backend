@@ -690,8 +690,19 @@ export class CrmWhatsAppService {
                     eq(schema.platformUserProfiles.phone, fullNumber)
                 )
             );
+            const data = await db.select({ leadId: lead.Id }).from(lead)
+            .innerJoin(schema.platformUserProfiles, eq(schema.platformUserProfiles.userId, lead.clientId)).where(
+                or(
+                    eq(schema.platformUserProfiles.phone, customerNumber),
+                    eq(schema.platformUserProfiles.phone, fullNumber)
+                )
+            ).toSQL()
 
+        console.log('>>>>>>>data>>>>',data)
+        console.log('>>>>>>>leadData>>>>>>',leadData);
         [threadDetail] = await db.select({ Id: chatThread.Id, createdBy: chatThread.createdBy }).from(chatThread).where(eq(chatThread.leadId, leadData.leadId));
+
+        console.log('>>>>>threadDetail>>>>>>',threadDetail)
 
 
         // Save to DB (Prisma Example)
