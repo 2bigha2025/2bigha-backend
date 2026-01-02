@@ -706,6 +706,9 @@ export class CrmWhatsAppService {
         console.log('>>>>>>>messageData>>>>>>>',messageData.messageId)
         console.log('>>>>>chatMessage>>>>',chatMessage.interaktMessageId)
 
+        const  result = await db.select({ Id: chatMessage.threadId }).from(chatMessage).where(eq(chatMessage.interaktMessageId, messageData.messageId)).toSQL()
+        console.log('>>>>>>result>>>>>>',result)
+
         const [threadId] = await db.select({ Id: chatMessage.threadId }).from(chatMessage).where(eq(chatMessage.interaktMessageId, messageData.messageId));
         console.log('>>>>>>threadId>>>>>',threadId)
 
