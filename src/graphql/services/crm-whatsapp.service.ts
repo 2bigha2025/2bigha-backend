@@ -414,11 +414,8 @@ export class CrmWhatsAppService {
             templatePayload.template.headerValues = headerValues
             templatePayload.template.fileName = fileName
         }
-        console.log('>>>>>>headerValues>>>>>>',headerValues)
-        console.log('>>>>>>>templatePayload>>>>>>',templatePayload)
         try {
             const templateData = await whatsAppInstance.post("/message/", templatePayload) as { result?: any, message?: string, id?: string };
-            console.log('>>>>>>>templateData>>>>>>>',templateData)
             return templateData;
         } catch (err: any) {
             console.error("sendTemplate error:", err.response?.data || err.message);
@@ -511,7 +508,6 @@ export class CrmWhatsAppService {
         const { phoneNumber, leadId, templateId } = input;
 
         const [templateData] = await db.select().from(template).where(eq(template.Id, templateId))
-        console.log('>>>>>>templateData>>>>>>>',templateData)
         const templateBody:any = {
             phoneNumber,
             TemplateName: templateData.name,
@@ -536,7 +532,6 @@ export class CrmWhatsAppService {
     static async saveMessages(response: any, leadId: string, templateMessage: string | null, adminId: string, templateId: string) {
         let [templateSendAlready] = await db.select().from(chatThread).where(eq(chatThread.leadId, leadId));
         let result = null;
-        // console.log('>>>>>>templateSendAlready>>>>>',templateSendAlready)
         if (!templateSendAlready) {
             result = await db.insert(chatThread).values({
                 leadId: leadId,
@@ -544,14 +539,12 @@ export class CrmWhatsAppService {
                 lastMessageAt: new Date(),
                 createdBy: adminId,
             }).returning();
-            // console.log('>>>>>>result>>>>>',result)
         } else {
             // update last templateMessage
-            const result = await db.update(chatThread).set({
+            await db.update(chatThread).set({
                 lastMessage: templateMessage?.slice(0, 30),
                 lastMessageAt: new Date(),
             }).where(eq(chatThread.Id, templateSendAlready.Id));
-            // console.log('>>>>>>>resultForUpdate>>>>>>',result)
         }
 
         result = templateSendAlready || result;
@@ -566,6 +559,8 @@ export class CrmWhatsAppService {
             templateId: templateId || null,
             createdBy: adminId,
         }).returning()
+
+        console.log('>>>>>>message>>>>>>',message)
 
         if (!response.result) {
             await db.update(chatMessage).set({
