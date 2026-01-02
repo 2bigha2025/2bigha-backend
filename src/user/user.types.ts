@@ -8,6 +8,12 @@ enum PropertyType {
   RESIDENTIAL
   AGRICULTURAL
   INDUSTRIAL
+  APARTMENT
+  OFFICE
+  PLOT 
+  VILLA
+  WAREHOUSE
+  OTHER
 }
 
 enum ApprovalStatus {
@@ -22,13 +28,17 @@ enum CreatedByType {
 }
 
 enum AreaUnit {
-  SQYRD
-  KANAL
-  MARLA
-  ACRE
-  BIGHAS
-  SQUARE_FEET
-  HECTARE
+   SQYRD
+    SQFT
+    SQM
+    ACRE
+    HECTARE
+    BIGHA
+    KATHA
+    MARLA
+    KANAL
+    GUNTA
+    CENT
 }
 
 enum ListingAs {
@@ -45,8 +55,8 @@ type Seo {
   seoTitle: String!
   seoDescription: String!
   seoKeywords: String!
-  createdAt: String!
-  updatedAt: String!
+  createdAt: Date!
+  updatedAt: Date!
   schema: JSON
 }
 
@@ -74,7 +84,7 @@ type PropertyImageVariants {
 }
 
 type PropertyImage {
-
+  id : String
   variants: PropertyImageVariants
   
 }
@@ -150,12 +160,50 @@ type Property {
   roadAccess: Boolean
   roadAccessDistance: Int
   landMark: String
-  landMarkName: JSON
+  landMarkName: String
   landType : String
   roadAccessWidth : Int
   roadAccessDistanceUnit : String
  
 }
+type ManagedProperty {
+  id: ID!
+  uuid: String
+  title: String!
+  description: String!
+  propertyType: PropertyType!
+  status: String!
+  area: Float!
+  areaUnit: AreaUnit!
+  address: String
+  city: String
+  district: String
+  state: String
+  country: String
+  pinCode: String
+  landType : String
+  createdByType: CreatedByType!
+  images: [Image!]!
+  videos: String
+  createdAt: Date!
+  updatedAt: Date!
+  publishedAt: String
+  createdByAdminId: ID
+  createdByUserId: ID
+  approvalStatus: ApprovalStatus!
+  approvalMessage: String
+  approvedBy: ID
+  approvedAt: Date
+  rejectionReason: String
+  rejectedBy: ID
+  rejectedAt: String
+  adminNotes: String
+  lastReviewedBy: ID
+  lastReviewedAt: String
+  saved: Boolean
+  listingId : Int
+}
+
 type properties {
   seo: Seo
   property: Property
@@ -216,6 +264,7 @@ type owner {
   phone: String
   avatar : String
   role : String
+  isVerified : Boolean
 }
 
 type properties {
@@ -226,6 +275,7 @@ type properties {
   owner: owner
 
 }
+
 
 type PaginatedProperties {
   data: [properties!]!
@@ -372,6 +422,26 @@ enum PropertyStatus {
     updatedAt: String!
   }
 
+  input createManagedPropertyInput {
+     planId: Int!,
+     PropertyType: PropertyType!,
+     title: String!,
+     description: String,
+     state: String!,
+     district: String!,
+     flag:String!,
+     city: String!,
+     Area: Float!,
+     pincode:Int
+     AreaUnit: AreaUnit!,
+     images: [Upload!],
+  }
+
+  type managedPropertyResponse {
+  property: ManagedProperty
+  images: [PropertyImage]
+  }
+
   # Enums
   enum PlatformUserRole {
     OWNER
@@ -476,6 +546,53 @@ enum PropertyStatus {
     schemaDescription: String
   
   }
+
+type PlanDetails {
+  id: ID
+  planName: String
+  description: String
+  billingCycle: String
+  durationInDays: Int
+  visitsAllowed: Int
+}
+
+type PropertyVisit {
+  id: ID!
+  date: String
+  status:String,
+  visitedBy:String,
+  visitedAt:Date
+}
+
+type PropertyVisitMedia {
+  id: ID!
+  mediaUrl: String
+  mediaType: String
+}
+
+  type meta {
+    page:Int
+    limit:Int
+    total:Int
+    totalPages:Int
+  }
+  type UserProperty {
+  userPropertyId: ID!
+  visitsRemaining: Int
+  visitsUsed: Int
+  property: Property
+  images: [PropertyImage!]
+  planDetails: PlanDetails!
+  visits: [PropertyVisit!]
+  visitMedia: [PropertyVisitMedia!]
+}
+
+
+type UserPropertyResult {
+  meta: meta!
+  data: [UserProperty!]!
+}
+
 
 
   # Custom Scalar

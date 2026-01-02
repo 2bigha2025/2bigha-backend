@@ -3,10 +3,11 @@ import { GraphQLError } from "graphql";
 import { logInfo, logError } from "../utils/logger";
 import { PlatformUserService } from "./user.services";
 import { PropertyService } from "../graphql/services/property.services";
+import { PropertyManagementService } from "../graphql/services/property-management.service";
 import { seoService } from "../graphql/services/seo.service";
 import { GeoJsonService } from "../graphql/services/geo-json.service";
 
-interface PlatformUserContext {
+export interface PlatformUserContext {
     user?: {
         userId: string;
         email: string;
@@ -103,15 +104,18 @@ export const platformUserResolvers = {
                     lastName: user.lastName,
                     role: user.role,
                     isActive: user.isActive,
-
+                    isVerified: Boolean(user.isVerified),
                     createdAt: user.createdAt.toISOString(),
                     profile: user.profile
                         ? {
                             id: user.profile.id.toString(),
                             bio: user.profile.bio,
                             avatar: user.profile.avatar,
+                            phone: user.profile.phone,
+                            address: user.profile.address,
                             city: user.profile.city,
                             state: user.profile.state,
+                            pincode: user.profile.pincode,
                             specializations: user.profile.specializations,
                             serviceAreas: user.profile.serviceAreas,
                             languages: user.profile.languages,
@@ -174,15 +178,6 @@ export const platformUserResolvers = {
                 );
                 return properties;
 
-                // return {
-                //     id: user.id.toString(),
-                //     uuid: user.uuid,
-                //     firstName: user.firstName,
-                //     lastName: user.lastName,
-                //     role: user.role,
-                //     companyName: user.companyName,
-                //     profile: user.profile,
-                // }
             } catch (error) {
                 console.log(error)
                 throw new GraphQLError("Failed to get user profile", {
@@ -201,39 +196,39 @@ export const platformUserResolvers = {
 
             return results;
         },
-         getPropertiesByLocation: async (
-      _: any,
-      { input }: { input: { lat?: number; lng?: number; radius?: number; limit?: number } }
-    ) => {
-      try {
-        const results = await PropertyService.getPropertiesByLocation(
-          input.lat,
-          input.lng,
-          input.radius,
-          input.limit || 10
-        );
-        return results;
-      } catch (error) {
-        console.error("❌ Resolver error in getPropertiesByLocation:", error);
-        throw new Error("Unable to fetch properties by location");
-      }
-    },
+        getPropertiesByLocation: async (
+            _: any,
+            { input }: { input: { lat?: number; lng?: number; radius?: number; limit?: number } }
+        ) => {
+            try {
+                const results = await PropertyService.getPropertiesByLocation(
+                    input.lat,
+                    input.lng,
+                    input.radius,
+                    input.limit || 10
+                );
+                return results;
+            } catch (error) {
+                console.error("❌ Resolver error in getPropertiesByLocation:", error);
+                throw new Error("Unable to fetch properties by location");
+            }
+        },
 
-    getPropertiesByViewCount: async (
-      _: any,
-      { input }: { input: { limit?: number; minViewCount?: number } }
-    ) => {
-      try {
-        const results = await PropertyService.getPropertiesByViewCount(
-          input.limit || 10,
-          input.minViewCount
-        );
-        return results;
-      } catch (error) {
-        console.error("❌ Resolver error in getPropertiesByViewCount:", error);
-        throw new Error("Unable to fetch properties by view count");
-      }
-    },
+        getPropertiesByViewCount: async (
+            _: any,
+            { input }: { input: { limit?: number; minViewCount?: number } }
+        ) => {
+            try {
+                const results = await PropertyService.getPropertiesByViewCount(
+                    input.limit || 10,
+                    input.minViewCount
+                );
+                return results;
+            } catch (error) {
+                console.error("❌ Resolver error in getPropertiesByViewCount:", error);
+                throw new Error("Unable to fetch properties by view count");
+            }
+        },
         getTopProperties: async (
             _: any,
             { },
@@ -287,14 +282,14 @@ export const platformUserResolvers = {
                         extensions: { code: "VALIDATION_ERROR" },
                     });
                 }
-                const {profile, ...userdata} = input;
+                const { profile, ...userdata } = input;
                 const createUserData = {
-                    ...userdata, 
+                    ...userdata,
                     phone: profile?.phone,
                     profileImage: profile?.avatar,
-                    address : profile?.address,
+                    address: profile?.address,
                 }
-                 console.log(input,createUserData);
+                console.log(input, createUserData);
                 const user = await PlatformUserService.createUser(createUserData);
                 const sessionToken = PlatformUserService.createUserSession(
                     user.id,
@@ -329,7 +324,7 @@ export const platformUserResolvers = {
                     email: input.email,
                     ip: context.ip,
                 });
-            
+
                 throw new GraphQLError((error as Error).message, {
                     extensions: { code: "SIGNUP_FAILED" },
                 });
@@ -508,7 +503,7 @@ export const platformUserResolvers = {
                     await PlatformUserService.authenticateWithGoogle(input.googleToken);
                 const sessionToken = PlatformUserService.createUserSession(
                     user.id,
-                    user?.email|| "",
+                    user?.email || "",
                     user.role
                 );
 
@@ -584,7 +579,7 @@ export const platformUserResolvers = {
                     lastName: updatedUser.lastName,
                     role: updatedUser.role,
                     isActive: updatedUser.isActive,
-                    isVerified: updatedUser.isVerified,
+                    isVerified: Boolean(updatedUser.isVerified),
                     updatedAt: new Date().toISOString(),
                     profile: updatedUser.profile
                         ? {
@@ -725,6 +720,6 @@ export const platformUserResolvers = {
                     extensions: { code: "INTERNAL_ERROR" },
                 });
             }
-        }
+        },
     },
 };

@@ -1,4 +1,4 @@
-import { pgTable, uuid, pgEnum, integer, timestamp, text, boolean, json,serial } from "drizzle-orm/pg-core";
+import { pgTable, uuid, pgEnum, integer, timestamp, text, boolean, json,serial,unique } from "drizzle-orm/pg-core";
 import { platformUsers } from "./platform-user";
 import { properties } from "./property";
 import { adminUsers } from "./admin-user";
@@ -6,7 +6,7 @@ import { adminUsers } from "./admin-user";
 
 export const PlanType = pgEnum("PlanType", [
     "BASIC",
-    "STANDARD",
+    "ADVANCED",
     "PREMIUM"
 ])
 // --- Order / Payment related enums ---
@@ -41,6 +41,12 @@ export const TransactionType = pgEnum("TransactionType", [
     "CHARGEBACK",
 ])
 
+export const billingCycle = pgEnum("billingCycle",[
+    "MONTHLY",
+    "QUARTERLY",
+    "YEARLY"
+])
+
 export const TransactionStatus = pgEnum("TransactionStatus", [
     "INITIATED",
     "PENDING",
@@ -51,23 +57,34 @@ export const TransactionStatus = pgEnum("TransactionStatus", [
 ])
 
 export const Plan = pgTable("plan", {
-    planId: serial("planId").primaryKey(),
-    planName: PlanType("planName").notNull(),
-    price: integer("price").notNull(),
-    visitsAllowed: integer("visitsAllowed").notNull(),
-    durationInDays: integer("durationInDays").notNull(),
+    planId: serial("plan_id").primaryKey(),
+    planName: PlanType("plan_name").notNull(),
     description: text("description"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow()
 })
+//CartStatus("status").notNull().default("ACTIVE")
+export const planvariants = pgTable("planvariants", {
+  id: serial("id").primaryKey(),
+  planId: integer("plan_id")
+    .references(() => Plan.planId)
+    .notNull(),
+  billingCycle: billingCycle("billing_cycle").notNull().default("MONTHLY"),  // MONTHLY, QUARTERLY, YEARLY
+  price: integer("price").notNull(),
+  durationInDays: integer("duration_in_days").notNull(), 
+  visitsAllowed: integer("visits_allowed").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+})
+
 
 // --- Cart table: holds selections the user intends to checkout later ---
 export const cart = pgTable("cart", {
-    cartId: uuid("cartId").defaultRandom().primaryKey(),
-    userId: uuid("userId").references(() => platformUsers.id, { onDelete: "cascade" }),
-    propertyId: uuid("propertyId").references(() => properties.id, { onDelete: "set null" }),
-    planId: integer("planId").references(() => Plan.planId, { onDelete: "set null" }),
-    priceAtSelection: integer("priceAtSelection").notNull(),
+    cartId: uuid("cart_id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").references(() => platformUsers.id, { onDelete: "cascade" }),
+    propertyId: uuid("property_id").references(() => properties.id, { onDelete: "set null" }),
+    planId: integer("plan_id").references(() => Plan.planId, { onDelete: "set null" }),
+    priceAtSelection: integer("price_at_selection").notNull(),
     currency: text("currency").notNull().default("INR"),
     status: CartStatus("status").notNull().default("ACTIVE"),
     expiresAt: timestamp("expires_at"),
@@ -78,11 +95,11 @@ export const cart = pgTable("cart", {
 
 // --- Orders table: includes Razorpay integration fields ---
 export const orders = pgTable("orders", {
-    orderId: uuid("orderId").defaultRandom().primaryKey(),
-    userId: uuid("userId").references(() => platformUsers.id, { onDelete: "set null" }),
-    propertyId: uuid("propertyId").references(() => properties.id, { onDelete: "set null" }),
-    planId: integer("planId").references(() => Plan.planId, { onDelete: "set null" }),
-    cartId: uuid("cartId").references(() => cart.cartId, { onDelete: "set null" }),
+    orderId: uuid("order_id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").references(() => platformUsers.id, { onDelete: "set null" }),
+    propertyId: uuid("property_id").references(() => properties.id, { onDelete: "set null" }),
+    planId: integer("plan_id").references(() => Plan.planId, { onDelete: "set null" }),
+    cartId: uuid("cart_id").references(() => cart.cartId, { onDelete: "set null" }),
     amount: integer("amount").notNull(),
     currency: text("currency").notNull().default("INR"),
     status: OrderStatus("status").notNull().default("CREATED"),
@@ -91,7 +108,7 @@ export const orders = pgTable("orders", {
     razorpayOrderId: text("razorpay_order_id"), // order id returned by Razorpay when creating an order
     razorpayPaymentId: text("razorpay_payment_id"), // payment id after successful capture
     razorpaySignature: text("razorpay_signature"), // signature to verify payment
-    transactionId: text("transactionId"), // internal transaction id or third-party id
+    transactionId: text("transaction_id"), // internal transaction id or third-party id
     receipt: text("receipt"),
     notes: json("notes"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -99,23 +116,53 @@ export const orders = pgTable("orders", {
 })
 
 // --- Mapper table between user, property and plan with agent assignment and audit ---
-export const userProperty = pgTable("user_property", {
-    id: uuid("id").defaultRandom().primaryKey(),
-    userId: uuid("user_id").references(() => platformUsers.id, { onDelete: "set null" }),
-    propertyId: uuid("property_id").references(() => properties.id, { onDelete: "set null" }),
-    planId: integer("plan_id").references(() => Plan.planId, { onDelete: "set null" }),
-    agentId: uuid("agent_id").references(() => adminUsers.id, { onDelete: "set null" }),
-    assignedBy: uuid("assigned_by").references(() => adminUsers.id, { onDelete: "set null" }),
-    assignedAt: timestamp("assigned_at"),
-    startDate: timestamp("start_date"),
-    endDate: timestamp("end_date"),
-    visitsRemaining: integer("visits_remaining"),
-    status: UserPropertyStatus("status").notNull().default("ACTIVE"),
-    active: boolean("active").notNull().default(true),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow()
-})
+    export const userProperty = pgTable("userproperty", {
+        id: uuid("id").defaultRandom().primaryKey(),
+        userId: uuid("userid").references(() => platformUsers.id, { onDelete: "set null" }),
+        propertyId: uuid("property_id").references(() => properties.id, { onDelete: "set null" }),
+        planVariantId: integer("planvariant_id").references(() => planvariants.id, { onDelete: "set null" }),
+        agentId: uuid("agent_id").references(() => adminUsers.id, { onDelete: "set null" }),
+        assignedBy: uuid("assigned_by").references(() => adminUsers.id, { onDelete: "set null" }),
+        assignedAt: timestamp("assigned_at"),
+        startDate: timestamp("start_date"),
+        endDate: timestamp("end_date"),
+        visitsRemaining: integer("visits_remaining"),
+        visitsUsed: integer("visits_useds"),
+        status: UserPropertyStatus("status").notNull().default("ACTIVE"),
+        active: boolean("active").notNull().default(true),
+        createdAt: timestamp("created_at").notNull().defaultNow(),
+        updatedAt: timestamp("updated_at").notNull().defaultNow()
+    },
+    (table)=>({
+        uniqueKeyCombo: unique().on(table.userId, table.propertyId)
+    })
+)
 // --- Order & Transaction history tables and enums ---
+
+
+export const propertyVisits = pgTable("property_visits", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  propertyId: uuid("property_id")
+    .references(() => properties.id, { onDelete: "cascade" }),
+  visitedBy: uuid("visited_by")           
+    .references(() => adminUsers.id, { onDelete: "set null" }),
+  visitDate: timestamp("visit_date").notNull().defaultNow(),
+  notes: text("notes"),
+  status: text("status").default("COMPLETED"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+});
+
+export const propertyVisitMedia = pgTable("property_visit_media", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  visitId: uuid("visit_id")
+    .references(() => propertyVisits.id, { onDelete: "cascade" }),
+  mediaUrl: text("media_url").notNull(),
+  mediaType: text("media_type").notNull(), 
+  capturedAt: timestamp("captured_at").defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow()
+});
+
 
 // order_history: keeps immutable event records for order lifecycle changes
 export const orderHistory = pgTable("order_history", {
@@ -221,7 +268,7 @@ export const appRelations = {
             relation: "many",
             table: userProperty,
             fields: [Plan.planId],
-            references: [userProperty.planId],
+            references: [userProperty.planVariantId],
         },
     },
     cart: {
@@ -303,9 +350,9 @@ export const appRelations = {
         },
         plan: {
             relation: "one",
-            table: Plan,
-            fields: [userProperty.planId],
-            references: [Plan.planId],
+            table: planvariants,
+            fields: [userProperty.planVariantId],
+            references: [planvariants.id],
         },
         agent: {
             relation: "one",
