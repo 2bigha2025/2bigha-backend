@@ -547,6 +547,11 @@ export class CrmWhatsAppService {
 
         result = templateSendAlready || result;
         // insert DB message
+        console.log('>>>>>threadId>>>>>',result.Id)
+        console.log('>>>>>>leadId>>>>>',leadId)
+        console.log('>>>>>>response.id>>>>>',response.id)
+        console.log('>>>>>>templateId>>>>>',templateId)
+        console.log('>>>>>>adminId>>>>>',adminId)
         const message = await db.insert(chatMessage).values({
             threadId: result?.Id,
             leadId: leadId,
@@ -557,6 +562,8 @@ export class CrmWhatsAppService {
             templateId: templateId || null,
             createdBy: adminId,
         }).returning()
+
+        console.log('>>>>>>message>>>>>>>',message)
 
         if (!response.result) {
             await db.update(chatMessage).set({
