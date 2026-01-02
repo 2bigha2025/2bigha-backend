@@ -704,6 +704,7 @@ export class CrmWhatsAppService {
         }).where(eq(chatMessage.interaktMessageId, messageData.messageId));
 
         const [threadId] = await db.select({ Id: chatMessage.threadId }).from(chatMessage).where(eq(chatMessage.interaktMessageId, messageData.messageId));
+        console.log('>>>>>>threadId>>>>>',threadId)
 
         io.to(threadId.Id).emit("message-status-update", {
             messageId: messageData.messageId,
