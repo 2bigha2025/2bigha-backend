@@ -407,9 +407,11 @@ export class CrmWhatsAppService {
             template: {
                 name: TemplateName,
                 languageCode: "en",
-                headerValues: headerValues,
                 fileName: fileName
             }
+        }
+        if(headerValues) {
+            templatePayload.template.headerValues = headerValues
         }
         try {
             const templateData = await whatsAppInstance.post("/message/", templatePayload) as { result?: any, message?: string, id?: string };
@@ -507,12 +509,10 @@ export class CrmWhatsAppService {
         const [templateData] = await db.select().from(template).where(eq(template.Id, templateId))
         console.log('>>>>>>templateData>>>>>>>',templateData)
         const templateBody:any = {
-            phoneNumber, TemplateName: templateData.name,
+            phoneNumber,
+            TemplateName: templateData.name,
             fileName: templateData.fileName,
-            headerValues : ['']
-        }
-        if(templateData.fileUrl){
-            templateBody['headerValues'] = [templateData.fileUrl]
+            headerValues : [templateData.fileUrl]
         }
 
         const response = await CrmWhatsAppService.sendTemplateApi(templateBody);
