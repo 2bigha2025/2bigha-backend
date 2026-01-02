@@ -149,6 +149,7 @@ const startServer = async () => {
       }
 
       if (payload.type === "message_api_sent" || payload.type === "message_api_delivered" || payload.type === "message_api_read") {
+        console.log('>>>>>>payloadData>>>>>',payload.data)
         const messageData = {
           messageId : payload.message.id,
           status : payload.message.message_status.toLowerCase(),
