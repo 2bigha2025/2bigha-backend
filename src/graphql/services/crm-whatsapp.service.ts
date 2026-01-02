@@ -505,6 +505,7 @@ export class CrmWhatsAppService {
         const { phoneNumber, leadId, templateId } = input;
 
         const [templateData] = await db.select().from(template).where(eq(template.Id, templateId))
+        console.log('>>>>>>templateData>>>>>>>',templateData)
 
         const response = await CrmWhatsAppService.sendTemplateApi({
             phoneNumber, TemplateName: templateData.name, headerValues: [templateData.fileUrl],
