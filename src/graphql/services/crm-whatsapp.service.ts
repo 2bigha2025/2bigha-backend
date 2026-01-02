@@ -418,6 +418,7 @@ export class CrmWhatsAppService {
         console.log('>>>>>>>templatePayload>>>>>>',templatePayload)
         try {
             const templateData = await whatsAppInstance.post("/message/", templatePayload) as { result?: any, message?: string, id?: string };
+            console.log('>>>>>>>templateData>>>>>>>',templateData)
             return templateData;
         } catch (err: any) {
             console.error("sendTemplate error:", err.response?.data || err.message);
@@ -555,12 +556,6 @@ export class CrmWhatsAppService {
 
         result = templateSendAlready || result;
         // insert DB message
-        console.log('>>>>>>>response>>>>>',response)
-        console.log('>>>>>threadId>>>>>',result.Id)
-        console.log('>>>>>>leadId>>>>>',leadId)
-        console.log('>>>>>>response.id>>>>>',response.id)
-        console.log('>>>>>>templateId>>>>>',templateId)
-        console.log('>>>>>>adminId>>>>>',adminId)
         const message = await db.insert(chatMessage).values({
             threadId: result?.Id,
             leadId: leadId,
@@ -571,8 +566,6 @@ export class CrmWhatsAppService {
             templateId: templateId || null,
             createdBy: adminId,
         }).returning()
-
-        console.log('>>>>>>message>>>>>>>',message)
 
         if (!response.result) {
             await db.update(chatMessage).set({
@@ -727,14 +720,9 @@ export class CrmWhatsAppService {
             deliveredAt: messageData.deliveredAt ? new Date(messageData.deliveredAt) : null
         }).where(eq(chatMessage.interaktMessageId, messageData.messageId));
 
-        console.log('>>>>>>>messageData>>>>>>>',messageData.messageId)
-        console.log('>>>>>chatMessage>>>>',chatMessage.interaktMessageId)
 
         const  result = await db.select({ Id: chatMessage.threadId }).from(chatMessage).where(eq(chatMessage.interaktMessageId, messageData.messageId)).toSQL()
-        console.log('>>>>>>result>>>>>>',result)
-
         const [threadId] = await db.select({ Id: chatMessage.threadId }).from(chatMessage).where(eq(chatMessage.interaktMessageId, messageData.messageId));
-        console.log('>>>>>>threadId>>>>>',threadId)
 
         io.to(threadId.Id).emit("message-status-update", {
             messageId: messageData.messageId,
