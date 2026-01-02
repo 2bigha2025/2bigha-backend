@@ -527,6 +527,7 @@ export class CrmWhatsAppService {
     static async saveMessages(response: any, leadId: string, templateMessage: string | null, adminId: string, templateId: string) {
         let [templateSendAlready] = await db.select().from(chatThread).where(eq(chatThread.leadId, leadId));
         let result = null;
+        try {
         if (!templateSendAlready) {
             result = await db.insert(chatThread).values({
                 leadId: leadId,
@@ -561,7 +562,11 @@ export class CrmWhatsAppService {
             }).where(eq(chatMessage.Id, message[0].Id))
         }
 
-        return response.message;
+        return response.message
+    }
+        catch(error) {
+            console.log('>>>>>>error>>>>>',error)
+        }
     }
 
     static async sendTextMessage(input: any, adminId: any) {
