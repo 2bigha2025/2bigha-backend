@@ -23,75 +23,71 @@ async function seedPlanVariants() {
 
     // Insert plan variants - don't set id (serial auto-increment)
     await db.insert(planvariants).values([
-      // Basic Care Plan
       {
         planId: planIds[0],
-        billingCycle: "MONTHLY",
-        price: 2999,
-        durationInDays: 30,
-        visitsAllowed: 1,
-      },
-      {
-        planId: planIds[0],
-        billingCycle: "QUARTERLY",
-        price: 8999,
-        durationInDays: 120,
-        visitsAllowed: 4,
-      },
-      {
-        planId: planIds[0],
-        billingCycle: "YEARLY",
-        price: 35988,
-        durationInDays: 420,
-        visitsAllowed: 14,
-      },
-
-      // Standard Care Plan
-      {
-        planId: planIds[1] || planIds[0],
-        billingCycle: "MONTHLY",
-        price: 3999,
-        durationInDays: 30,
-        visitsAllowed: 1,
-      },
-      {
-        planId: planIds[1] || planIds[0],
-        billingCycle: "QUARTERLY",
-        price: 11999,
-        durationInDays: 120,
-        visitsAllowed: 4,
-      },
-      {
-        planId: planIds[1] || planIds[0],
-        billingCycle: "YEARLY",
-        price: 47999,
-        durationInDays: 420,
-        visitsAllowed: 14,
-      },
-
-      // Premium Care Plan
-      {
-        planId: planIds[2] || planIds[0],
         billingCycle: "MONTHLY",
         price: 4999,
+        durationInDays: 30,
+        visitsAllowed: 1,
+      },
+      {
+        planId: planIds[0],
+        billingCycle: "QUATERLY",
+        price: 13497,
+        durationInDays: 120,
+        visitsAllowed: 4,
+      },
+      {
+        planId: planIds[0],
+        billingCycle: "YEARLY",
+        price: 47997,
+        durationInDays: 420,
+        visitsAllowed: 14,
+      },
+      {
+        planId: planIds[1] || planIds[0],
+        billingCycle: "MONTHLY",
+        price: 7999,
         durationInDays: 30,
         visitsAllowed: 2,
       },
       {
-        planId: planIds[2] || planIds[0],
-        billingCycle: "QUARTERLY",
-        price: 14999,
+        planId: planIds[1] || planIds[0],
+        billingCycle: "QUATERLY",
+        price: 21597,
         durationInDays: 120,
         visitsAllowed: 8,
       },
       {
-        planId: planIds[2] || planIds[0],
+        planId: planIds[1] || planIds[0],
         billingCycle: "YEARLY",
-        price: 59999,
+        price: 76790,
         durationInDays: 420,
         visitsAllowed: 28,
       },
+      {
+        planId: planIds[2] || planIds[0],
+        billingCycle: "MONTHLY",
+        price: 9999,
+        durationInDays: 30,
+        visitsAllowed: 4,
+      },
+      {
+        planId: planIds[2] || planIds[0],
+        billingCycle: "QUATERLY",
+        price: 26997,
+        durationInDays: 120,
+        visitsAllowed: 16,
+      },
+      {
+        planId: planIds[2] || planIds[0],
+        billingCycle: "YEARLY",
+        price: 95990,
+        durationInDays: 420,
+        visitsAllowed: 56,
+      },
     ])
+
     console.log("✅ Plan variants seeded successfully!")
     process.exit(0)
   } catch (error) {

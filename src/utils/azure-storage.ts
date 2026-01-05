@@ -338,6 +338,8 @@ export class AzureStorageService {
         const variantFilename = baseFilename.replace(/\.([^.]+)$/, `-${variant.name}.$1`)
         const blobPath = `${folder}/${variantFilename}`
 
+        console.log('>>>>>>>blobPath>>>>>',blobPath)
+
         try {
           const blockBlobClient = this.containerClient.getBlockBlobClient(blobPath)
           await blockBlobClient.deleteIfExists()

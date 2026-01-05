@@ -529,7 +529,7 @@ type PaginatedFarms {
 
     # Property Mutations
   extend type Mutation {
-    createFarmByAdmin(input: CreateFarmsInput!): Properties!
+    createFarmByAdmin(input: CreateFarmsInput!): Property!
     createFarmByUser(input: CreateFarmsInput!): Properties!
     # updateFarms(id: ID!, input: UpdateFarmsInput!): Property!
     # deleteFarms(id: ID!): Boolean!

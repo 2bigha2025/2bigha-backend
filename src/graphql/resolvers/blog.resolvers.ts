@@ -57,7 +57,6 @@ export const blogResolvers = {
       const { status,page,limit } = args
       try {
         const blogs = await BlogService.getAllBlogs(status,page,limit)
-        console.log(blogs);
         return blogs;
       } catch (error) {
         throw new GraphQLError(`Failed to get blogs: ${(error as Error).message}`, {
