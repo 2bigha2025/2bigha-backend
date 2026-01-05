@@ -641,8 +641,6 @@ input ViewCountPropertiesInput {
     getHomePageSeo:homePageSeo
      getPropertyBySlug(input: inputGetPropertyBySlug!):properties 
     getTopProperties: [properties]
-    getManagedProeprtiesByUser(page:Int, limit:Int):UserPropertyResult
-    getManagedUserPropertiesID(property_id:String): UserProperty
     # Get current user profile
     me: PlatformUser
     getSeoPageByUrl(url: String!): SeoPage
@@ -705,7 +703,6 @@ input ViewCountPropertiesInput {
     logout: PlatformAuthResponse!
 
     createPropertyByUser(input: CreatePropertyInput!): properties!
-    createManagedPropertyByUser(input: createManagedPropertyInput!): managedPropertyResponse!
     
   }
 `;

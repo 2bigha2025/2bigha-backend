@@ -43,7 +43,7 @@ export const TransactionType = pgEnum("TransactionType", [
 
 export const billingCycle = pgEnum("billingCycle",[
     "MONTHLY",
-    "QUATERLY",
+    "QUARTERLY",
     "YEARLY"
 ])
 
@@ -57,8 +57,8 @@ export const TransactionStatus = pgEnum("TransactionStatus", [
 ])
 
 export const Plan = pgTable("plan", {
-    planId: serial("planId").primaryKey(),
-    planName: PlanType("planName").notNull(),
+    planId: serial("plan_id").primaryKey(),
+    planName: PlanType("plan_name").notNull(),
     description: text("description"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow()
@@ -66,13 +66,13 @@ export const Plan = pgTable("plan", {
 //CartStatus("status").notNull().default("ACTIVE")
 export const planvariants = pgTable("planvariants", {
   id: serial("id").primaryKey(),
-  planId: integer("planId")
+  planId: integer("plan_id")
     .references(() => Plan.planId)
     .notNull(),
-  billingCycle: billingCycle("billingCycle").notNull().default("MONTHLY"),  // MONTHLY, QUARTERLY, YEARLY
+  billingCycle: billingCycle("billing_cycle").notNull().default("MONTHLY"),  // MONTHLY, QUARTERLY, YEARLY
   price: integer("price").notNull(),
-  durationInDays: integer("durationInDays").notNull(), 
-  visitsAllowed: integer("visitsAllowed").notNull(),
+  durationInDays: integer("duration_in_days").notNull(), 
+  visitsAllowed: integer("visits_allowed").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 })
