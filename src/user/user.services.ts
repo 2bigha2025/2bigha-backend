@@ -130,7 +130,6 @@ export class PlatformUserService {
             }
             // update user
             // console.log("validatedData", validatedData);
-            console.log('>>>>>>userData>>>>>>',userData.isVerified)
             const userUpdates = filterDefined({
                 email: validatedData.email?.trim().toLowerCase(),
                 firstName: validatedData.firstName?.trim(),
