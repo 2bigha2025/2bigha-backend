@@ -73,6 +73,7 @@ export class BlogService {
         slug,
         excerpt: input.excerpt,
         content: input.content,
+        category : input.category,
         featuredImage: featuredImageUrl,
         status: input.status || "DRAFT",
         tags: input.tags || [],
@@ -110,17 +111,20 @@ export class BlogService {
     if (typeof input.slug === "string" && input.slug.trim().length > 0) {
       slugToSave = await this.ensureUniqueSlug(input.slug, id)
     }
+    console.log('>>>>>>slugToSave>>>>>>',slugToSave)
+    console.log('>>>>>>>>>input>>>>>>>>',input)
 
     const updatedBlog = await db
       .update(blogPosts)
       .set({
         title: input.title,
-        slug: slugToSave,
+        // slug: slugToSave,
         excerpt: input.excerpt,
         content: input.content,
         featuredImage: imageUrl,
         status: input.status,
         tags: input.tags,
+        category : input.category,
         seoTitle: input.seoTitle,
         seoDescription: input.seoDescription,
         publishedAt: input.publishedAt ? new Date(input.publishedAt) : null,
@@ -186,6 +190,7 @@ static async getAllBlogs(status?: string,page:number=1,limit?:number) {
     }).from(blogPosts).where(status ? eq(blogPosts.status, status as any) : sql`1=1`);
     const [blogs, totalCountResult] = await Promise.all([query, totalCountQuery]);
     const totalCount = parseInt(totalCountResult[0].count as string, 10);
+    console.log('>>>>>>>blogs>>>>>>',blogs)
     return {
       data: blogs,
       meta: { 

@@ -21,6 +21,7 @@ export const blogPosts = pgTable("blog_posts", {
   seoTitle: text("seo_title"),
   seoDescription: text("seo_description"),
   publishedAt: timestamp("published_at"),
+  category : text('category'),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })

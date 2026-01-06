@@ -58,6 +58,7 @@ export const blogTypeDefs = `#graphql
     seoTitle: String
     seoDescription: String
     publishedAt: Date
+    category : String
   }
   
    # First define the metadata type properly
