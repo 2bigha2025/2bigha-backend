@@ -1,11 +1,11 @@
-import { eq, desc,and } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { db } from "../../config/database";
 import * as schema from "../../database/schema/index";
 import { logger } from "../../utils/logger";
 import { propertyNotificationService } from "./property-notification.service";
 import { PlatformUserService } from "../../user/user.services";
 import { AdminAuthService } from "./auth.service";
-
+import { PropertyManagementService } from './property-management.service';
 const {
     properties,
     propertyApprovalHistory,
@@ -21,6 +21,7 @@ export interface ApprovalActionInput {
     reason?: string;
     ipAddress?: string;
     userAgent?: string;
+    adminUserId?: string;
     availablilityStatus?: "AVAILABLE" | "SOLD";
 }
 
@@ -74,7 +75,7 @@ export class PropertyApprovalService {
     }
 
     static async approveProperty(input: ApprovalActionInput) {
-        const { propertyId, adminId, message, adminNotes, reason, ipAddress, userAgent } = input;
+        const { propertyId, adminId, adminUserId, message, adminNotes, reason, ipAddress, userAgent } = input;
         try {
             const [property] = await db.select().from(properties).where(eq(properties.id, propertyId.toString()));
             if (!property) throw new Error("Property not found");
@@ -103,7 +104,9 @@ export class PropertyApprovalService {
                 ipAddress,
                 userAgent,
             });
-
+            if (adminUserId) {
+                await PropertyManagementService.assignPropertyToAgent({ PropertyId: propertyId, agentId: adminUserId, assignedByAdminId: adminId });
+            }
             // Notifying the owner safely
             try {
                 if (property.createdByType === "USER" && property.createdByUserId) {

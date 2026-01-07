@@ -234,7 +234,7 @@ export class RBACService {
     // ==================== ADMINS ====================
 
     // Get all admins with RBAC info
-    static async getAllAdmins(filter?: any, sort?: any, limit = 20, offset = 0) {
+    static async getAllAdmins(filter?: any, sort?: any, limit = 25, offset = 0) {
         let query = db.select().from(adminUsers)
 
         // Apply filters

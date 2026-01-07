@@ -45,6 +45,7 @@ export const propertyApprovalEnhancedTypeDefs = `#graphql
   input PropertyApprovalInput {
     propertyId: ID!
     message: String
+    adminUserId: ID
     adminNotes: String
     reason: String
   }

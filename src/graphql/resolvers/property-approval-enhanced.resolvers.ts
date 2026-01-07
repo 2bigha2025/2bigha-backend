@@ -37,7 +37,7 @@ export const propertyApprovalResolvers = {
     Mutation: {
         // Enhanced approve property with notifications
         approveProperty: async (_: any, { input }: any, context: AdminContext) => {
-            const { propertyId, message, adminNotes, reason } = input;
+            const { propertyId, adminUserId, message, adminNotes, reason } = input;
             const adminId = context.admin?.adminId;
 
             if (!adminId) {
@@ -49,6 +49,7 @@ export const propertyApprovalResolvers = {
                 const property = await PropertyApprovalService.approveProperty({
                     propertyId,
                     adminId,
+                    adminUserId,
                     message,
                     adminNotes,
                     reason,
