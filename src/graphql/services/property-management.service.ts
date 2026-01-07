@@ -442,7 +442,7 @@ const wherecondition = conditions.length > 1 ? and(...conditions) : conditions[0
 
 
   static async assignPropertyToAgent(input: {
-    userPropertyId: string;
+    PropertyId: string;
     agentId: string;
     assignedByAdminId: string;
   }) {
@@ -451,11 +451,11 @@ const wherecondition = conditions.length > 1 ? and(...conditions) : conditions[0
       const existingUserProperty = await db
         .select()
         .from(userProperty)
-        .where(eq(userProperty.id, input.userPropertyId))
+        .where(eq(userProperty.propertyId, input.PropertyId))
         .limit(1);
 
       if (!existingUserProperty.length) {
-        throw new Error(`User property with ID ${input.userPropertyId} not found`);
+        throw new Error(`User property with ID ${input.PropertyId} not found`);
       }
 
       // Verify the agent (admin user) exists
@@ -489,7 +489,7 @@ const wherecondition = conditions.length > 1 ? and(...conditions) : conditions[0
           assignedAt: new Date(),
           updatedAt: new Date(),
         })
-        .where(eq(userProperty.id, input.userPropertyId))
+        .where(eq(userProperty.propertyId, input.PropertyId))
         .returning();
 
       return {
