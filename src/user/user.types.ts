@@ -319,6 +319,7 @@ input PropertyDetailsSchemaInput {
   landMarkName: JSON
   roadAccessWidth : Int
   roadAccessDistanceUnit : String
+  source: String
 }
 
 

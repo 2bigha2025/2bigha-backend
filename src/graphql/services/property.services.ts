@@ -1411,6 +1411,7 @@ export class PropertyService {
             propertyData?.propertyDetailsSchema?.roadAccessWidth ?? null,
           roadAccessDistanceUnit:
             propertyData?.propertyDetailsSchema?.roadAccessDistanceUnit ?? null,
+          source: propertyData?.propertyDetailsSchema?.source ?? "2BIGHA",
           availablilityStatus: isManaged ? "MANAGED" : "AVAILABLE",
         })
         .returning({ listing_id: properties.listingId });
