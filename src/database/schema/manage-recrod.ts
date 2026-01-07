@@ -6,7 +6,7 @@ import { adminUsers } from "./admin-user";
 
 export const PlanType = pgEnum("PlanType", [
     "BASIC",
-    "STANDARD",
+    "ADVANCED",
     "PREMIUM"
 ])
 // --- Order / Payment related enums ---
@@ -43,7 +43,7 @@ export const TransactionType = pgEnum("TransactionType", [
 
 export const billingCycle = pgEnum("billingCycle",[
     "MONTHLY",
-    "QUATERLY",
+    "QUARTERLY",
     "YEARLY"
 ])
 
@@ -57,8 +57,8 @@ export const TransactionStatus = pgEnum("TransactionStatus", [
 ])
 
 export const Plan = pgTable("plan", {
-    planId: serial("planId").primaryKey(),
-    planName: PlanType("planName").notNull(),
+    planId: serial("plan_id").primaryKey(),
+    planName: PlanType("plan_name").notNull(),
     description: text("description"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow()
@@ -66,13 +66,13 @@ export const Plan = pgTable("plan", {
 //CartStatus("status").notNull().default("ACTIVE")
 export const planvariants = pgTable("planvariants", {
   id: serial("id").primaryKey(),
-  planId: integer("planId")
+  planId: integer("plan_id")
     .references(() => Plan.planId)
     .notNull(),
-  billingCycle: billingCycle("billingCycle").notNull().default("MONTHLY"),  // MONTHLY, QUARTERLY, YEARLY
+  billingCycle: billingCycle("billing_cycle").notNull().default("MONTHLY"),  // MONTHLY, QUARTERLY, YEARLY
   price: integer("price").notNull(),
-  durationInDays: integer("durationInDays").notNull(), 
-  visitsAllowed: integer("visitsAllowed").notNull(),
+  durationInDays: integer("duration_in_days").notNull(), 
+  visitsAllowed: integer("visits_allowed").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 })
@@ -80,11 +80,11 @@ export const planvariants = pgTable("planvariants", {
 
 // --- Cart table: holds selections the user intends to checkout later ---
 export const cart = pgTable("cart", {
-    cartId: uuid("cartId").defaultRandom().primaryKey(),
-    userId: uuid("userId").references(() => platformUsers.id, { onDelete: "cascade" }),
-    propertyId: uuid("propertyId").references(() => properties.id, { onDelete: "set null" }),
-    planId: integer("planId").references(() => Plan.planId, { onDelete: "set null" }),
-    priceAtSelection: integer("priceAtSelection").notNull(),
+    cartId: uuid("cart_id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").references(() => platformUsers.id, { onDelete: "cascade" }),
+    propertyId: uuid("property_id").references(() => properties.id, { onDelete: "set null" }),
+    planId: integer("plan_id").references(() => Plan.planId, { onDelete: "set null" }),
+    priceAtSelection: integer("price_at_selection").notNull(),
     currency: text("currency").notNull().default("INR"),
     status: CartStatus("status").notNull().default("ACTIVE"),
     expiresAt: timestamp("expires_at"),
@@ -95,11 +95,11 @@ export const cart = pgTable("cart", {
 
 // --- Orders table: includes Razorpay integration fields ---
 export const orders = pgTable("orders", {
-    orderId: uuid("orderId").defaultRandom().primaryKey(),
-    userId: uuid("userId").references(() => platformUsers.id, { onDelete: "set null" }),
-    propertyId: uuid("propertyId").references(() => properties.id, { onDelete: "set null" }),
-    planId: integer("planId").references(() => Plan.planId, { onDelete: "set null" }),
-    cartId: uuid("cartId").references(() => cart.cartId, { onDelete: "set null" }),
+    orderId: uuid("order_id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").references(() => platformUsers.id, { onDelete: "set null" }),
+    propertyId: uuid("property_id").references(() => properties.id, { onDelete: "set null" }),
+    planId: integer("plan_id").references(() => Plan.planId, { onDelete: "set null" }),
+    cartId: uuid("cart_id").references(() => cart.cartId, { onDelete: "set null" }),
     amount: integer("amount").notNull(),
     currency: text("currency").notNull().default("INR"),
     status: OrderStatus("status").notNull().default("CREATED"),
@@ -108,7 +108,7 @@ export const orders = pgTable("orders", {
     razorpayOrderId: text("razorpay_order_id"), // order id returned by Razorpay when creating an order
     razorpayPaymentId: text("razorpay_payment_id"), // payment id after successful capture
     razorpaySignature: text("razorpay_signature"), // signature to verify payment
-    transactionId: text("transactionId"), // internal transaction id or third-party id
+    transactionId: text("transaction_id"), // internal transaction id or third-party id
     receipt: text("receipt"),
     notes: json("notes"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -268,7 +268,7 @@ export const appRelations = {
             relation: "many",
             table: userProperty,
             fields: [Plan.planId],
-            references: [userProperty.planId],
+            references: [userProperty.planVariantId],
         },
     },
     cart: {
@@ -350,9 +350,9 @@ export const appRelations = {
         },
         plan: {
             relation: "one",
-            table: Plan,
-            fields: [userProperty.planId],
-            references: [Plan.planId],
+            table: planvariants,
+            fields: [userProperty.planVariantId],
+            references: [planvariants.id],
         },
         agent: {
             relation: "one",

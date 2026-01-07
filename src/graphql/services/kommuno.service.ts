@@ -29,7 +29,6 @@ export class KommunoService {
         };
 
         const data = await kommunoInstance.post("/kcrm/clickToCallWithLiveStatus", body);
-
         return { sessionId, data };
     }
 
@@ -43,7 +42,6 @@ export class KommunoService {
             date_time
         } = payload;
 
-        const systemAgentId = agent_details?.agent_id || null;
         const agentNumber = agent_details?.agent_number || null;
         const clientNumber = from || null;
         let agentId = null;
@@ -79,13 +77,13 @@ export class KommunoService {
             });
         } else {
             // UPDATE STATUS ONLY
-            await db
+           const response =  await db
                 .update(callLogs)
                 .set({
                     systemStatus: live_event === "evt_popup" ? "CONNECTED" : "RINGING",
-                    AgentId: systemAgentId
+                    AgentId: agentId ? agentId[0]?.Id : null
                 })
-                .where(eq(callLogs.Id, callId));
+                .where(eq(callLogs.Id, callId));            
         }
     }
 

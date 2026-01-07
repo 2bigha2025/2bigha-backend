@@ -3,6 +3,7 @@ import { GraphQLError } from "graphql";
 import { logInfo, logError } from "../utils/logger";
 import { PlatformUserService } from "./user.services";
 import { PropertyService } from "../graphql/services/property.services";
+import { PropertyManagementService } from "../graphql/services/property-management.service";
 import { seoService } from "../graphql/services/seo.service";
 import { GeoJsonService } from "../graphql/services/geo-json.service";
 
@@ -103,15 +104,18 @@ export const platformUserResolvers = {
                     lastName: user.lastName,
                     role: user.role,
                     isActive: user.isActive,
-
+                    isVerified: Boolean(user.isVerified),
                     createdAt: user.createdAt.toISOString(),
                     profile: user.profile
                         ? {
                             id: user.profile.id.toString(),
                             bio: user.profile.bio,
                             avatar: user.profile.avatar,
+                            phone: user.profile.phone,
+                            address: user.profile.address,
                             city: user.profile.city,
                             state: user.profile.state,
+                            pincode: user.profile.pincode,
                             specializations: user.profile.specializations,
                             serviceAreas: user.profile.serviceAreas,
                             languages: user.profile.languages,
@@ -262,39 +266,6 @@ export const platformUserResolvers = {
             _: any,
             { lat, lng, radiusKm }: { lat: number; lng: number; radiusKm: number }
         ) => GeoJsonService.findFeaturesWithinRadius(lat, lng, radiusKm),
-        getManagedProeprtiesByUser: async (
-            _: any,
-            { page, limit }: { page: number, limit: number },
-            context: PlatformUserContext
-        ) => {
-            if (!context?.user?.userId) {
-                throw new GraphQLError("Not authenticated", {
-                    extensions: { code: "UNAUTHENTICATED" },
-                });
-            }
-            const result = await PropertyService.getUserProperties(context.user.userId, page, limit)
-            return {
-                meta: result.meta,
-                data: result.rows
-            }
-
-
-        },
-        getManagedUserPropertiesID: async (
-            _: any,
-            { property_id }: { property_id: string },
-            context: PlatformUserContext
-        ) => {
-
-            if (!context?.user?.userId) {
-                throw new GraphQLError("Not authenticated", {
-                    extensions: { code: "UNAUTHENTICATED" },
-                });
-            }
-            const result = await PropertyService.getUserPropertiesById(context.user.userId, property_id)
-            console.log(result, "It is from resolver")
-            return result
-        }
     },
 
 
@@ -608,7 +579,7 @@ export const platformUserResolvers = {
                     lastName: updatedUser.lastName,
                     role: updatedUser.role,
                     isActive: updatedUser.isActive,
-                    isVerified: updatedUser.isVerified,
+                    isVerified: Boolean(updatedUser.isVerified),
                     updatedAt: new Date().toISOString(),
                     profile: updatedUser.profile
                         ? {
@@ -750,31 +721,5 @@ export const platformUserResolvers = {
                 });
             }
         },
-        createManagedPropertyByUser: async (
-            _: any,
-            { input }: { input: any },
-            context: PlatformUserContext
-        ) => {
-            if (!context.user) {
-                throw new GraphQLError("Not authenticated", {
-                    extensions: { code: "UNAUTHENTICATED" },
-                });
-            }
-
-            try {
-                const property = await PropertyService.createPropertyByUser(
-                    input,
-                    context.user.userId
-                );
-                console.log(property);
-                return property;
-            } catch (error) {
-                console.log(error)
-                console.error("Create property error:", error);
-                throw new GraphQLError("Failed to create property", {
-                    extensions: { code: "INTERNAL_ERROR" },
-                });
-            }
-        }
     },
 };

@@ -45,6 +45,7 @@ enum ListingAs {
   OWNER
   AGENT
   BUILDER
+  COMPANY
 }
 
 type Seo {
@@ -54,8 +55,8 @@ type Seo {
   seoTitle: String!
   seoDescription: String!
   seoKeywords: String!
-  createdAt: String!
-  updatedAt: String!
+  createdAt: Date!
+  updatedAt: Date!
   schema: JSON
 }
 
@@ -83,7 +84,7 @@ type PropertyImageVariants {
 }
 
 type PropertyImage {
-
+  id : String
   variants: PropertyImageVariants
   
 }
@@ -159,7 +160,7 @@ type Property {
   roadAccess: Boolean
   roadAccessDistance: Int
   landMark: String
-  landMarkName: JSON
+  landMarkName: String
   landType : String
   roadAccessWidth : Int
   roadAccessDistanceUnit : String
@@ -245,6 +246,7 @@ type properties {
     REAL_ESTATE_AGENT
     PROPERTY_DEALER
     BUILDER
+    COMPANY
   }
 
 
@@ -262,6 +264,7 @@ type owner {
   phone: String
   avatar : String
   role : String
+  isVerified : Boolean
 }
 
 type properties {
@@ -638,8 +641,6 @@ input ViewCountPropertiesInput {
     getHomePageSeo:homePageSeo
      getPropertyBySlug(input: inputGetPropertyBySlug!):properties 
     getTopProperties: [properties]
-    getManagedProeprtiesByUser(page:Int, limit:Int):UserPropertyResult
-    getManagedUserPropertiesID(property_id:String): UserProperty
     # Get current user profile
     me: PlatformUser
     getSeoPageByUrl(url: String!): SeoPage
@@ -702,7 +703,6 @@ input ViewCountPropertiesInput {
     logout: PlatformAuthResponse!
 
     createPropertyByUser(input: CreatePropertyInput!): properties!
-    createManagedPropertyByUser(input: createManagedPropertyInput!): managedPropertyResponse!
     
   }
 `;

@@ -11,6 +11,7 @@ import {
   isNotNull,
   ilike,
   or,
+  notInArray,
 } from "drizzle-orm";
 import { db } from "../../database/connection";
 import * as schema from "../../database/schema/index";
@@ -208,8 +209,7 @@ export class SavedPropertiesService {
         .where(
           and(
             eq(savedProperties.userId, userId),
-            eq(savedProperties.isActive, true),
-            eq(properties.source, "2BIGHA")
+            eq(savedProperties.isActive, true)
           )
         )
         .groupBy(properties.id, schema.propertySeo.id, savedProperties.id);
@@ -259,7 +259,6 @@ export class SavedPropertiesService {
           lte(savedProperties.savedAt, new Date(filters.savedBefore))
         );
       }
-      conditions.push(eq(properties.source, "2BIGHA"));
       if (filters.collectionId) {
         // Join with collection items to filter by collection
         query = query
@@ -336,8 +335,7 @@ export class SavedPropertiesService {
         and(
           eq(savedProperties.userId, userId),
           eq(savedProperties.propertyId, propertyId),
-          eq(savedProperties.isActive, true),
-          eq(properties.source, "2BIGHA")
+          eq(savedProperties.isActive, true)
         )
       );
 
@@ -367,8 +365,7 @@ export class SavedPropertiesService {
       .where(
         and(
           eq(savedPropertyCollections.userId, userId),
-          eq(savedPropertyCollections.isActive, true),
-          eq(properties.source, "2BIGHA")
+          eq(savedPropertyCollections.isActive, true)
         )
       )
       .groupBy(savedPropertyCollections.id)
@@ -478,8 +475,7 @@ export class SavedPropertiesService {
         .where(
           and(
             eq(savedProperties.userId, userId),
-            eq(savedProperties.isActive, true),
-            eq(properties.source, "2BIGHA")
+            eq(savedProperties.isActive, true)
           )
         );
 
@@ -490,8 +486,7 @@ export class SavedPropertiesService {
         .where(
           and(
             eq(savedPropertyCollections.userId, userId),
-            eq(savedPropertyCollections.isActive, true),
-            eq(properties.source, "2BIGHA")
+            eq(savedPropertyCollections.isActive, true)
           )
         );
 
@@ -518,8 +513,7 @@ export class SavedPropertiesService {
         .where(
           and(
             eq(savedProperties.userId, userId),
-            eq(savedProperties.isActive, true),
-            eq(properties.source, "2BIGHA")
+            eq(savedProperties.isActive, true)
           )
         )
         .orderBy(desc(savedProperties.savedAt))
@@ -631,18 +625,23 @@ export class SavedPropertiesService {
         platformUsers,
         eq(savedPropertyCollections.userId, platformUsers.id)
       )
-      .leftJoin(
+      .innerJoin(
         savedPropertyCollectionItems,
         eq(
           savedPropertyCollectionItems.collectionId,
           savedPropertyCollections.id
         )
       )
+      .innerJoin(
+        savedProperties,
+        eq(savedPropertyCollectionItems.savedPropertyId, savedProperties.id)
+      )
+      .innerJoin(properties, eq(savedProperties.propertyId, properties.id))
       .where(
         and(
           eq(savedPropertyCollections.isPublic, true),
           eq(savedPropertyCollections.isActive, true),
-          eq(properties.source, "2BIGHA")
+          notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"])
         )
       )
       .groupBy(savedPropertyCollections.id, platformUsers.id)
@@ -668,7 +667,6 @@ export class SavedPropertiesService {
     landType?: string,
     sortBy?: string
   ) {
-    console.log("States", state);
     try {
       const offset = (page - 1) * limit;
 
@@ -679,7 +677,9 @@ export class SavedPropertiesService {
 
       const filterConditions: any[] = [];
       filterConditions.push(eq(properties.approvalStatus, "APPROVED"));
-      filterConditions.push(eq(properties.source, "2BIGHA"));
+      filterConditions.push(
+        notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"])
+      );
 
       if (state && Array.isArray(state) && state.length > 0) {
         const normalizedStates = state.map(
