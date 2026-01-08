@@ -806,7 +806,7 @@ export class PropertyService {
           platformUserProfile.id,
           adminUsers.id
         )
-        .orderBy(desc(properties.createdAt))
+        .orderBy(desc(properties.updatedAt))
         .limit(limit)
         .offset(offset);
 
@@ -1231,9 +1231,9 @@ export class PropertyService {
             return await upload.promise;
           })
         );
-
+        
         processedImages = await this.processPropertyImages(resolvedUploads);
-
+        
         console.log("🖼️ Processed images:", processedImages);
       }
     }
@@ -1246,6 +1246,9 @@ export class PropertyService {
           await this.azureStorage.deleteBulkFiles(filenamesArray, "properties");
           await tx.delete(propertyImages).where(inArray(propertyImages.id, propertyData.deleteImageIds));
         }
+        
+        console.log('>>>>>>>propertyId>>>>>>>',propertyId)
+        console.log('>>>>>>>>>propertyDataContact>>>>>',propertyData.contactDetails.ownerId)
 
         await tx
           .update(properties)
@@ -1253,6 +1256,7 @@ export class PropertyService {
             propertyType:
               propertyData.propertyDetailsSchema.propertyType.toUpperCase(),
             status: "PUBLISHED",
+            approvalStatus : 'PENDING',
             price: parseFloat(propertyData.propertyDetailsSchema.totalPrice),
             area: parseFloat(propertyData.propertyDetailsSchema.area),
             pricePerUnit: parseFloat(propertyData.propertyDetailsSchema.pricePerUnit),
@@ -1286,6 +1290,7 @@ export class PropertyService {
             roadAccessWidth: propertyData.propertyDetailsSchema.roadAccessWidth,
             roadAccessDistanceUnit:
               propertyData.propertyDetailsSchema.roadAccessDistanceUnit,
+            updatedAt : new Date()
           }).where(eq(properties.id, propertyId))
 
         if (processedImages.length > 0) {
@@ -1322,6 +1327,7 @@ export class PropertyService {
       //   .where(eq(propertyImages.propertyId, propertyId));
       return property;
     } catch (err) {
+      console.log('>>>>>erorr>>>>>>>',err)
       throw new Error('Failed to update property')
     }
   }
