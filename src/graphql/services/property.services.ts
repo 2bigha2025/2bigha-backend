@@ -920,7 +920,7 @@ export class PropertyService {
                   p.road_access_width as "roadAccessWidth",
                   p.road_access_distance_unit as "roadAccessDistanceUnit",
                   p.land_mark as "landMark",
-                  p.landmark_name as "landMarkName",
+                  p.landmark_name::text as "landMarkName",
                   p.approval_status as "status",
                   p.area_unit as "areaUnit",
                   p.khasra_number as "khasraNumber",
@@ -1077,7 +1077,7 @@ export class PropertyService {
           createdByType: "ADMIN",
           createdByAdminId: userID,
           waterLevel: propertyData?.propertyDetailsSchema?.waterLevel ?? null,
-          landMark: propertyData?.propertyDetailsSchema?.landMark ?? null,
+          landMark: JSON.stringify(propertyData?.propertyDetailsSchema?.landMark) ?? null,
           category: propertyData?.propertyDetailsSchema?.category ?? null,
           highwayConn: propertyData?.propertyDetailsSchema?.highwayConn ?? null,
           landZoning: propertyData?.propertyDetailsSchema?.landZoning ?? null,
@@ -1095,6 +1095,7 @@ export class PropertyService {
           roadAccessDistanceUnit:
             propertyData?.propertyDetailsSchema?.roadAccessDistanceUnit ?? null,
           availablilityStatus: isManaged ? "MANAGED" : "AVAILABLE",
+          ownerId : propertyData?.contactDetails?.ownerId
         })
         .returning({ listing_id: properties.listingId });
 
@@ -1400,7 +1401,7 @@ export class PropertyService {
           createdByType: "USER",
           createdByUserId: userID,
           waterLevel: propertyData?.propertyDetailsSchema?.waterLevel ?? null,
-          landMark: propertyData?.propertyDetailsSchema?.landMark ?? null,
+          landMark: JSON.stringify(propertyData?.propertyDetailsSchema?.landMark) ?? null,
           category: propertyData?.propertyDetailsSchema?.category ?? null,
           highwayConn: propertyData?.propertyDetailsSchema?.highwayConn ?? null,
           landZoning: propertyData?.propertyDetailsSchema?.landZoning ?? null,
@@ -1412,7 +1413,7 @@ export class PropertyService {
           roadAccessDistance:
             propertyData?.propertyDetailsSchema?.roadAccessDistance ?? null,
           landMarkName:
-            propertyData?.propertyDetailsSchema?.landMarkName ?? null,
+            JSON.stringify(propertyData?.propertyDetailsSchema?.landMarkName) ?? null,
           roadAccessWidth:
             propertyData?.propertyDetailsSchema?.roadAccessWidth ?? null,
           roadAccessDistanceUnit:
