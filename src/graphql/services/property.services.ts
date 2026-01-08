@@ -1513,4 +1513,19 @@ export class PropertyService {
       images: imagesResult,
     };
   }
+
+static async getDistrictsState() {
+  const result = await db
+    .select({
+      district: properties.district ,
+      state: properties.state,
+    })
+    .from(properties)
+    .where(notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"]))
+    .groupBy(properties.district, properties.state)
+    .orderBy(properties.district);
+
+  return result;
 }
+}
+

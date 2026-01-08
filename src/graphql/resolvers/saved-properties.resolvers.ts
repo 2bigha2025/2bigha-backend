@@ -1,6 +1,7 @@
 import { GraphQLError } from "graphql"
 import { SavedPropertiesService } from '../services/saved-properties.service'
 import { requirePlatformUser } from '../../utils/auth-helpers'
+import { PropertyService } from "../services/property.services"
 
 interface Context {
     user?: {
@@ -118,7 +119,14 @@ export const savedPropertiesResolvers = {
     meta: result.meta,
   };
 },
-
+    getDistrictState:async ()=>{
+      try {
+        return PropertyService.getDistrictsState();
+      } catch (error) {
+        console.error("❌ Resolver error in topProperties:", error);
+        throw new Error("Unable to fetch top properties");
+      }
+    }
     },
 
     Mutation: {

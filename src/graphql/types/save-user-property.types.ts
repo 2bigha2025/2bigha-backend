@@ -195,6 +195,10 @@ type PropertySearchByStateOrCityResponse {
   meta: PropertySearchMeta
 }
 
+ type DistrictState {
+   district: String!
+   state: String!
+  }
 
 extend type Query {
   savedProperty(id: ID!): Property!
@@ -217,6 +221,8 @@ extend type Query {
 
    # # Search Property by state or City
     propertySearchByStateOrCity(input: PropertySearchByStateOrCityInput): PropertySearchByStateOrCityResponse!
+
+     getDistrictState:[DistrictState!]!
 }
 
 

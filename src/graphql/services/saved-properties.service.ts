@@ -675,11 +675,27 @@ export class SavedPropertiesService {
       const ownerProfile = alias(platformUserProfiles, "ownerProfile");
       const createdByProfile = alias(platformUserProfiles, "createdByProfile");
 
+      if (!state || !Array.isArray(state) || state.length === 0) {
+  return {
+    data: [],
+    meta: {
+      total: 0,
+      page,
+      limit,
+      totalPages: 0,
+      avgPrice: 0,
+      minPrice: 0,
+      maxPrice: 0,
+    },
+  };
+}
+
       const filterConditions: any[] = [];
       filterConditions.push(eq(properties.approvalStatus, "APPROVED"));
       filterConditions.push(
         notInArray(properties.propertyType, ["FARMHOUSE", "FARMLAND"])
       );
+
 
       if (state && Array.isArray(state) && state.length > 0) {
         const normalizedStates = state.map(
