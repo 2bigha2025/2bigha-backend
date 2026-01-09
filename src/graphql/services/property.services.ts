@@ -756,13 +756,13 @@ export class PropertyService {
           FILTER (WHERE ${propertyImages}.id IS NOT NULL), '[]')
         `.as("images"),
           user: {
-            firstName: createdByUser?.firstName ?? ownerUser?.firstName,
-            lastName: createdByUser?.lastName ?? ownerUser?.lastName,
+            firstName:ownerUser?.firstName ?? createdByUser?.firstName ?? properties.ownerName,
+            lastName: ownerUser?.lastName ?? createdByUser?.lastName,
             email: createdByUser?.email ?? ownerUser?.email,
             role: sql`CASE WHEN COALESCE(${createdByUser.role}, ${ownerUser.role}) = 'USER' THEN 'OWNER' ELSE COALESCE(${createdByUser.role}, ${ownerUser.role}) END`,
             phone:
-              platformUserProfile?.phone ??
               platformOwnerProfile?.phone ??
+              platformUserProfile?.phone ??
               properties.ownerPhone,
           },
           createdByUser: {
@@ -806,7 +806,7 @@ export class PropertyService {
           platformUserProfile.id,
           adminUsers.id
         )
-        .orderBy(desc(properties.createdAt))
+        .orderBy(desc(properties.updatedAt))
         .limit(limit)
         .offset(offset);
 
@@ -920,7 +920,7 @@ export class PropertyService {
                   p.road_access_width as "roadAccessWidth",
                   p.road_access_distance_unit as "roadAccessDistanceUnit",
                   p.land_mark as "landMark",
-                  p.landmark_name as "landMarkName",
+                  p.landmark_name::text as "landMarkName",
                   p.approval_status as "status",
                   p.area_unit as "areaUnit",
                   p.khasra_number as "khasraNumber",
@@ -1077,7 +1077,7 @@ export class PropertyService {
           createdByType: "ADMIN",
           createdByAdminId: userID,
           waterLevel: propertyData?.propertyDetailsSchema?.waterLevel ?? null,
-          landMark: propertyData?.propertyDetailsSchema?.landMark ?? null,
+          landMark: JSON.stringify(propertyData?.propertyDetailsSchema?.landMark) ?? null,
           category: propertyData?.propertyDetailsSchema?.category ?? null,
           highwayConn: propertyData?.propertyDetailsSchema?.highwayConn ?? null,
           landZoning: propertyData?.propertyDetailsSchema?.landZoning ?? null,
@@ -1095,6 +1095,10 @@ export class PropertyService {
           roadAccessDistanceUnit:
             propertyData?.propertyDetailsSchema?.roadAccessDistanceUnit ?? null,
           availablilityStatus: isManaged ? "MANAGED" : "AVAILABLE",
+          ownerId : propertyData?.contactDetails?.ownerId,
+          ownerName: propertyData.contactDetails.ownerName,
+          ownerPhone: propertyData.contactDetails.phoneNumber,
+          ownerWhatsapp: propertyData.contactDetails.whatsappNumber || null,
         })
         .returning({ listing_id: properties.listingId });
 
@@ -1231,9 +1235,9 @@ export class PropertyService {
             return await upload.promise;
           })
         );
-
+        
         processedImages = await this.processPropertyImages(resolvedUploads);
-
+        
         console.log("🖼️ Processed images:", processedImages);
       }
     }
@@ -1246,13 +1250,13 @@ export class PropertyService {
           await this.azureStorage.deleteBulkFiles(filenamesArray, "properties");
           await tx.delete(propertyImages).where(inArray(propertyImages.id, propertyData.deleteImageIds));
         }
-
         await tx
           .update(properties)
           .set({
             propertyType:
               propertyData.propertyDetailsSchema.propertyType.toUpperCase(),
             status: "PUBLISHED",
+            approvalStatus : 'PENDING',
             price: parseFloat(propertyData.propertyDetailsSchema.totalPrice),
             area: parseFloat(propertyData.propertyDetailsSchema.area),
             pricePerUnit: parseFloat(propertyData.propertyDetailsSchema.pricePerUnit),
@@ -1272,7 +1276,7 @@ export class PropertyService {
             isActive: true,
             ownerId: propertyData.contactDetails.ownerId,
             waterLevel: propertyData.propertyDetailsSchema.waterLevel,
-            landMark: propertyData.propertyDetailsSchema.landMark,
+            landMark: JSON.stringify(propertyData.propertyDetailsSchema.landMark),
             category: propertyData.propertyDetailsSchema.category,
             highwayConn: propertyData.propertyDetailsSchema.highwayConn,
             landZoning: propertyData.propertyDetailsSchema.landZoning,
@@ -1286,6 +1290,7 @@ export class PropertyService {
             roadAccessWidth: propertyData.propertyDetailsSchema.roadAccessWidth,
             roadAccessDistanceUnit:
               propertyData.propertyDetailsSchema.roadAccessDistanceUnit,
+            updatedAt : new Date()
           }).where(eq(properties.id, propertyId))
 
         if (processedImages.length > 0) {
@@ -1322,6 +1327,7 @@ export class PropertyService {
       //   .where(eq(propertyImages.propertyId, propertyId));
       return property;
     } catch (err) {
+      console.log('>>>>>erorr>>>>>>>',err)
       throw new Error('Failed to update property')
     }
   }
@@ -1394,7 +1400,7 @@ export class PropertyService {
           createdByType: "USER",
           createdByUserId: userID,
           waterLevel: propertyData?.propertyDetailsSchema?.waterLevel ?? null,
-          landMark: propertyData?.propertyDetailsSchema?.landMark ?? null,
+          landMark: JSON.stringify(propertyData?.propertyDetailsSchema?.landMark) ?? null,
           category: propertyData?.propertyDetailsSchema?.category ?? null,
           highwayConn: propertyData?.propertyDetailsSchema?.highwayConn ?? null,
           landZoning: propertyData?.propertyDetailsSchema?.landZoning ?? null,
