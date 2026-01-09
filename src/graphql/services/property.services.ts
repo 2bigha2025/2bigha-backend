@@ -756,13 +756,13 @@ export class PropertyService {
           FILTER (WHERE ${propertyImages}.id IS NOT NULL), '[]')
         `.as("images"),
           user: {
-            firstName: createdByUser?.firstName ?? ownerUser?.firstName,
-            lastName: createdByUser?.lastName ?? ownerUser?.lastName,
+            firstName:ownerUser?.firstName ?? createdByUser?.firstName ?? properties.ownerName,
+            lastName: ownerUser?.lastName ?? createdByUser?.lastName,
             email: createdByUser?.email ?? ownerUser?.email,
             role: sql`CASE WHEN COALESCE(${createdByUser.role}, ${ownerUser.role}) = 'USER' THEN 'OWNER' ELSE COALESCE(${createdByUser.role}, ${ownerUser.role}) END`,
             phone:
-              platformUserProfile?.phone ??
               platformOwnerProfile?.phone ??
+              platformUserProfile?.phone ??
               properties.ownerPhone,
           },
           createdByUser: {
@@ -1095,7 +1095,10 @@ export class PropertyService {
           roadAccessDistanceUnit:
             propertyData?.propertyDetailsSchema?.roadAccessDistanceUnit ?? null,
           availablilityStatus: isManaged ? "MANAGED" : "AVAILABLE",
-          ownerId : propertyData?.contactDetails?.ownerId
+          ownerId : propertyData?.contactDetails?.ownerId,
+          ownerName: propertyData.contactDetails.ownerName,
+          ownerPhone: propertyData.contactDetails.phoneNumber,
+          ownerWhatsapp: propertyData.contactDetails.whatsappNumber || null,
         })
         .returning({ listing_id: properties.listingId });
 
@@ -1247,10 +1250,6 @@ export class PropertyService {
           await this.azureStorage.deleteBulkFiles(filenamesArray, "properties");
           await tx.delete(propertyImages).where(inArray(propertyImages.id, propertyData.deleteImageIds));
         }
-        
-        console.log('>>>>>>>propertyId>>>>>>>',propertyId)
-        console.log('>>>>>>>>>propertyDataContact>>>>>',propertyData.contactDetails.ownerId)
-
         await tx
           .update(properties)
           .set({
@@ -1277,7 +1276,7 @@ export class PropertyService {
             isActive: true,
             ownerId: propertyData.contactDetails.ownerId,
             waterLevel: propertyData.propertyDetailsSchema.waterLevel,
-            landMark: propertyData.propertyDetailsSchema.landMark,
+            landMark: JSON.stringify(propertyData.propertyDetailsSchema.landMark),
             category: propertyData.propertyDetailsSchema.category,
             highwayConn: propertyData.propertyDetailsSchema.highwayConn,
             landZoning: propertyData.propertyDetailsSchema.landZoning,
@@ -1413,7 +1412,7 @@ export class PropertyService {
           roadAccessDistance:
             propertyData?.propertyDetailsSchema?.roadAccessDistance ?? null,
           landMarkName:
-            JSON.stringify(propertyData?.propertyDetailsSchema?.landMarkName) ?? null,
+            propertyData?.propertyDetailsSchema?.landMarkName ?? null,
           roadAccessWidth:
             propertyData?.propertyDetailsSchema?.roadAccessWidth ?? null,
           roadAccessDistanceUnit:
